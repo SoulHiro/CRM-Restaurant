@@ -9,7 +9,9 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "drizzle-kit": "1.0.0-rc.4",
     "prettier": "^3.7.4",
+    "tsx": "^4.23.5",
     "turbo": "^2.10.8",
     "typescript": "5.9.2"
   },
@@ -22,5 +24,9 @@
       "esbuild": "^0.25.12"
     }
   },
-  "dependencies": {}
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "1.0.0-rc.4"
+  }
 }

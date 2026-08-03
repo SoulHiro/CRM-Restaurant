@@ -186,5 +186,5 @@ audit_log
 1. **CPF sempre criptografado** — nunca em texto plano no banco
 2. **`pedido.envio_consumer_id`** só é preenchido após confirmação de sucesso do envio — antes disso, fica null
 3. **Regra de edição de pedido:** funcionário só edita `data > hoje` — validar tanto no client quanto no server (Server Action / Route Handler)
-4. **Payload do Consumer:** itens devem vir agrupados por prato (todos de um prato juntos, depois o próximo), não em ordem arbitrária
+4. **Payload do Consumer:** cada item = um funcionário (nome + pedido na descrição). Itens devem ser **ordenados por prato** no payload (todos de um prato juntos, depois o próximo) para legibilidade da cozinha — mas **não são agregados**: não é "3× Frango G", é um item por pessoa, pois o slip impresso vai em cima da marmita individual
 5. **`external_code`** vive em `prato_tamanho_preco` (cada tamanho é um SKU diferente), não em `prato`

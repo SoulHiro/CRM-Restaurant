@@ -74,7 +74,7 @@ Roles: `admin` (acesso total, inclusive impersonation), `caixa`, `financeiro`, `
 ### Consumer (fiscal / PDV)
 
 - API de parceiro funciona por **polling** — o Consumer consulta periodicamente nossos endpoints (Route Handlers), não o contrário
-- **Um pedido consolidado por empresa/dia** no Consumer, contendo múltiplos itens (um por funcionário), agrupados por prato no payload
+- **Um pedido consolidado por empresa/dia** no Consumer, contendo múltiplos itens — **um item por funcionário** (nome + pedido na descrição), ordenados por prato no payload para facilitar a cozinha. Não são agregados por prato ("3× Frango G") — cada pessoa é um item separado, pois o slip vai em cima da marmita individual
 - "Imprimir Todos" dispara **simultaneamente**: chamada à API do Consumer (fiscal) + impressão local via QZ Tray (formato próprio)
 - Requer assinatura Premium do Consumer
 
