@@ -16,7 +16,8 @@ export const roles = [
 ] as const
 export type Role = typeof roles[number]
 
-export function createAuth(db: Parameters<typeof drizzleAdapter>[0]) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function createAuth(db: Parameters<typeof drizzleAdapter>[0]): any {
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg" }),
     plugins: [adminPlugin()],
