@@ -6,7 +6,6 @@ config({ path: resolve(process.cwd(), ".env.local") })
 
 import { auth } from "../lib/auth"
 import { db } from "../lib/db"
-import { sql } from "drizzle-orm"
 
 async function main() {
   console.log("🌱 Criando usuário admin...")
@@ -25,8 +24,9 @@ async function main() {
   }
 
   // Better Auth adminPlugin stores role in "role" column of "user" table
-  await db.execute(
-    sql`UPDATE "user" SET role = 'admin' WHERE email = 'victormts.s1@gmail.com'`
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (db as any).execute(
+    `UPDATE "user" SET role = 'admin' WHERE email = 'victormts.s1@gmail.com'`
   )
 
   console.log("✅ Role admin definida")
