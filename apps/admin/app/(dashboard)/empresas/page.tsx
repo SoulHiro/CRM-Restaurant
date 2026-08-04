@@ -1,9 +1,10 @@
-import { ListFilter, ArrowUpDown, Plus, Search } from "lucide-react"
+import { ListFilter, ArrowUpDown, Search } from "lucide-react"
 
 import { Button } from "@repo/ui/components/button"
 import { Input } from "@repo/ui/components/input"
 import { cn } from "@repo/ui/lib/utils"
 
+import { CadastrarEmpresaSheet } from "./cadastrar-empresa-sheet"
 import { mockEmpresas } from "./mock-empresas"
 import { StatusIndicator } from "./status-indicator"
 
@@ -43,10 +44,7 @@ export default function EmpresasPage() {
           </Button>
         </div>
 
-        <Button>
-          <Plus className="size-4" />
-          Cadastrar empresa
-        </Button>
+        <CadastrarEmpresaSheet />
       </div>
 
       <div role="table" aria-label="Empresas cadastradas" className="flex flex-col gap-2">

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider } from './component/theme-provider'
 import { Providers } from './providers'
+import { Toaster } from '@repo/ui/components/sonner'
 import { Geist } from 'next/font/google'
 
 const geistSans = Geist({
@@ -20,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${geistSans.className}`}>
+      <body className={`${geistSans.className}`} cz-shortcut-listen="true">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -28,6 +29,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <Providers>{children}</Providers>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
