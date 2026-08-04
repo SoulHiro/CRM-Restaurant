@@ -15,7 +15,9 @@ user_role
 
 ```
 empresa
-  - id, nome, endereco, zona, email_contato, telefone_contato
+  - id, nome, cnpj (unique), responsavel_nome
+  - email_contato, telefone_contato
+  - cep, logradouro, numero, complemento, bairro, cidade, uf
   - status: ativo | inativo
   - created_at
 
