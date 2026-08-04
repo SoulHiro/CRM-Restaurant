@@ -29,59 +29,58 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --card: #ffffff;
-  --card-foreground: #171717;
-  --primary: #18181b;
-  --primary-foreground: #fafafa;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
+  /* Nosso Quintal — Dourado (primária) + Madeira Escura (secundária) */
+  --background: #f5ecd9; /* Creme */
+  --foreground: #2e2013; /* Madeira 500 */
+  --card: #fbf3dc; /* Dourado 50 */
+  --card-foreground: #2e2013; /* Madeira 500 */
+  --primary: #c9a227; /* Dourado 500 */
+  --primary-foreground: #2e2013; /* Madeira 500 */
+  --secondary: #d9c7a3; /* Bege Quente / Madeira 100 */
+  --secondary-foreground: #2e2013; /* Madeira 500 */
+  --muted: #f5ede4; /* Madeira 50 */
+  --muted-foreground: #8f7350; /* Madeira 300 */
+  --accent: #f5e7b8; /* Dourado 100 */
+  --accent-foreground: #2e2013; /* Madeira 500 */
   --destructive: #ef4444;
   --destructive-foreground: #fafafa;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #18181b;
-  /* Sidebar */
-  --sidebar: #fafafa;
-  --sidebar-foreground: #18181b;
-  --sidebar-border: #e4e4e7;
-  --sidebar-accent: #f4f4f5;
-  --sidebar-accent-foreground: #18181b;
-  --sidebar-ring: #18181b;
+  --border: #d9c7a3; /* Bege Quente */
+  --input: #d9c7a3; /* Bege Quente */
+  --ring: #c9a227; /* Dourado 500 */
+  /* Sidebar — replica a placa física: dourado sobre madeira escura */
+  --sidebar: #2e2013; /* Madeira 500 */
+  --sidebar-foreground: #f5ecd9; /* Creme */
+  --sidebar-border: #241909; /* Madeira 600 */
+  --sidebar-accent: #4a3826; /* Madeira 400 */
+  --sidebar-accent-foreground: #e0b84d; /* Dourado 300 */
+  --sidebar-ring: #c9a227; /* Dourado 500 */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #fafafa;
-    --card: #09090b;
-    --card-foreground: #fafafa;
-    --primary: #fafafa;
-    --primary-foreground: #18181b;
-    --secondary: #27272a;
-    --secondary-foreground: #fafafa;
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa;
-    --accent: #27272a;
-    --accent-foreground: #fafafa;
-    --destructive: #7f1d1d;
-    --destructive-foreground: #fafafa;
-    --border: #27272a;
-    --input: #27272a;
-    --ring: #d4d4d8;
-    /* Sidebar */
-    --sidebar: #18181b;
-    --sidebar-foreground: #fafafa;
-    --sidebar-border: #27272a;
-    --sidebar-accent: #27272a;
-    --sidebar-accent-foreground: #fafafa;
-    --sidebar-ring: #d4d4d8;
-  }
+.dark {
+  --background: #1a1206; /* Madeira 700 */
+  --foreground: #f5ecd9; /* Creme */
+  --card: #241909; /* Madeira 600 */
+  --card-foreground: #f5ecd9; /* Creme */
+  --primary: #c9a227; /* Dourado 500 */
+  --primary-foreground: #1a1206; /* Madeira 700 */
+  --secondary: #4a3826; /* Madeira 400 */
+  --secondary-foreground: #f5ecd9; /* Creme */
+  --muted: #2e2013; /* Madeira 500 */
+  --muted-foreground: #d9c7a3; /* Bege Quente */
+  --accent: #4a3826; /* Madeira 400 */
+  --accent-foreground: #e0b84d; /* Dourado 300 */
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fafafa;
+  --border: #4a3826; /* Madeira 400 */
+  --input: #4a3826; /* Madeira 400 */
+  --ring: #d4a82e; /* Dourado 400 */
+  /* Sidebar */
+  --sidebar: #241909; /* Madeira 600 */
+  --sidebar-foreground: #f5ecd9; /* Creme */
+  --sidebar-border: #1a1206; /* Madeira 700 */
+  --sidebar-accent: #4a3826; /* Madeira 400 */
+  --sidebar-accent-foreground: #e0b84d; /* Dourado 300 */
+  --sidebar-ring: #c9a227; /* Dourado 500 */
 }
 
 @layer base {
