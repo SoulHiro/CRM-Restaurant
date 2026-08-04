@@ -17,8 +17,22 @@ const STATUS_CONFIG: Record<
   },
 }
 
-export function StatusIndicator({ status }: { status: EmpresaStatus }) {
+export function StatusIndicator({
+  status,
+  showDot = true,
+}: {
+  status: EmpresaStatus
+  showDot?: boolean
+}) {
   const config = STATUS_CONFIG[status]
+
+  if (!showDot) {
+    return (
+      <span className={cn("text-xs font-medium", config.text)}>
+        {config.label}
+      </span>
+    )
+  }
 
   return (
     <span className="inline-flex items-center gap-2 text-sm font-medium">
