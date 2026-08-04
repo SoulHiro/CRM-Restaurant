@@ -1,3 +1,4 @@
+export * from "./auth"
 export * from "./empresa"
 export * from "./turno"
 export * from "./funcionario"
