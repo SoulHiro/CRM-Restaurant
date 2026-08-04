@@ -1,7 +1,6 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import * as React from "react"
 import {
   UtensilsCrossed,
   BookOpen,
@@ -12,20 +11,19 @@ import {
   Bike,
   Settings,
   UserCog,
-  LogOut,
 } from "lucide-react"
+
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from "@repo/ui/components/sidebar"
-import { authClient } from "@/lib/auth-client"
+import { NavMain } from "@/components/nav-main"
+import { NavUser } from "@/components/nav-user"
 import type { User } from "@repo/auth"
 
 const NAV_ITEMS = [
@@ -40,69 +38,35 @@ const NAV_ITEMS = [
   { title: "Usuários",      url: "/usuarios",       icon: UserCog,         roles: ["admin"] },
 ]
 
-interface AppSidebarProps {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User
   role?: string
 }
 
-export function AppSidebar({ user, role }: AppSidebarProps) {
-  const pathname = usePathname()
+export function AppSidebar({ user, role, ...props }: AppSidebarProps) {
   const visibleItems = NAV_ITEMS.filter(
     (item) => role && item.roles.includes(role)
   )
 
-  async function handleSignOut() {
-    await authClient.signOut()
-    window.location.href = "/login"
-  }
-
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className="px-2 py-1">
-          <p className="text-sm font-semibold">Nosso Quintal</p>
-          <p className="text-xs text-sidebar-foreground/50">Admin</p>
-        </div>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <div className="px-2 py-1.5 group-data-[collapsible=icon]:hidden">
+              <p className="text-sm font-semibold">Nosso Quintal</p>
+              <p className="text-xs text-sidebar-foreground/50">Admin</p>
+            </div>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
-
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {visibleItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith(item.url)}
-                    tooltip={item.title}
-                  >
-                    <Link href={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <NavMain items={visibleItems} />
       </SidebarContent>
-
       <SidebarFooter>
-        <div className="flex items-center justify-between px-2 py-1">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{user.name}</p>
-            <p className="truncate text-xs text-sidebar-foreground/50">{user.email}</p>
-          </div>
-          <button
-            onClick={handleSignOut}
-            className="ml-2 shrink-0 rounded p-1 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            title="Sair"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
+        <NavUser user={{ name: user.name, email: user.email }} />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   )
 }

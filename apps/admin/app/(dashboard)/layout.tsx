@@ -3,6 +3,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { SidebarProvider, SidebarInset } from "@repo/ui/components/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
+import { SiteHeader } from "@/components/site-header"
 
 export default async function DashboardLayout({
   children,
@@ -14,8 +15,15 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebar user={session.user} role={(session.user as any).role} />
-      <SidebarInset>{children}</SidebarInset>
+      <AppSidebar
+        variant="inset"
+        user={session.user}
+        role={(session.user as any).role}
+      />
+      <SidebarInset>
+        <SiteHeader />
+        {children}
+      </SidebarInset>
     </SidebarProvider>
   )
 }
