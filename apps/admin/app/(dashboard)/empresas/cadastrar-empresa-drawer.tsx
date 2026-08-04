@@ -17,14 +17,14 @@ import {
   SelectValue,
 } from "@repo/ui/components/select"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-  SheetTrigger,
-} from "@repo/ui/components/sheet"
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerTrigger,
+} from "@repo/ui/components/drawer"
 import {
   Form,
   FormControl,
@@ -95,7 +95,7 @@ interface ViaCepResponse {
   erro?: boolean
 }
 
-export function CadastrarEmpresaSheet() {
+export function CadastrarEmpresaDrawer() {
   const [open, setOpen] = React.useState(false)
   const [isLookingUpCnpj, setIsLookingUpCnpj] = React.useState(false)
   const [isLookingUpCep, setIsLookingUpCep] = React.useState(false)
@@ -191,36 +191,38 @@ export function CadastrarEmpresaSheet() {
   }
 
   return (
-    <Sheet
+    <Drawer
+      direction="right"
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
         if (!next) form.reset(defaultValues)
       }}
     >
-      <SheetTrigger asChild>
+      <DrawerTrigger asChild>
         <Button>
           <Plus className="size-4" />
           Cadastrar empresa
         </Button>
-      </SheetTrigger>
-      <SheetContent
-        side="right"
+      </DrawerTrigger>
+      <DrawerContent
+        direction="right"
+        variant="float"
         className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-lg"
       >
-        <SheetHeader>
-          <SheetTitle>Cadastrar empresa</SheetTitle>
-          <SheetDescription>
+        <DrawerHeader>
+          <DrawerTitle>Cadastrar empresa</DrawerTitle>
+          <DrawerDescription>
             Preencha os dados da empresa cliente. Só nome, CNPJ e status são
             obrigatórios.
-          </SheetDescription>
-        </SheetHeader>
+          </DrawerDescription>
+        </DrawerHeader>
 
         <Form {...form}>
           <form
             id="cadastrar-empresa-form"
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-1 flex-col gap-6 py-6"
+            className="flex flex-1 flex-col gap-6 px-4 py-6"
           >
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -340,7 +342,7 @@ export function CadastrarEmpresaSheet() {
               />
             </div>
 
-            <div className="flex flex-col gap-4 border-t pt-6">
+            <div className="flex flex-col gap-4">
               <div>
                 <h3 className="text-sm font-medium">Endereço</h3>
                 <p className="text-sm text-muted-foreground">
@@ -476,19 +478,20 @@ export function CadastrarEmpresaSheet() {
           </form>
         </Form>
 
-        <SheetFooter className="border-t pt-4">
+        <DrawerFooter>
+          <Button type="submit" form="cadastrar-empresa-form" className="w-full">
+            Salvar empresa
+          </Button>
           <Button
             type="button"
             variant="outline"
+            className="w-full"
             onClick={() => setOpen(false)}
           >
             Cancelar
           </Button>
-          <Button type="submit" form="cadastrar-empresa-form">
-            Salvar empresa
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
