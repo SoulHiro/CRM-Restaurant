@@ -10,7 +10,7 @@ import { DadosTab } from './tabs/dados-tab'
 import { FinanceiroTab } from './tabs/financeiro-tab'
 import { FuncionariosTab } from './tabs/funcionarios/funcionarios-tab'
 import { OverviewTab } from './tabs/overview/overview-tab'
-import { PausasTab } from './tabs/pausas-tab'
+import { PausasTab } from './tabs/pausas/pausas-tab'
 import { PedidosTab } from './tabs/pedidos-tab'
 
 export function EmpresaTabs({
@@ -44,7 +44,7 @@ export function EmpresaTabs({
         />
       </TabsContent>
       <TabsContent value="pausas" className="mt-6">
-        <PausasTab pausas={detail.pausas} />
+        <PausasTab empresaId={empresa.id} pausas={detail.pausas} />
       </TabsContent>
       <TabsContent value="pedidos" className="mt-6">
         <PedidosTab envios={detail.envios} />

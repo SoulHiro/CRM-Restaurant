@@ -4,12 +4,11 @@ import { actionClient } from '@/lib/safe-action'
 import {
   createEmpresaSchema,
   createFuncionarioSchema,
+  createPausaSchema,
+  deletePausaSchema,
   updateFuncionarioSchema,
   updateFuncionarioStatusSchema,
 } from './schemas'
-
-// Convenção para a futura `createPausaAction` (aba Pausas, botão "Nova
-// pausa" ainda não-funcional): actionClient.schema(createPausaSchema).action(...)
 
 export const createEmpresaAction = actionClient
   .schema(createEmpresaSchema)
@@ -49,4 +48,24 @@ export const updateFuncionarioStatusAction = actionClient
     void parsedInput
     await new Promise((resolve) => setTimeout(resolve, 300))
     return { funcionarioId: parsedInput.id }
+  })
+
+export const createPausaAction = actionClient
+  .schema(createPausaSchema)
+  .action(async ({ parsedInput }) => {
+    // TODO(db): substituir por `await db.insert(empresaPausaDia).values(...)`
+    // quando as migrations estiverem prontas.
+    void parsedInput
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    return { pausaId: crypto.randomUUID() }
+  })
+
+export const deletePausaAction = actionClient
+  .schema(deletePausaSchema)
+  .action(async ({ parsedInput }) => {
+    // TODO(db): substituir por `await db.delete(empresaPausaDia)...` quando
+    // as migrations estiverem prontas.
+    void parsedInput
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    return { pausaId: parsedInput.id }
   })

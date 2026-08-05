@@ -111,3 +111,25 @@ export const updateFuncionarioStatusSchema = z.object({
 export type UpdateFuncionarioStatusInput = z.infer<
   typeof updateFuncionarioStatusSchema
 >
+
+export const createPausaSchema = z.object({
+  empresaId: z.string().min(1),
+  data: z.string().min(1, 'Informe a data'),
+  motivo: z.string().optional(),
+})
+
+export type CreatePausaInput = z.infer<typeof createPausaSchema>
+
+export function createPausaDefaultValues(empresaId: string): CreatePausaInput {
+  return {
+    empresaId,
+    data: '',
+    motivo: '',
+  }
+}
+
+export const deletePausaSchema = z.object({
+  id: z.string().min(1),
+})
+
+export type DeletePausaInput = z.infer<typeof deletePausaSchema>
