@@ -39,11 +39,11 @@ export function ResumoSemanaCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="min-h-0 flex-1">
-        <div className="grid h-full grid-cols-3 gap-4">
-          <div className="grid h-full grid-rows-3 gap-3">
-            <div className="flex gap-3">
+        <div className="grid h-full min-h-0 grid-cols-3 gap-4">
+          <div className="grid h-full min-h-0 grid-rows-3 gap-3">
+            <div className="flex min-h-0 gap-3">
               <StatCard
-                className="flex-1 overflow-hidden"
+                className="min-h-0 flex-1 overflow-hidden"
                 contentClassName="h-full justify-between gap-2 p-4"
                 labelClassName="text-xs"
                 label="Funcionários ativos"
@@ -51,7 +51,7 @@ export function ResumoSemanaCard({
                 trailing={<TrendBadge delta={deltaFuncionarios} />}
               />
               <StatCard
-                className="flex-1 overflow-hidden"
+                className="min-h-0 flex-1 overflow-hidden"
                 contentClassName="h-full justify-between gap-2 p-4"
                 labelClassName="text-xs"
                 label="Pedidos enviados"
@@ -60,17 +60,17 @@ export function ResumoSemanaCard({
               />
             </div>
             <StatCard
-              className="row-span-2 overflow-hidden"
+              className="row-span-2 min-h-0 overflow-hidden"
               contentClassName="h-full justify-between gap-2 p-4"
               labelClassName="text-xs"
-              valueClassName="text-4xl truncate"
+              valueClassName="text-6xl truncate"
               label="Taxa de resposta"
               value={taxaResposta}
               trailing={<TrendBadge delta={deltaTaxaResposta} />}
             />
           </div>
 
-          <div className="relative col-span-2 overflow-hidden rounded-lg bg-sidebar p-4 text-sidebar-foreground">
+          <div className="relative col-span-2 min-h-0 overflow-hidden rounded-lg bg-sidebar p-4 text-sidebar-foreground">
             <svg
               className="pointer-events-none absolute inset-0 h-full w-full"
               viewBox="0 0 100 100"

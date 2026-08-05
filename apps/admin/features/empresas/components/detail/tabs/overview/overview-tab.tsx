@@ -67,7 +67,7 @@ export function OverviewTab({ detail }: { detail: EmpresaDetail }) {
       : null
 
   return (
-    <div className="grid grid-cols-3 gap-6 auto-rows-[minmax(0,26rem)]">
+    <div className="grid grid-cols-3 gap-6 auto-rows-[minmax(0,26rem)] grid-rows-[minmax(0,29rem)]">
       <ResumoSemanaCard
         funcionariosAtivos={funcionariosAtivos}
         deltaFuncionarios={deltaFuncionarios}
