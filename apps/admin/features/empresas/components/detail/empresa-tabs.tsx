@@ -6,7 +6,6 @@ import {
 } from '@repo/ui/components/tabs'
 
 import type { EmpresaDetail, EmpresaListItem } from '../../lib/types'
-import { ContratoTab } from './tabs/contrato-tab'
 import { DadosTab } from './tabs/dados-tab'
 import { FinanceiroTab } from './tabs/financeiro-tab'
 import { FuncionariosTab } from './tabs/funcionarios/funcionarios-tab'
@@ -28,7 +27,6 @@ export function EmpresaTabs({
       <TabsList className="flex w-full justify-start bg-sidebar">
         <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
         <TabsTrigger value="funcionarios">Funcionários</TabsTrigger>
-        <TabsTrigger value="contrato">Contrato</TabsTrigger>
         <TabsTrigger value="pausas">Pausas</TabsTrigger>
         <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
         <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
@@ -45,9 +43,6 @@ export function EmpresaTabs({
           searchParams={searchParams}
         />
       </TabsContent>
-      <TabsContent value="contrato" className="mt-6">
-        <ContratoTab contrato={detail.contrato} />
-      </TabsContent>
       <TabsContent value="pausas" className="mt-6">
         <PausasTab pausas={detail.pausas} />
       </TabsContent>
@@ -61,7 +56,11 @@ export function EmpresaTabs({
         />
       </TabsContent>
       <TabsContent value="dados" className="mt-6">
-        <DadosTab empresa={empresa} endereco={detail.endereco} />
+        <DadosTab
+          empresa={empresa}
+          endereco={detail.endereco}
+          contrato={detail.contrato}
+        />
       </TabsContent>
     </Tabs>
   )
