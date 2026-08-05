@@ -99,7 +99,7 @@ export function FuncionariosFiltersPanel({
           <SelectContent>
             <SelectItem value="todos">Todos</SelectItem>
             <SelectItem value="ativo">
-              <CircleCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <CircleCheck className="size-4 text-primary" />
               Ativo
             </SelectItem>
             <SelectItem value="inativo">
@@ -129,7 +129,7 @@ export function FuncionariosFiltersPanel({
           <SelectContent>
             <SelectItem value="todos">Todos</SelectItem>
             <SelectItem value="sim">
-              <Check className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <Check className="size-4 text-sidebar" />
               Sim
             </SelectItem>
             <SelectItem value="nao">

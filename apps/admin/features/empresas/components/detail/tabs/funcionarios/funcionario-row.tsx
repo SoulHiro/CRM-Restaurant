@@ -41,7 +41,7 @@ export function FuncionarioRow({
 
       <span role="cell" className="flex justify-center">
         {funcionario.respondeuEstaSemana ? (
-          <Check className="size-4 text-emerald-600 dark:text-emerald-400" />
+          <Check className="size-4 text-sidebar" />
         ) : (
           <X className="size-4 text-muted-foreground" />
         )}
