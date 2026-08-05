@@ -170,9 +170,7 @@ export function SatisfacaoCard({
 }: {
   satisfacao?: EmpresaSatisfacao
 }) {
-  const [visao, setVisao] = useState<'funcionarios' | 'empresa'>(
-    'funcionarios'
-  )
+  const [visao, setVisao] = useState<'funcionarios' | 'empresa'>('funcionarios')
 
   const semDados =
     !satisfacao ||
@@ -184,7 +182,8 @@ export function SatisfacaoCard({
       ? satisfacao.categoriasFuncionarios
       : satisfacao.categoriasEmpresa
     : []
-  const accentColor = visao === 'funcionarios' ? 'var(--sidebar)' : 'var(--primary)'
+  const accentColor =
+    visao === 'funcionarios' ? 'var(--sidebar)' : 'var(--primary)'
   const media = mediaDe(categorias)
   const deltaMedio = deltaMedioDe(categorias)
   const { fortes, atencao } = splitCategorias(categorias)

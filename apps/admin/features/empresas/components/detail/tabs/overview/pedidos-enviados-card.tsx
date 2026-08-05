@@ -10,11 +10,7 @@ import { EmptyState } from '@repo/ui/components/empty-state'
 import type { EnviosHeatmap } from '../../../../lib/overview-helpers'
 import { PedidosEnviadosHeatmap } from './pedidos-enviados-heatmap'
 
-export function PedidosEnviadosCard({
-  heatmap,
-}: {
-  heatmap: EnviosHeatmap
-}) {
+export function PedidosEnviadosCard({ heatmap }: { heatmap: EnviosHeatmap }) {
   const temEnvios = heatmap.semanas.some((semana) =>
     semana.dias.some((dia) => dia.total > 0)
   )

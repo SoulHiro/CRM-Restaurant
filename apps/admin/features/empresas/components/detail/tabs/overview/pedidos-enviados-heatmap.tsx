@@ -9,7 +9,11 @@ const NIVEL_CLASSNAME: Record<number, string> = {
   4: 'bg-sidebar',
 }
 
-export function PedidosEnviadosHeatmap({ heatmap }: { heatmap: EnviosHeatmap }) {
+export function PedidosEnviadosHeatmap({
+  heatmap,
+}: {
+  heatmap: EnviosHeatmap
+}) {
   const { semanas, diasSemanaLabels } = heatmap
 
   return (
