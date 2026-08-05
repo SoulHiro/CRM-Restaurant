@@ -10,7 +10,7 @@ nunca `React.useState`, `React.useEffect`.
 const [open, setOpen] = React.useState(false)
 
 // bom
-import { useState } from "react"
+import { useState } from 'react'
 const [open, setOpen] = useState(false)
 ```
 

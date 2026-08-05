@@ -8,19 +8,19 @@ shadcn/ui, estilo "new-york", cor base "zinc". Tema claro por padrão (`defaultT
 
 Definido em `packages/ui/src/styles/globals.css`, compartilhado entre os apps `admin` e `web`.
 
-| Token | Light | Dark |
-|---|---|---|
-| `--background` | `#ffffff` | `#09090b` |
-| `--foreground` | `#171717` | `#fafafa` |
-| `--card` | `#ffffff` | `#09090b` |
-| `--primary` | `#18181b` | `#fafafa` |
-| `--primary-foreground` | `#fafafa` | `#18181b` |
+| Token                                  | Light     | Dark      |
+| -------------------------------------- | --------- | --------- |
+| `--background`                         | `#ffffff` | `#09090b` |
+| `--foreground`                         | `#171717` | `#fafafa` |
+| `--card`                               | `#ffffff` | `#09090b` |
+| `--primary`                            | `#18181b` | `#fafafa` |
+| `--primary-foreground`                 | `#fafafa` | `#18181b` |
 | `--secondary` / `--muted` / `--accent` | `#f4f4f5` | `#27272a` |
-| `--muted-foreground` | `#71717a` | `#a1a1aa` |
-| `--destructive` | `#ef4444` | `#7f1d1d` |
-| `--border` / `--input` | `#e4e4e7` | `#27272a` |
-| `--ring` | `#18181b` | `#d4d4d8` |
-| `--sidebar` | `#fafafa` | `#18181b` |
+| `--muted-foreground`                   | `#71717a` | `#a1a1aa` |
+| `--destructive`                        | `#ef4444` | `#7f1d1d` |
+| `--border` / `--input`                 | `#e4e4e7` | `#27272a` |
+| `--ring`                               | `#18181b` | `#d4d4d8` |
+| `--sidebar`                            | `#fafafa` | `#18181b` |
 
 Sem cor de destaque adicional além da escala zinc — acentos de estado (sucesso, alerta, pendência) ainda não têm token dedicado; usar `--destructive` para erro e compor amarelo/verde pontualmente até definirmos tokens formais de status.
 

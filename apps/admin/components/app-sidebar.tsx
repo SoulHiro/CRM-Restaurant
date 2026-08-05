@@ -1,6 +1,6 @@
-"use client"
+'use client'
 
-import * as React from "react"
+import * as React from 'react'
 import {
   UtensilsCrossed,
   BookOpen,
@@ -11,7 +11,7 @@ import {
   Bike,
   Settings,
   UserCog,
-} from "lucide-react"
+} from 'lucide-react'
 
 import {
   Sidebar,
@@ -21,21 +21,51 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarRail,
-} from "@repo/ui/components/sidebar"
-import { NavMain } from "@/components/nav-main"
-import { NavUser } from "@/components/nav-user"
-import type { User } from "@repo/auth"
+} from '@repo/ui/components/sidebar'
+import { NavMain } from '@/components/nav-main'
+import { NavUser } from '@/components/nav-user'
+import type { User } from '@repo/auth'
 
 const NAV_ITEMS = [
-  { title: "Caixa",         url: "/caixa",         icon: UtensilsCrossed, roles: ["admin", "caixa", "cozinha"] },
-  { title: "Cardápio",      url: "/cardapio",       icon: BookOpen,        roles: ["admin"] },
-  { title: "Empresas",      url: "/empresas",       icon: Building2,       roles: ["admin", "caixa"] },
-  { title: "Funcionários",  url: "/funcionarios",   icon: Users,           roles: ["admin"] },
-  { title: "Fiado",         url: "/fiado",          icon: CreditCard,      roles: ["admin", "caixa", "financeiro"] },
-  { title: "Placar",        url: "/placar",         icon: BarChart3,       roles: ["admin", "caixa", "financeiro"] },
-  { title: "Entregadores",  url: "/entregadores",   icon: Bike,            roles: ["admin"] },
-  { title: "Configurações", url: "/configuracoes",  icon: Settings,        roles: ["admin", "caixa"] },
-  { title: "Usuários",      url: "/usuarios",       icon: UserCog,         roles: ["admin"] },
+  {
+    title: 'Caixa',
+    url: '/caixa',
+    icon: UtensilsCrossed,
+    roles: ['admin', 'caixa', 'cozinha'],
+  },
+  { title: 'Cardápio', url: '/cardapio', icon: BookOpen, roles: ['admin'] },
+  {
+    title: 'Empresas',
+    url: '/empresas',
+    icon: Building2,
+    roles: ['admin', 'caixa'],
+  },
+  {
+    title: 'Funcionários',
+    url: '/funcionarios',
+    icon: Users,
+    roles: ['admin'],
+  },
+  {
+    title: 'Fiado',
+    url: '/fiado',
+    icon: CreditCard,
+    roles: ['admin', 'caixa', 'financeiro'],
+  },
+  {
+    title: 'Placar',
+    url: '/placar',
+    icon: BarChart3,
+    roles: ['admin', 'caixa', 'financeiro'],
+  },
+  { title: 'Entregadores', url: '/entregadores', icon: Bike, roles: ['admin'] },
+  {
+    title: 'Configurações',
+    url: '/configuracoes',
+    icon: Settings,
+    roles: ['admin', 'caixa'],
+  },
+  { title: 'Usuários', url: '/usuarios', icon: UserCog, roles: ['admin'] },
 ]
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {

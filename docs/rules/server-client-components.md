@@ -7,7 +7,7 @@ Component gigante contendo tudo. Empurre `"use client"` para a menor unidade
 que realmente precisa de interatividade.
 
 Exemplo: uma tela renderiza vários cards buscados do banco. O Server
-Component faz o fetch e renderiza os cards; só o controle *interno* de um
+Component faz o fetch e renderiza os cards; só o controle _interno_ de um
 card que realmente precisa de interação (um botão, um gráfico) é Client
 Component — não o card inteiro.
 
@@ -16,7 +16,7 @@ Ruim (estado real de `visao-geral-tab.tsx` antes deste refactor: 623 linhas,
 usassem algo que exige client):
 
 ```tsx
-"use client"
+'use client'
 export function VisaoGeralTab(props) {
   // 9 cards, a maioria 100% estática, todos presos em client
   // porque 2 deles usam <BarChart> do recharts

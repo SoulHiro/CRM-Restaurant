@@ -60,7 +60,7 @@ tocar em nenhum componente:
 
 ```ts
 // features/empresas/lib/queries.ts
-import "server-only"
+import 'server-only'
 
 export async function getEmpresas(): Promise<EmpresaListItem[]> {
   return mockEmpresas // troca futura: return db.select().from(empresa)
