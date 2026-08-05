@@ -52,9 +52,12 @@ export interface EmpresaFuncionario {
 export interface EmpresaEnvio {
   id: string
   data: string
+  horario: string
   status: 'enviado' | 'confirmado' | 'erro'
   notaFiscalNumero: string | null
   notaFiscalEmitidaEm: string | null
+  responsavel: string
+  motivoErro: string | null
 }
 
 export interface EmpresaRespostaSemanal {
@@ -63,9 +66,17 @@ export interface EmpresaRespostaSemanal {
   pendentes: number
 }
 
+export interface EmpresaSatisfacaoCategoria {
+  categoria: string
+  media: number
+  delta?: number | null
+}
+
 export interface EmpresaSatisfacao {
   media: number
   totalAvaliacoes: number
+  categoriasFuncionarios: EmpresaSatisfacaoCategoria[]
+  categoriasEmpresa: EmpresaSatisfacaoCategoria[]
 }
 
 export interface EmpresaFaturamentoMensal {
