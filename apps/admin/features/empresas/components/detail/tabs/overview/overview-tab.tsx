@@ -1,32 +1,28 @@
 import type { EmpresaDetail } from '../../../../lib/types'
 import {
-  getEnviosPorDia,
+  getEnviosHeatmap,
   getProximaPausa,
   percentChange,
 } from '../../../../lib/overview-helpers'
 import { EnviosComErroCard } from './envios-com-erro-card'
-import { FaturamentoCard } from './faturamento-card'
 import { FuncionariosPendentesCard } from './funcionarios-pendentes-card'
 import { PedidosEnviadosCard } from './pedidos-enviados-card'
-import { ProximaPausaCard } from './proxima-pausa-card'
 import { RespostasPorDiaCard } from './respostas-por-dia-card'
 import { ResumoSemanaCard } from './resumo-semana-card'
 import { SatisfacaoCard } from './satisfacao-card'
-import { ValidadeContratoCard } from './validade-contrato-card'
 
 export function OverviewTab({ detail }: { detail: EmpresaDetail }) {
   const {
     respostasSemanais,
     envios,
     funcionarios,
-    contrato,
     pausas,
     satisfacao,
     faturamentoMensal,
     comparativoSemanaAnterior,
   } = detail
 
-  const enviosPorDia = getEnviosPorDia(envios)
+  const enviosHeatmap = getEnviosHeatmap(envios)
   const naoResponderam = funcionarios.filter(
     (f) => f.vinculoStatus === 'ativo' && !f.respondeuEstaSemana
   )
@@ -79,16 +75,13 @@ export function OverviewTab({ detail }: { detail: EmpresaDetail }) {
         proximaPausa={proximaPausa}
       />
       <RespostasPorDiaCard respostasSemanais={respostasSemanais} />
-      <PedidosEnviadosCard enviosPorDia={enviosPorDia} />
+      <PedidosEnviadosCard heatmap={enviosHeatmap} />
       <FuncionariosPendentesCard
         naoResponderam={naoResponderam}
         totalFuncionarios={funcionarios.length}
       />
-      <ValidadeContratoCard contrato={contrato} />
       <EnviosComErroCard envios={enviosComErro} />
-      <ProximaPausaCard pausa={proximaPausa} />
       <SatisfacaoCard satisfacao={satisfacao} />
-      <FaturamentoCard faturamentoMensal={faturamentoMensal} />
     </div>
   )
 }
