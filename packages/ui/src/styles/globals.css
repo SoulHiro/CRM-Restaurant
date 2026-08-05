@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @source "../**/*.{ts,tsx}";
 
 /* Map CSS variables to Tailwind v4 color utilities */
@@ -7,6 +7,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -34,6 +36,8 @@
   --foreground: #2e2013; /* Madeira 500 */
   --card: #fbf3dc; /* Dourado 50 */
   --card-foreground: #2e2013; /* Madeira 500 */
+  --popover: #fbf3dc; /* Dourado 50 */
+  --popover-foreground: #2e2013; /* Madeira 500 */
   --primary: #c9a227; /* Dourado 500 */
   --primary-foreground: #2e2013; /* Madeira 500 */
   --secondary: #d9c7a3; /* Bege Quente / Madeira 100 */
@@ -61,6 +65,8 @@
   --foreground: #f5ecd9; /* Creme */
   --card: #241909; /* Madeira 600 */
   --card-foreground: #f5ecd9; /* Creme */
+  --popover: #241909; /* Madeira 600 */
+  --popover-foreground: #f5ecd9; /* Creme */
   --primary: #c9a227; /* Dourado 500 */
   --primary-foreground: #1a1206; /* Madeira 700 */
   --secondary: #4a3826; /* Madeira 400 */
