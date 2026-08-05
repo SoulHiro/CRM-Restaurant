@@ -1,10 +1,11 @@
-import Link from "next/link"
-import { notFound } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { notFound } from 'next/navigation'
 
-import { Button } from "@repo/ui/components/button"
-
-import { mockEmpresas } from "../mock-empresas"
+import { EmpresaHeader } from '@/features/empresas/components/detail/empresa-header'
+import { EmpresaTabs } from '@/features/empresas/components/detail/empresa-tabs'
+import {
+  getEmpresaById,
+  getEmpresaDetail,
+} from '@/features/empresas/lib/queries'
 
 export default async function EmpresaDetailPage({
   params,
@@ -12,27 +13,18 @@ export default async function EmpresaDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const empresa = mockEmpresas.find((item) => item.id === id)
+  const empresa = await getEmpresaById(id)
 
   if (!empresa) {
     notFound()
   }
 
-  return (
-    <div className="flex flex-col gap-4 p-6">
-      <Button variant="ghost" size="sm" className="w-fit" asChild>
-        <Link href="/empresas">
-          <ArrowLeft className="size-4" />
-          Voltar
-        </Link>
-      </Button>
+  const detail = await getEmpresaDetail(id)
 
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">{empresa.nome}</h1>
-        <p className="text-sm text-muted-foreground">
-          Página de detalhes da empresa — em construção.
-        </p>
-      </div>
+  return (
+    <div className="flex flex-col gap-8 p-6">
+      <EmpresaHeader empresa={empresa} status={detail.status} />
+      <EmpresaTabs empresa={empresa} detail={detail} />
     </div>
   )
 }

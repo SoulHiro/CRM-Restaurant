@@ -1,18 +1,18 @@
-"use client"
+'use client'
 
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 
-import { Avatar, AvatarFallback } from "@repo/ui/components/avatar"
-import { cn, getInitials } from "@repo/ui/lib/utils"
+import { PersonAvatar } from '@repo/ui/components/person-avatar'
+import { cn } from '@repo/ui/lib/utils'
 
-import type { EmpresaRow as EmpresaRowData } from "./mock-empresas"
-import { StatusIndicator } from "./status-indicator"
+import type { EmpresaListItem } from '../../lib/types'
+import { ListStatusBadge } from './list-status-badge'
 
-export function EmpresaRow({
+export function EmpresaTableRow({
   empresa,
   className,
 }: {
-  empresa: EmpresaRowData
+  empresa: EmpresaListItem
   className: string
 }) {
   const router = useRouter()
@@ -27,27 +27,25 @@ export function EmpresaRow({
       tabIndex={0}
       onClick={goToEmpresa}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           goToEmpresa()
         }
       }}
       className={cn(
-        "cursor-pointer rounded-lg bg-card transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        'cursor-pointer rounded-lg bg-card transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
         className
       )}
     >
       <span role="cell" className="flex items-center gap-3">
-        <Avatar className="size-9">
-          <AvatarFallback className="text-xs font-medium">
-            {getInitials(empresa.nome)}
-          </AvatarFallback>
-        </Avatar>
+        <PersonAvatar
+          name={empresa.nome}
+          className="size-9"
+          fallbackClassName="text-xs font-medium"
+        />
         <span className="flex flex-col">
           <span className="font-medium">{empresa.nome}</span>
-          <span className="text-xs text-muted-foreground">
-            {empresa.cnpj}
-          </span>
+          <span className="text-xs text-muted-foreground">{empresa.cnpj}</span>
         </span>
       </span>
 
@@ -56,11 +54,11 @@ export function EmpresaRow({
       </span>
 
       <span role="cell" className="flex items-center gap-3">
-        <Avatar className="size-9">
-          <AvatarFallback className="text-xs font-medium">
-            {getInitials(empresa.responsavelNome)}
-          </AvatarFallback>
-        </Avatar>
+        <PersonAvatar
+          name={empresa.responsavelNome}
+          className="size-9"
+          fallbackClassName="text-xs font-medium"
+        />
         <span className="flex flex-col">
           <span className="font-medium">{empresa.responsavelNome}</span>
           <span className="text-xs text-muted-foreground">
@@ -73,7 +71,7 @@ export function EmpresaRow({
         <span className="font-medium tabular-nums">
           {empresa.funcionariosRespondidos}/{empresa.funcionariosTotal}
         </span>
-        <StatusIndicator status={empresa.status} showDot={false} />
+        <ListStatusBadge status={empresa.status} showDot={false} />
       </span>
     </div>
   )
