@@ -9,8 +9,10 @@ import {
 
 export default async function EmpresaDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { id } = await params
   const empresa = await getEmpresaById(id)
@@ -20,11 +22,16 @@ export default async function EmpresaDetailPage({
   }
 
   const detail = await getEmpresaDetail(id)
+  const resolvedSearchParams = await searchParams
 
   return (
     <div className="flex flex-col gap-8 p-6">
       <EmpresaHeader empresa={empresa} status={detail.status} />
-      <EmpresaTabs empresa={empresa} detail={detail} />
+      <EmpresaTabs
+        empresa={empresa}
+        detail={detail}
+        searchParams={resolvedSearchParams}
+      />
     </div>
   )
 }

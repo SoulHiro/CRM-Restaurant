@@ -9,7 +9,7 @@ import type { EmpresaDetail, EmpresaListItem } from '../../lib/types'
 import { ContratoTab } from './tabs/contrato-tab'
 import { DadosTab } from './tabs/dados-tab'
 import { FinanceiroTab } from './tabs/financeiro-tab'
-import { FuncionariosTab } from './tabs/funcionarios-tab'
+import { FuncionariosTab } from './tabs/funcionarios/funcionarios-tab'
 import { OverviewTab } from './tabs/overview/overview-tab'
 import { PausasTab } from './tabs/pausas-tab'
 import { PedidosTab } from './tabs/pedidos-tab'
@@ -17,9 +17,11 @@ import { PedidosTab } from './tabs/pedidos-tab'
 export function EmpresaTabs({
   empresa,
   detail,
+  searchParams,
 }: {
   empresa: EmpresaListItem
   detail: EmpresaDetail
+  searchParams: Record<string, string | string[] | undefined>
 }) {
   return (
     <Tabs defaultValue="visao-geral">
@@ -37,7 +39,11 @@ export function EmpresaTabs({
         <OverviewTab detail={detail} />
       </TabsContent>
       <TabsContent value="funcionarios" className="mt-6">
-        <FuncionariosTab funcionarios={detail.funcionarios} />
+        <FuncionariosTab
+          empresaId={empresa.id}
+          funcionarios={detail.funcionarios}
+          searchParams={searchParams}
+        />
       </TabsContent>
       <TabsContent value="contrato" className="mt-6">
         <ContratoTab contrato={detail.contrato} />

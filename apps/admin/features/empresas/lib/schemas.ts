@@ -72,3 +72,42 @@ export const createEmpresaDefaultValues: CreateEmpresaInput = {
   uf: '',
   status: 'ativo',
 }
+
+export const createFuncionarioSchema = z.object({
+  empresaId: z.string().min(1),
+  nome: z.string().min(1, 'Informe o nome do funcionário'),
+  setor: z.string().min(1, 'Informe o setor'),
+  turno: z.string().min(1, 'Informe o turno'),
+  modalidade: z.string().optional(),
+  status: z.enum(['ativo', 'inativo']),
+})
+
+export type CreateFuncionarioInput = z.infer<typeof createFuncionarioSchema>
+
+export function createFuncionarioDefaultValues(
+  empresaId: string
+): CreateFuncionarioInput {
+  return {
+    empresaId,
+    nome: '',
+    setor: '',
+    turno: '',
+    modalidade: '',
+    status: 'ativo',
+  }
+}
+
+export const updateFuncionarioSchema = createFuncionarioSchema.extend({
+  id: z.string().min(1),
+})
+
+export type UpdateFuncionarioInput = z.infer<typeof updateFuncionarioSchema>
+
+export const updateFuncionarioStatusSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(['ativo', 'inativo']),
+})
+
+export type UpdateFuncionarioStatusInput = z.infer<
+  typeof updateFuncionarioStatusSchema
+>
