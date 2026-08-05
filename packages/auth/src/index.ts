@@ -24,5 +24,14 @@ export function createAuth(db: Parameters<typeof drizzleAdapter>[0]): any {
     emailAndPassword: { enabled: true },
     database: drizzleAdapter(db, { provider: 'pg' }),
     plugins: [adminPlugin()],
+    session: {
+      // Evita bater no Postgres a cada getSession() (ex: proxy.ts roda em
+      // toda navegação) — a sessão fica servida por um cookie assinado
+      // dentro dessa janela, revalidando no banco depois que ela expira.
+      cookieCache: {
+        enabled: true,
+        maxAge: 60,
+      },
+    },
   })
 }
