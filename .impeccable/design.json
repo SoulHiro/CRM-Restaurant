@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-06T00:00:00.000Z",
+  "title": "Design System: Nosso Quintal — Admin",
+  "extensions": {
+    "colorMeta": {
+      "dourado-quintal": {
+        "role": "primary",
+        "displayName": "Dourado Quintal",
+        "canonical": "#c9a227",
+        "tonalRamp": ["#200000", "#431f00", "#654000", "#886300", "#ad8700", "#d0a931", "#f1c957", "#ffea7a"]
+      },
+      "dourado-300": {
+        "role": "accent",
+        "displayName": "Dourado 300",
+        "canonical": "#e0b84d",
+        "tonalRamp": ["#200000", "#431f00", "#644000", "#886200", "#ad8600", "#d0a93b", "#f1c95f", "#ffea81"]
+      },
+      "dourado-100": {
+        "role": "accent",
+        "displayName": "Dourado 100",
+        "canonical": "#f5e7b8",
+        "tonalRamp": ["#140900", "#332800", "#53471c", "#75683d", "#998c60", "#bbae81", "#dbce9f", "#fceebf"]
+      },
+      "dourado-50": {
+        "role": "surface",
+        "displayName": "Dourado 50",
+        "canonical": "#fbf3dc",
+        "tonalRamp": ["#100a00", "#2f2816", "#4e4734", "#706955", "#938c77", "#b5ae98", "#d5cdb7", "#f6eed7"]
+      },
+      "bege-quente": {
+        "role": "secondary",
+        "displayName": "Bege Quente",
+        "canonical": "#d9c7a3",
+        "tonalRamp": ["#150800", "#352605", "#554525", "#776746", "#9b8a68", "#bdac89", "#decca8", "#ffecc7"]
+      },
+      "creme-quintal": {
+        "role": "neutral",
+        "displayName": "Creme Quintal",
+        "canonical": "#f5ecd9",
+        "tonalRamp": ["#100a01", "#2f2819", "#4e4737", "#706858", "#948b7a", "#b6ad9b", "#d6cdba", "#f7eedb"]
+      },
+      "madeira-50": {
+        "role": "neutral",
+        "displayName": "Madeira 50",
+        "canonical": "#f5ede4",
+        "tonalRamp": ["#0f0a05", "#2e2821", "#4d463f", "#6f6860", "#928b83", "#b4ada4", "#d4ccc4", "#f5ede4"]
+      },
+      "madeira-300": {
+        "role": "neutral",
+        "displayName": "Madeira 300",
+        "canonical": "#8f7350",
+        "tonalRamp": ["#1a0500", "#3b2300", "#5c4220", "#7f6341", "#a38763", "#c6a884", "#e7c8a3", "#ffe9c2"]
+      },
+      "madeira-400": {
+        "role": "neutral",
+        "displayName": "Madeira 400",
+        "canonical": "#4a3826",
+        "tonalRamp": ["#160700", "#362513", "#564431", "#796552", "#9d8874", "#bfaa95", "#e0c9b4", "#ffead4"]
+      },
+      "madeira-escura": {
+        "role": "neutral",
+        "displayName": "Madeira Escura",
+        "canonical": "#2e2013",
+        "tonalRamp": ["#140801", "#342618", "#544436", "#766557", "#9a8979", "#bdaa9a", "#ddcab9", "#feebd9"]
+      },
+      "madeira-600": {
+        "role": "neutral",
+        "displayName": "Madeira 600",
+        "canonical": "#241909",
+        "tonalRamp": ["#130900", "#322716", "#524534", "#746755", "#988a77", "#baac98", "#dacbb7", "#fcecd7"]
+      },
+      "destructive": {
+        "role": "error",
+        "displayName": "Vermelho de Erro",
+        "canonical": "#ef4444",
+        "tonalRamp": ["#410000", "#6f0000", "#9a0000", "#c5081f", "#f04545", "#ff6c66", "#ff8e85", "#ffb0a5"]
+      }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Título", "purpose": "Título de card, seção e drawer." },
+      "body": { "displayName": "Corpo", "purpose": "Texto corrido, valor de campo, conteúdo de tabela." },
+      "label": { "displayName": "Rótulo", "purpose": "Rótulo de campo, texto de badge, texto secundário abaixo de um valor." }
+    },
+    "shadows": [
+      { "name": "repouso", "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)", "purpose": "Botões preenchidos, inputs, select trigger em repouso." },
+      { "name": "card", "value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)", "purpose": "Superfície de card, sem borda." },
+      { "name": "overlay", "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", "purpose": "Conteúdo de dropdown/select/popover, sem borda." },
+      { "name": "painel-flutuante", "value": "0 25px 50px -12px rgb(0 0 0 / 0.25)", "purpose": "Drawer no modo float, com borda." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Botão Primário",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal — salvar, cadastrar, imprimir.",
+      "html": "<button class=\"ds-btn-primary\">Salvar</button>",
+      "css": ".ds-btn-primary { background: #c9a227; color: #2e2013; padding: 0.5rem 1rem; height: 2.25rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; border: none; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); cursor: pointer; transition: background-color 0.15s; } .ds-btn-primary:hover { background: rgb(201 162 39 / 0.9); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 1px #c9a227; }"
+    },
+    {
+      "name": "Botão Outline",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Ação secundária — cancelar, filtrar.",
+      "html": "<button class=\"ds-btn-outline\">Filtrar</button>",
+      "css": ".ds-btn-outline { background: transparent; color: #2e2013; padding: 0.5rem 1rem; height: 2.25rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; border: 1px solid #d9c7a3; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); cursor: pointer; transition: background-color 0.15s; } .ds-btn-outline:hover { background: #f5e7b8; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Container de conteúdo agrupado — sem borda, sombra sutil.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Faturamento mensal</div><div class=\"ds-card-body\">Conteúdo do card</div></div>",
+      "css": ".ds-card { background: #fbf3dc; color: #2e2013; border-radius: 0.75rem; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); padding: 1.5rem; } .ds-card-title { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 0.75rem; } .ds-card-body { font-size: 0.875rem; color: #8f7350; }"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de texto padrão de formulário.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Nome da empresa\" />",
+      "css": ".ds-input { height: 2.25rem; width: 100%; background: transparent; color: #2e2013; border: 1px solid #d9c7a3; border-radius: 0.375rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); } .ds-input::placeholder { color: #8f7350; } .ds-input:focus-visible { outline: none; box-shadow: 0 0 0 1px #c9a227; border-color: #c9a227; }"
+    },
+    {
+      "name": "Badge Ativo",
+      "kind": "chip",
+      "refersTo": "badge-default",
+      "description": "Marca estado positivo — ativo, vigente.",
+      "html": "<span class=\"ds-badge-default\">Ativo</span>",
+      "css": ".ds-badge-default { display: inline-flex; align-items: center; background: #c9a227; color: #2e2013; border-radius: 0.375rem; padding: 0.125rem 0.625rem; font-size: 0.75rem; font-weight: 600; }"
+    },
+    {
+      "name": "Badge Inativo",
+      "kind": "chip",
+      "refersTo": "badge-secondary",
+      "description": "Marca estado neutro — inativo, encerrado.",
+      "html": "<span class=\"ds-badge-secondary\">Inativo</span>",
+      "css": ".ds-badge-secondary { display: inline-flex; align-items: center; background: #d9c7a3; color: #2e2013; border-radius: 0.375rem; padding: 0.125rem 0.625rem; font-size: 0.75rem; font-weight: 600; }"
+    },
+    {
+      "name": "Linha-Cartão",
+      "kind": "custom",
+      "refersTo": "card-row",
+      "description": "Linha de lista densa (empresas, pausas, histórico) — cartão próprio em vez de linha de tabela.",
+      "html": "<div class=\"ds-card-row\"><span class=\"ds-card-row-title\">Empresa Exemplo Ltda.</span><span class=\"ds-card-row-meta\">12/15 funcionários</span></div>",
+      "css": ".ds-card-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: #fbf3dc; border-radius: 0.5rem; padding: 0.75rem 1rem; cursor: pointer; transition: background-color 0.15s; } .ds-card-row:hover { background: #f5e7b8; } .ds-card-row-title { font-size: 0.875rem; font-weight: 500; color: #2e2013; } .ds-card-row-meta { font-size: 0.75rem; color: #8f7350; }"
+    },
+    {
+      "name": "Sidebar (Placa)",
+      "kind": "nav",
+      "refersTo": "sidebar",
+      "description": "Navegação principal — madeira escura constante nos dois temas, nunca inverte com o tema claro/escuro.",
+      "html": "<nav class=\"ds-sidebar\"><div class=\"ds-sidebar-item ds-sidebar-item-active\">Empresas</div><div class=\"ds-sidebar-item\">Funcionários</div></nav>",
+      "css": ".ds-sidebar { background: #2e2013; color: #f5ecd9; width: 240px; padding: 0.5rem; border-radius: 0.75rem; } .ds-sidebar-item { padding: 0.5rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; cursor: pointer; color: #f5ecd9; } .ds-sidebar-item:hover { background: #4a3826; } .ds-sidebar-item-active { background: #4a3826; color: #e0b84d; font-weight: 500; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "A Placa do Quintal",
+    "overview": "O sistema replica, em UI, a placa física de um restaurante: letras douradas sobre madeira escura. Isso não é metáfora solta — está literalmente no código (packages/ui/src/styles/globals.css: \"Sidebar — replica a placa física: dourado sobre madeira escura\"), e é o único elemento do sistema que não muda com o tema: a sidebar é madeira escura tanto no claro quanto no escuro, porque uma placa não \"clareia\" à noite.\n\nFora da sidebar, o resto da interface é uma superfície neutra e quente — creme e dourado-claro no tema claro, madeira ainda mais escura no tema escuro — pensada pra uso operacional sob pressão de horário, não pra vitrine. Sólido e funcional, sem floreio: cada sombra, cada cor de destaque, cada componente existe porque tem um trabalho a fazer (marcar estado, guiar ação primária, hierarquizar dado), nunca porque \"fica bonito\".",
+    "keyCharacteristics": [
+      "Placa física como âncora: dourado + madeira escura, sidebar constante nos dois temas",
+      "Operate-mode primeiro: densidade de tabela/lista escaneável > expressão visual",
+      "Estado sempre visível: badges e cores de status carregam a informação, não decoram",
+      "Superfícies planas por padrão; sombra e elevação só aparecem em overlays temporários ou painéis flutuantes"
+    ],
+    "rules": [
+      { "name": "A Regra da Placa Constante", "body": "A sidebar nunca muda de valor entre os temas claro e escuro — ela é sempre madeira escura com texto creme. Todo o resto da interface inverte tom com o tema; a placa não.", "section": "colors" },
+      { "name": "A Regra do Popover Sem Borda", "body": "Overlays efêmeros (dropdown menu, select, popover) não têm borda — só shadow-lg sobre bg-popover. Superfícies persistentes maiores (drawer) mantêm borda + shadow-2xl.", "section": "colors" },
+      { "name": "A Regra do Plano-em-Repouso", "body": "Nada tem sombra pesada parado na tela. Peso visual é reservado pra elementos temporariamente flutuando sobre o resto da UI.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do usar os tokens dourado-*/madeira-*/bege-quente/creme-quintal — nunca a paleta zinc padrão do shadcn.",
+      "Do manter a sidebar em madeira escura constante, independente do tema ativo.",
+      "Do aplicar cursor-pointer em todo elemento clicável, mesmo quando o componente-base do Radix não inclui por padrão.",
+      "Do remover a borda de overlays efêmeros (dropdown/select/popover) e usar só shadow-lg."
+    ],
+    "donts": [
+      "Don't reintroduzir sombra pesada em elementos parados na tela.",
+      "Don't misturar o padrão de tabela simples com o de linha-cartão na mesma lista.",
+      "Don't usar dado mock como prova social ou exemplo real em nenhuma superfície."
+    ]
+  }
+}
