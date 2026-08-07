@@ -44,6 +44,38 @@ features/empresas/
 Habilitado via `reactCompiler: true` em `next.config.js` — não escreva
 `useMemo`/`useCallback` manual (ver `docs/rules/code-style.md`).
 
+## Exemplo canônico de feature com banco real: `features/estoque/`
+
+`features/empresas` é a referência de **arquitetura de pastas**;
+`features/estoque` é a referência de **feature plugada no Postgres**. Copie
+dali ao começar a Fase 2 (Financeiro) e a Fase 3 (RH):
+
+```
+features/estoque/
+  lib/queries.ts             ← Drizzle real, `db.query.x.findMany({ with })` para evitar N+1
+  lib/actions.ts             ← authActionClient + ActionError (mensagem chega no toast)
+  lib/aplicar-movimento.ts   ← único caminho que altera saldo; devolve statements p/ `executarLote`
+  lib/numeric.ts             ← numeric do Postgres vem como string; converte só aqui
+  lib/*-helpers.ts           ← lógica pura, coberta por Vitest (38 testes)
+```
+
+Três coisas que valem para qualquer feature nova deste app:
+
+- **`db.batch([...])`, não `db.transaction(cb)`.** O driver `neon-http` só tem
+  transação não-interativa; a variante com callback lança em runtime. Leia e
+  calcule antes, depois mande os statements prontos no lote.
+- **`numeric` chega como string.** Converta em `queries.ts` e devolva `number`
+  nos tipos — componente nenhum deve ver `"9.000"`.
+- **Erro de action só aparece na tela se for `ActionError`** (`lib/safe-action.ts`).
+  Qualquer outra exceção vira mensagem genérica de propósito, para não vazar
+  detalhe de banco.
+
+## Testes
+
+`pnpm --filter admin test` (Vitest, `environment: 'node'`). Os alvos são
+helpers puros — filtro/ordenação/paginação, aritmética de saldo e diferença de
+inventário. Componente não é testado aqui.
+
 ## Dados ainda mock
 
 `features/empresas` está 100% em cima de dados mock — a camada

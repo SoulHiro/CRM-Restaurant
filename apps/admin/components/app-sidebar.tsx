@@ -5,6 +5,7 @@ import {
   UtensilsCrossed,
   BookOpen,
   Building2,
+  Package,
   Users,
   CreditCard,
   BarChart3,
@@ -39,6 +40,12 @@ const NAV_ITEMS = [
     url: '/empresas',
     icon: Building2,
     roles: ['admin', 'caixa'],
+  },
+  {
+    title: 'Estoque',
+    url: '/estoque',
+    icon: Package,
+    roles: ['admin', 'cozinha'],
   },
   {
     title: 'Funcionários',
