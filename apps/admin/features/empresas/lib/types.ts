@@ -33,10 +33,33 @@ export interface EmpresaContrato {
   vigente: boolean
 }
 
+export interface EmpresaDocumento {
+  id: string
+  nome: string
+  tipo: 'contrato' | 'outro'
+  arquivoUrl: string
+  enviadoEm: string
+}
+
 export interface EmpresaPausa {
   id: string
   data: string
   motivo: string | null
+}
+
+export interface EmpresaFuncionarioPedido {
+  dia: string
+  diaSemanaLabel: string
+  prato: string | null
+  tamanho: 'P' | 'M' | 'G' | null
+  status: 'pendente' | 'impresso' | 'erro_impressao' | null
+  motivoErro: string | null
+}
+
+export interface EmpresaSemanaPedidos {
+  semanaLabel: string
+  inicioSemana: string
+  pedidos: EmpresaFuncionarioPedido[]
 }
 
 export interface EmpresaFuncionario {
@@ -47,6 +70,9 @@ export interface EmpresaFuncionario {
   modalidade: string | null
   vinculoStatus: 'ativo' | 'inativo'
   respondeuEstaSemana: boolean
+  pedidoHoje: EmpresaFuncionarioPedido | null
+  pedidosSemana: EmpresaFuncionarioPedido[]
+  historicoSemanas: EmpresaSemanaPedidos[]
 }
 
 export interface EmpresaEnvio {
@@ -101,4 +127,5 @@ export interface EmpresaDetail {
   satisfacao?: EmpresaSatisfacao
   faturamentoMensal: EmpresaFaturamentoMensal[]
   comparativoSemanaAnterior?: EmpresaComparativoSemanal
+  documentos: EmpresaDocumento[]
 }

@@ -1,6 +1,110 @@
 import 'server-only'
 
-import type { EmpresaDetail } from '../types'
+import type {
+  EmpresaDetail,
+  EmpresaFuncionarioPedido,
+  EmpresaSemanaPedidos,
+} from '../types'
+
+const DIAS_SEMANA_ATUAL = [
+  { dia: '2026-08-03', diaSemanaLabel: 'Segunda-feira' },
+  { dia: '2026-08-04', diaSemanaLabel: 'Terça-feira' },
+  { dia: '2026-08-05', diaSemanaLabel: 'Quarta-feira' },
+  { dia: '2026-08-06', diaSemanaLabel: 'Quinta-feira' },
+  { dia: '2026-08-07', diaSemanaLabel: 'Sexta-feira' },
+  { dia: '2026-08-08', diaSemanaLabel: 'Sábado' },
+  { dia: '2026-08-09', diaSemanaLabel: 'Domingo' },
+] as const
+
+const FIM_DE_SEMANA_SEM_PEDIDO = [
+  {
+    ...DIAS_SEMANA_ATUAL[5],
+    prato: null,
+    tamanho: null,
+    status: null,
+    motivoErro: null,
+  },
+  {
+    ...DIAS_SEMANA_ATUAL[6],
+    prato: null,
+    tamanho: null,
+    status: null,
+    motivoErro: null,
+  },
+] as const
+
+const SEMANAS_ANTERIORES = [
+  { semanaLabel: '27 jul – 02 ago', inicioSemana: '2026-07-27' },
+  { semanaLabel: '20 jul – 26 jul', inicioSemana: '2026-07-20' },
+  { semanaLabel: '13 jul – 19 jul', inicioSemana: '2026-07-13' },
+]
+
+const DIAS_LABEL = [
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado',
+  'Domingo',
+]
+
+const PRATOS_HISTORICO = [
+  'Frango grelhado',
+  'Feijoada leve',
+  'Estrogonofe de frango',
+  'Filé de tilápia',
+  'Salada Caesar',
+]
+
+const TAMANHOS_HISTORICO = ['P', 'M', 'G'] as const
+
+// Gera um histórico de semanas anteriores determinístico (mesmo `seed` sempre
+// produz o mesmo resultado), só pra popular a visão de histórico agrupado por
+// semana enquanto não existe a tabela `pedido` real vinda do Drizzle.
+function gerarHistoricoSemanas(seed: number): EmpresaSemanaPedidos[] {
+  return SEMANAS_ANTERIORES.map((semana, semanaIndex) => {
+    const inicio = new Date(`${semana.inicioSemana}T00:00:00`)
+
+    const pedidos: EmpresaFuncionarioPedido[] = DIAS_LABEL.map(
+      (diaSemanaLabel, diaIndex) => {
+        const data = new Date(inicio)
+        data.setDate(data.getDate() + diaIndex)
+        const dia = data.toISOString().slice(0, 10)
+        const rand = (seed * 31 + semanaIndex * 7 + diaIndex * 3) % 10
+        const ehFimDeSemana = diaIndex >= 5
+
+        if (ehFimDeSemana || rand < 2) {
+          return {
+            dia,
+            diaSemanaLabel,
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          }
+        }
+
+        return {
+          dia,
+          diaSemanaLabel,
+          prato:
+            PRATOS_HISTORICO[rand % PRATOS_HISTORICO.length] ??
+            'Frango grelhado',
+          tamanho: TAMANHOS_HISTORICO[rand % TAMANHOS_HISTORICO.length] ?? 'M',
+          status: 'impresso',
+          motivoErro: null,
+        }
+      }
+    )
+
+    return {
+      semanaLabel: semana.semanaLabel,
+      inicioSemana: semana.inicioSemana,
+      pedidos,
+    }
+  })
+}
 
 export const EMPTY_DETAIL: EmpresaDetail = {
   status: 'ativo',
@@ -17,6 +121,7 @@ export const EMPTY_DETAIL: EmpresaDetail = {
   envios: [],
   respostasSemanais: [],
   faturamentoMensal: [],
+  documentos: [],
 }
 
 export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
@@ -38,6 +143,29 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
       prazoPagamento: 'Todo dia 10, mês seguinte',
       vigente: true,
     },
+    documentos: [
+      {
+        id: 'd1',
+        nome: 'Contrato assinado.pdf',
+        tipo: 'contrato',
+        arquivoUrl: '#',
+        enviadoEm: '2026-01-01',
+      },
+      {
+        id: 'd2',
+        nome: 'Cartão CNPJ.pdf',
+        tipo: 'outro',
+        arquivoUrl: '#',
+        enviadoEm: '2026-01-03',
+      },
+      {
+        id: 'd3',
+        nome: 'Termo de adesão.pdf',
+        tipo: 'outro',
+        arquivoUrl: '#',
+        enviadoEm: '2026-01-05',
+      },
+    ],
     pausas: [
       { id: 'p1', data: '2026-04-21', motivo: 'Feriado municipal' },
       { id: 'p2', data: '2026-06-04', motivo: 'Manutenção do refeitório' },
@@ -52,6 +180,52 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'marmita',
         vinculoStatus: 'ativo',
         respondeuEstaSemana: true,
+        pedidoHoje: {
+          ...DIAS_SEMANA_ATUAL[2],
+          prato: 'Estrogonofe de frango',
+          tamanho: 'M',
+          status: 'impresso',
+          motivoErro: null,
+        },
+        pedidosSemana: [
+          {
+            ...DIAS_SEMANA_ATUAL[0],
+            prato: 'Frango grelhado',
+            tamanho: 'M',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[1],
+            prato: 'Feijoada leve',
+            tamanho: 'M',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[2],
+            prato: 'Estrogonofe de frango',
+            tamanho: 'M',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[3],
+            prato: 'Filé de tilápia',
+            tamanho: 'M',
+            status: 'pendente',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[4],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          ...FIM_DE_SEMANA_SEM_PEDIDO,
+        ],
+        historicoSemanas: gerarHistoricoSemanas(1),
       },
       {
         id: 'f2',
@@ -61,6 +235,52 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'marmita',
         vinculoStatus: 'ativo',
         respondeuEstaSemana: true,
+        pedidoHoje: {
+          ...DIAS_SEMANA_ATUAL[2],
+          prato: 'Feijoada leve',
+          tamanho: 'G',
+          status: 'erro_impressao',
+          motivoErro: 'Sem papel na impressora',
+        },
+        pedidosSemana: [
+          {
+            ...DIAS_SEMANA_ATUAL[0],
+            prato: 'Frango grelhado',
+            tamanho: 'G',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[1],
+            prato: 'Frango grelhado',
+            tamanho: 'G',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[2],
+            prato: 'Feijoada leve',
+            tamanho: 'G',
+            status: 'erro_impressao',
+            motivoErro: 'Impressora offline',
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[3],
+            prato: 'Filé de tilápia',
+            tamanho: 'G',
+            status: 'pendente',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[4],
+            prato: 'Estrogonofe de frango',
+            tamanho: 'G',
+            status: 'pendente',
+            motivoErro: null,
+          },
+          ...FIM_DE_SEMANA_SEM_PEDIDO,
+        ],
+        historicoSemanas: gerarHistoricoSemanas(2),
       },
       {
         id: 'f3',
@@ -70,6 +290,46 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'marmita',
         vinculoStatus: 'ativo',
         respondeuEstaSemana: false,
+        pedidoHoje: null,
+        pedidosSemana: [
+          {
+            ...DIAS_SEMANA_ATUAL[0],
+            prato: 'Salada Caesar',
+            tamanho: 'P',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[1],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[2],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[3],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[4],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          ...FIM_DE_SEMANA_SEM_PEDIDO,
+        ],
+        historicoSemanas: gerarHistoricoSemanas(3),
       },
       {
         id: 'f4',
@@ -79,6 +339,9 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'transport',
         vinculoStatus: 'inativo',
         respondeuEstaSemana: false,
+        pedidoHoje: null,
+        pedidosSemana: [],
+        historicoSemanas: [],
       },
       {
         id: 'f9',
@@ -88,6 +351,52 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'marmita',
         vinculoStatus: 'ativo',
         respondeuEstaSemana: false,
+        pedidoHoje: {
+          ...DIAS_SEMANA_ATUAL[2],
+          prato: 'Filé de tilápia',
+          tamanho: 'P',
+          status: 'pendente',
+          motivoErro: null,
+        },
+        pedidosSemana: [
+          {
+            ...DIAS_SEMANA_ATUAL[0],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[1],
+            prato: 'Frango grelhado',
+            tamanho: 'P',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[2],
+            prato: 'Filé de tilápia',
+            tamanho: 'P',
+            status: 'pendente',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[3],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[4],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          ...FIM_DE_SEMANA_SEM_PEDIDO,
+        ],
+        historicoSemanas: gerarHistoricoSemanas(5),
       },
       {
         id: 'f10',
@@ -97,6 +406,52 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'marmita',
         vinculoStatus: 'ativo',
         respondeuEstaSemana: false,
+        pedidoHoje: {
+          ...DIAS_SEMANA_ATUAL[2],
+          prato: 'Estrogonofe de frango',
+          tamanho: 'G',
+          status: 'pendente',
+          motivoErro: null,
+        },
+        pedidosSemana: [
+          {
+            ...DIAS_SEMANA_ATUAL[0],
+            prato: 'Feijoada leve',
+            tamanho: 'G',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[1],
+            prato: 'Feijoada leve',
+            tamanho: 'G',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[2],
+            prato: 'Estrogonofe de frango',
+            tamanho: 'G',
+            status: 'pendente',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[3],
+            prato: 'Estrogonofe de frango',
+            tamanho: 'G',
+            status: 'pendente',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[4],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          ...FIM_DE_SEMANA_SEM_PEDIDO,
+        ],
+        historicoSemanas: gerarHistoricoSemanas(6),
       },
       {
         id: 'f11',
@@ -106,6 +461,46 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'marmita',
         vinculoStatus: 'ativo',
         respondeuEstaSemana: false,
+        pedidoHoje: null,
+        pedidosSemana: [
+          {
+            ...DIAS_SEMANA_ATUAL[0],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[1],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[2],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[3],
+            prato: 'Salada Caesar',
+            tamanho: 'P',
+            status: 'pendente',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[4],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          ...FIM_DE_SEMANA_SEM_PEDIDO,
+        ],
+        historicoSemanas: gerarHistoricoSemanas(7),
       },
     ],
     envios: [
@@ -229,6 +624,16 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         responsavel: 'Rafael Souza',
         motivoErro: null,
       },
+      {
+        id: 'e13',
+        data: '2026-08-05',
+        horario: '11:24',
+        status: 'enviado',
+        notaFiscalNumero: null,
+        notaFiscalEmitidaEm: null,
+        responsavel: 'Juliana Prado',
+        motivoErro: null,
+      },
     ],
     respostasSemanais: [
       { dia: 'Dom', responderam: 6, pendentes: 2 },
@@ -286,6 +691,22 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
       prazoPagamento: 'Todo dia 5, mês seguinte',
       vigente: true,
     },
+    documentos: [
+      {
+        id: 'd4',
+        nome: 'Contrato assinado.pdf',
+        tipo: 'contrato',
+        arquivoUrl: '#',
+        enviadoEm: '2026-03-02',
+      },
+      {
+        id: 'd5',
+        nome: 'Comprovante de endereço.pdf',
+        tipo: 'outro',
+        arquivoUrl: '#',
+        enviadoEm: '2026-03-04',
+      },
+    ],
     pausas: [],
     funcionarios: [
       {
@@ -296,6 +717,52 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'marmita',
         vinculoStatus: 'ativo',
         respondeuEstaSemana: true,
+        pedidoHoje: {
+          ...DIAS_SEMANA_ATUAL[2],
+          prato: 'Frango grelhado',
+          tamanho: 'M',
+          status: 'impresso',
+          motivoErro: null,
+        },
+        pedidosSemana: [
+          {
+            ...DIAS_SEMANA_ATUAL[0],
+            prato: 'Frango grelhado',
+            tamanho: 'M',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[1],
+            prato: 'Feijoada leve',
+            tamanho: 'M',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[2],
+            prato: 'Frango grelhado',
+            tamanho: 'M',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[3],
+            prato: 'Estrogonofe de frango',
+            tamanho: 'M',
+            status: 'pendente',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[4],
+            prato: 'Filé de tilápia',
+            tamanho: 'M',
+            status: 'pendente',
+            motivoErro: null,
+          },
+          ...FIM_DE_SEMANA_SEM_PEDIDO,
+        ],
+        historicoSemanas: gerarHistoricoSemanas(8),
       },
       {
         id: 'f6',
@@ -305,6 +772,52 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'marmita',
         vinculoStatus: 'ativo',
         respondeuEstaSemana: false,
+        pedidoHoje: {
+          ...DIAS_SEMANA_ATUAL[2],
+          prato: 'Feijoada leve',
+          tamanho: 'M',
+          status: 'erro_impressao',
+          motivoErro: 'Falha de conexão com a impressora',
+        },
+        pedidosSemana: [
+          {
+            ...DIAS_SEMANA_ATUAL[0],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[1],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[2],
+            prato: 'Feijoada leve',
+            tamanho: 'M',
+            status: 'erro_impressao',
+            motivoErro: 'Sem papel na impressora',
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[3],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[4],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          ...FIM_DE_SEMANA_SEM_PEDIDO,
+        ],
+        historicoSemanas: gerarHistoricoSemanas(9),
       },
       {
         id: 'f12',
@@ -314,6 +827,46 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         modalidade: 'marmita',
         vinculoStatus: 'ativo',
         respondeuEstaSemana: false,
+        pedidoHoje: null,
+        pedidosSemana: [
+          {
+            ...DIAS_SEMANA_ATUAL[0],
+            prato: 'Salada Caesar',
+            tamanho: 'P',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[1],
+            prato: 'Salada Caesar',
+            tamanho: 'P',
+            status: 'impresso',
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[2],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[3],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          {
+            ...DIAS_SEMANA_ATUAL[4],
+            prato: null,
+            tamanho: null,
+            status: null,
+            motivoErro: null,
+          },
+          ...FIM_DE_SEMANA_SEM_PEDIDO,
+        ],
+        historicoSemanas: gerarHistoricoSemanas(10),
       },
     ],
     envios: [
@@ -355,6 +908,16 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
         notaFiscalNumero: '000217',
         notaFiscalEmitidaEm: '2026-07-30',
         responsavel: 'Juliana Prado',
+        motivoErro: null,
+      },
+      {
+        id: 'e14',
+        data: '2026-08-05',
+        horario: '12:02',
+        status: 'enviado',
+        notaFiscalNumero: null,
+        notaFiscalEmitidaEm: null,
+        responsavel: 'Marcos Vieira',
         motivoErro: null,
       },
     ],
@@ -406,6 +969,7 @@ export const mockEmpresaDetails: Record<string, EmpresaDetail> = {
       uf: 'SP',
     },
     contrato: undefined,
+    documentos: [],
     pausas: [{ id: 'p3', data: '2026-06-20', motivo: null }],
     funcionarios: [],
     envios: [
