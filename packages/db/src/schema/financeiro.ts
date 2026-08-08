@@ -105,12 +105,17 @@ export const conta_a_pagar = pgTable(
     status: contaStatusEnum('status').notNull().default('pendente'),
     data_pagamento: date('data_pagamento'),
     observacao: text('observacao'),
+    // Quem gerou esta conta — hoje `compra`, amanhã salário/benefício (Fase 3).
+    // Mesmo par de colunas que `transacao_financeira` usa.
+    origem_tipo: text('origem_tipo'),
+    origem_id: text('origem_id'),
     user_id: text('user_id').references(() => user.id),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [
     index('conta_a_pagar_status_venc_idx').on(t.status, t.data_vencimento),
     index('conta_a_pagar_venc_idx').on(t.data_vencimento),
+    index('conta_a_pagar_origem_idx').on(t.origem_tipo, t.origem_id),
   ]
 )
 

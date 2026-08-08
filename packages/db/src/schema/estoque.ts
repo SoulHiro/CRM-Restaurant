@@ -193,10 +193,9 @@ export const inventario_fisico_item = pgTable(
   ]
 )
 
-export const fornecedorRelations = relations(fornecedor, ({ many }) => ({
-  itensPadrao: many(estoque_item),
-  precos: many(historico_preco_insumo),
-}))
+// `fornecedorRelations` vive em `compras.ts`: precisa enxergar compra,
+// fornecedor_item e avaliacao_fornecedor, e este arquivo não pode importar
+// aquele sem criar ciclo (compras.ts já importa estoque.ts).
 
 export const estoqueItemRelations = relations(
   estoque_item,
