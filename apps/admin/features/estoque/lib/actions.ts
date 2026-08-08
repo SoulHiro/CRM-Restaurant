@@ -88,6 +88,7 @@ export const updateEstoqueItemAction = authActionClient
               : null,
           ponto_reposicao: toNumericString(parsedInput.pontoReposicao),
           validade: parsedInput.validade ?? null,
+          fornecedor_padrao_id: parsedInput.fornecedorPadraoId?.trim() || null,
         })
         .where(eq(estoque_item.id, parsedInput.id)),
     ]

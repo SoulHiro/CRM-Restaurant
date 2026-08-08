@@ -61,6 +61,9 @@ export const updateEstoqueItemSchema = z.object({
   tamanhoEmbalagem: numeroOpcional,
   pontoReposicao: quantidade,
   validade: dataOpcional,
+  // '' = "nenhum": o Select do shadcn não aceita item com valor vazio, então
+  // a ausência vem como string vazia e vira null na action.
+  fornecedorPadraoId: z.string().optional(),
   novoPreco: numeroOpcional,
   precoDataVigencia: z.string().optional(),
 })

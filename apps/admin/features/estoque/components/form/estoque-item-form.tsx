@@ -42,12 +42,17 @@ import type { EstoqueItem } from '../../lib/types'
 import { UNIDADES } from '../../lib/types'
 import { formatQuantidade } from '../shared/quantidade'
 
+const SEM_FORNECEDOR = 'nenhum'
+
 export function EstoqueItemForm({
   item,
+  fornecedores,
   open,
   onOpenChange,
 }: {
   item?: EstoqueItem
+  /** Só o Editar usa: é onde se define de quem esse item é comprado. */
+  fornecedores?: { id: string; nome: string }[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -70,6 +75,7 @@ export function EstoqueItemForm({
     tamanhoEmbalagem: item?.tamanhoEmbalagem ?? undefined,
     pontoReposicao: item?.pontoReposicao ?? 0,
     validade: item?.validade ?? undefined,
+    fornecedorPadraoId: item?.fornecedorPadraoId ?? '',
     novoPreco: undefined,
     precoDataVigencia: hoje,
   }
@@ -271,6 +277,44 @@ export function EstoqueItemForm({
                 </FormItem>
               )}
             />
+
+            {fornecedores && fornecedores.length > 0 && (
+              <FormField
+                control={formEditar.control}
+                name="fornecedorPadraoId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fornecedor padrão (opcional)</FormLabel>
+                    <Select
+                      value={field.value || SEM_FORNECEDOR}
+                      onValueChange={(valor) =>
+                        field.onChange(valor === SEM_FORNECEDOR ? '' : valor)
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11 sm:h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={SEM_FORNECEDOR}>
+                          Nenhum
+                        </SelectItem>
+                        {fornecedores.map((fornecedor) => (
+                          <SelectItem key={fornecedor.id} value={fornecedor.id}>
+                            {fornecedor.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      É por ele que a lista de compra sugerida agrupa este item.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="flex flex-col gap-4 border-t pt-6">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

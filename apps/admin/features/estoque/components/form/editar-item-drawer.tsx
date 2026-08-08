@@ -17,7 +17,13 @@ import { useDrawerDirection } from '@/hooks/use-drawer-direction'
 import type { EstoqueItem } from '../../lib/types'
 import { EstoqueItemForm } from './estoque-item-form'
 
-export function EditarItemDrawer({ item }: { item: EstoqueItem }) {
+export function EditarItemDrawer({
+  item,
+  fornecedores,
+}: {
+  item: EstoqueItem
+  fornecedores: { id: string; nome: string }[]
+}) {
   const [open, setOpen] = useState(false)
   const { direction, variant } = useDrawerDirection()
 
@@ -42,7 +48,12 @@ export function EditarItemDrawer({ item }: { item: EstoqueItem }) {
           </DrawerDescription>
         </DrawerHeader>
 
-        <EstoqueItemForm item={item} open={open} onOpenChange={setOpen} />
+        <EstoqueItemForm
+          item={item}
+          fornecedores={fornecedores}
+          open={open}
+          onOpenChange={setOpen}
+        />
       </DrawerContent>
     </Drawer>
   )

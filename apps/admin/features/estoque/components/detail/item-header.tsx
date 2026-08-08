@@ -24,9 +24,11 @@ function textoValidade(validade: string | null, hoje: string): string | null {
 
 export function ItemHeader({
   item,
+  fornecedores,
   hoje,
 }: {
   item: EstoqueItem
+  fornecedores: { id: string; nome: string }[]
   hoje: string
 }) {
   const nivel = nivelEstoque(item)
@@ -76,7 +78,7 @@ export function ItemHeader({
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <AjustarQuantidadeDrawer item={item} />
           <RegistrarPerdaDrawer item={item} hoje={hoje} />
-          <EditarItemDrawer item={item} />
+          <EditarItemDrawer item={item} fornecedores={fornecedores} />
           <DesativarItemButton item={item} />
         </div>
       </div>
