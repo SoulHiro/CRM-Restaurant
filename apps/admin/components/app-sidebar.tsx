@@ -6,6 +6,7 @@ import {
   BookOpen,
   Building2,
   Package,
+  ShoppingCart,
   Wallet,
   Users,
   CreditCard,
@@ -52,6 +53,12 @@ const NAV_ITEMS = [
     title: 'Financeiro',
     url: '/financeiro',
     icon: Wallet,
+    roles: ['admin', 'financeiro'],
+  },
+  {
+    title: 'Compras',
+    url: '/compras',
+    icon: ShoppingCart,
     roles: ['admin', 'financeiro'],
   },
   {
