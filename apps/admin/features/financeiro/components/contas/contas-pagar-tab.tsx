@@ -30,10 +30,7 @@ export function ContasPagarTab({
   filtro: ContaFiltro
   hoje: string
 }) {
-  const visiveis = ordenarPorUrgencia(
-    filtrarContas(contas, filtro, hoje),
-    hoje
-  )
+  const visiveis = ordenarPorUrgencia(filtrarContas(contas, filtro, hoje))
 
   return (
     <div className="flex flex-col gap-4">

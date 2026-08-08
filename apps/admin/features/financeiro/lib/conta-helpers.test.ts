@@ -153,14 +153,11 @@ describe('resumirContas', () => {
 
 describe('ordenarPorUrgencia', () => {
   it('coloca o mais atrasado primeiro e joga o pago pro fim', () => {
-    const ordenadas = ordenarPorUrgencia(
-      [
-        pagar({ id: 'futuro', dataVencimento: '2026-09-01' }),
-        pagar({ id: 'pago', dataVencimento: '2026-07-01', status: 'pago' }),
-        pagar({ id: 'atrasado', dataVencimento: '2026-08-01' }),
-      ],
-      '2026-08-10'
-    )
+    const ordenadas = ordenarPorUrgencia([
+      pagar({ id: 'futuro', dataVencimento: '2026-09-01' }),
+      pagar({ id: 'pago', dataVencimento: '2026-07-01', status: 'pago' }),
+      pagar({ id: 'atrasado', dataVencimento: '2026-08-01' }),
+    ])
 
     expect(ordenadas.map((c) => c.id)).toEqual(['atrasado', 'futuro', 'pago'])
   })

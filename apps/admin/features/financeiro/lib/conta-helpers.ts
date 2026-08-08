@@ -84,10 +84,7 @@ export function resumirContas(
  * Ordem de trabalho, não ordem de cadastro: o que está atrasado há mais tempo
  * vem primeiro, depois o que vence antes, e o que já foi pago desce pro fim.
  */
-export function ordenarPorUrgencia<T extends ContaBase>(
-  contas: T[],
-  hoje: string
-): T[] {
+export function ordenarPorUrgencia<T extends ContaBase>(contas: T[]): T[] {
   return [...contas].sort((a, b) => {
     const aPago = a.status === 'pago'
     const bPago = b.status === 'pago'

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { and, eq } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
-import { executarLote, type Statement } from '@/lib/db-batch'
+import { executarLote } from '@/lib/db-batch'
 import { toMoneyString } from '@/lib/numeric'
 import { ActionError, authActionClient } from '@/lib/safe-action'
 import {
