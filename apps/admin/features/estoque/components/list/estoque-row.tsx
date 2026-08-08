@@ -6,7 +6,7 @@ import { cn } from '@repo/ui/lib/utils'
 
 import { nivelEstoque } from '../../lib/estoque-helpers'
 import type { EstoqueItem } from '../../lib/types'
-import { MobileCellLabel } from '../shared/mobile-cell-label'
+import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
 import { NivelEstoqueBadge } from '../shared/nivel-estoque-badge'
 import { Quantidade } from '../shared/quantidade'
 import { ValidadeBadge } from '../shared/validade-badge'

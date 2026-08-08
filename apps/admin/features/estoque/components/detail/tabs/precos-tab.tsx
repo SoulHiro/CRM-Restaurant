@@ -2,9 +2,13 @@ import { EmptyState } from '@repo/ui/components/empty-state'
 import { StatCard } from '@repo/ui/components/stat-card'
 import { cn } from '@repo/ui/lib/utils'
 
-import { formatCurrencyBRL, formatDateBR } from '@/lib/formatters'
+import {
+  formatCurrencyBRL,
+  formatDateBR,
+  formatPercentBR,
+} from '@/lib/formatters'
 import type { PrecoInsumo, Unidade } from '../../../lib/types'
-import { MobileCellLabel } from '../../shared/mobile-cell-label'
+import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
 
 const GRID_COLUMNS = 'sm:grid-cols-[1fr_1fr_1fr_1.4fr]'
 
@@ -46,7 +50,7 @@ export function PrecosTab({
           value={
             variacaoTotal == null
               ? '—'
-              : `${variacaoTotal > 0 ? '+' : ''}${variacaoTotal}%`
+              : `${variacaoTotal > 0 ? '+' : ''}${formatPercentBR(variacaoTotal)}%`
           }
           valueClassName={cn(
             'text-2xl font-semibold',
@@ -127,7 +131,7 @@ export function PrecosTab({
                 <MobileCellLabel>Variação</MobileCellLabel>
                 {variacao == null
                   ? '—'
-                  : `${variacao > 0 ? '+' : ''}${variacao}%`}
+                  : `${variacao > 0 ? '+' : ''}${formatPercentBR(variacao)}%`}
               </span>
               <span
                 role="cell"

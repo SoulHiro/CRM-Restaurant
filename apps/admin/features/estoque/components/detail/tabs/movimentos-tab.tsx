@@ -3,7 +3,7 @@ import { cn } from '@repo/ui/lib/utils'
 
 import { formatDateBR } from '@/lib/formatters'
 import type { EstoqueMovimento, Unidade } from '../../../lib/types'
-import { MobileCellLabel } from '../../shared/mobile-cell-label'
+import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
 import { MovimentoTipoBadge } from '../../shared/movimento-tipo-badge'
 import { Quantidade } from '../../shared/quantidade'
 

@@ -4,7 +4,7 @@ import { cn } from '@repo/ui/lib/utils'
 
 import { formatDateBR } from '@/lib/formatters'
 import type { PerdaEstoque, PerdaMotivo, Unidade } from '../../../lib/types'
-import { MobileCellLabel } from '../../shared/mobile-cell-label'
+import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
 import { formatQuantidade, Quantidade } from '../../shared/quantidade'
 
 const MOTIVO_LABELS: Record<PerdaMotivo, string> = {

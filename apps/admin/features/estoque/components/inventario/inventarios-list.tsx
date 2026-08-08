@@ -6,7 +6,7 @@ import { cn } from '@repo/ui/lib/utils'
 
 import { formatDateBR } from '@/lib/formatters'
 import type { InventarioResumo } from '../../lib/types'
-import { MobileCellLabel } from '../shared/mobile-cell-label'
+import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
 
 const GRID_COLUMNS = 'sm:grid-cols-[1fr_1.4fr_1fr_1fr_1fr]'
 

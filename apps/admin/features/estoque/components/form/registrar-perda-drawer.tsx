@@ -13,7 +13,7 @@ import {
   DrawerTrigger,
 } from '@repo/ui/components/drawer'
 
-import { useDrawerDirection } from '../../hooks/use-drawer-direction'
+import { useDrawerDirection } from '@/hooks/use-drawer-direction'
 import type { EstoqueItem } from '../../lib/types'
 import { RegistrarPerdaForm } from './registrar-perda-form'
 

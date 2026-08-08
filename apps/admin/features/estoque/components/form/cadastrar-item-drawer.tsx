@@ -13,7 +13,7 @@ import {
   DrawerTrigger,
 } from '@repo/ui/components/drawer'
 
-import { useDrawerDirection } from '../../hooks/use-drawer-direction'
+import { useDrawerDirection } from '@/hooks/use-drawer-direction'
 import { EstoqueItemForm } from './estoque-item-form'
 
 export function CadastrarItemDrawer() {

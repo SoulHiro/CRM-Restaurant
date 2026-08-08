@@ -29,7 +29,7 @@ import {
 } from '@repo/ui/components/form'
 import { Input } from '@repo/ui/components/input'
 
-import { useDrawerDirection } from '../../hooks/use-drawer-direction'
+import { useDrawerDirection } from '@/hooks/use-drawer-direction'
 import { iniciarInventarioAction } from '../../lib/actions'
 import {
   iniciarInventarioSchema,

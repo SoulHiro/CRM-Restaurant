@@ -4,7 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
+import { executarLote, type Statement } from '@/lib/db-batch'
 import { hojeISO } from '@/lib/formatters'
+import { toNumber, toNumericString } from '@/lib/numeric'
 import { ActionError, authActionClient } from '@/lib/safe-action'
 import {
   estoque_item,
@@ -14,14 +16,8 @@ import {
   perda_estoque,
 } from '@repo/db'
 
-import {
-  executarLote,
-  lerSaldoAtual,
-  planejarMovimento,
-  type Statement,
-} from './aplicar-movimento'
+import { lerSaldoAtual, planejarMovimento } from './aplicar-movimento'
 import { calcularDiferenca } from './inventario-helpers'
-import { toNumber, toNumericString } from './numeric'
 import {
   ajustarQuantidadeSchema,
   createEstoqueItemSchema,

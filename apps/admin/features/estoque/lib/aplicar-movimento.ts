@@ -3,9 +3,9 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
+import { toNumber, toNumericString } from '@/lib/numeric'
 import { estoque_item, estoque_movimento } from '@repo/db'
 
-import { toNumber, toNumericString } from './numeric'
 import type { MovimentoTipo } from './types'
 
 export interface MovimentoPlanejado {
@@ -22,18 +22,6 @@ export interface MovimentoPlanejado {
 export interface MovimentoAplicado {
   saldoAnterior: number
   saldoResultante: number
-}
-
-export type Statement = Parameters<typeof db.batch>[0][number]
-
-/**
- * `db.batch` é a única forma de transação do driver neon-http (a variante
- * interativa `db.transaction(cb)` lança em runtime). Por isso todo saldo é
- * lido e calculado antes, e só os statements prontos vão para o lote.
- */
-export async function executarLote(statements: Statement[]): Promise<void> {
-  if (statements.length === 0) return
-  await db.batch(statements as [Statement, ...Statement[]])
 }
 
 /**

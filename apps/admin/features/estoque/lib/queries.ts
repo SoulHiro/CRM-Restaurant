@@ -11,7 +11,7 @@ import {
   perda_estoque,
 } from '@repo/db'
 
-import { toNumber } from './numeric'
+import { toNumber } from '@/lib/numeric'
 import { selecionarAlertas } from './estoque-helpers'
 import type {
   AlertasEstoque,

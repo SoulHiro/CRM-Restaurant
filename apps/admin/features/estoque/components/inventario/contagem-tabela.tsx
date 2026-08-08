@@ -1,7 +1,7 @@
 import { cn } from '@repo/ui/lib/utils'
 
 import type { InventarioLinha } from '../../lib/types'
-import { MobileCellLabel } from '../shared/mobile-cell-label'
+import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
 import { formatQuantidade, Quantidade } from '../shared/quantidade'
 import { ContagemLinha } from './contagem-linha'
 
