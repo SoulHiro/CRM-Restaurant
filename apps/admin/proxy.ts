@@ -7,6 +7,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   '/cardapio': ['admin'],
   '/empresas': ['admin', 'caixa'],
   '/estoque': ['admin', 'cozinha'],
+  '/financeiro': ['admin', 'financeiro'],
   '/funcionarios': ['admin'],
   '/fiado': ['admin', 'caixa', 'financeiro'],
   '/placar': ['admin', 'caixa', 'financeiro'],

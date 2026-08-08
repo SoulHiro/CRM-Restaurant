@@ -231,29 +231,67 @@ avaliacao_fornecedor
   - tipo: atraso | qualidade | produto_vencido | outro
 ```
 
-## Financeiro Consolidado — PRIORIDADE DE IMPLEMENTAÇÃO
+## Financeiro Consolidado — IMPLEMENTADO (Fase 2a)
 
 ```
-transacao_financeira
-  - id, origem: anotai | ifood | pagbank | marmita_b2b | manual
-  - valor, data, tipo: receita | despesa
-  - referencia_externa (nullable), sincronizado_em
-  -- FASE INICIAL: popular manualmente (lançamento direto), sem sync automático de API ainda
+transacao_financeira                    -- livro-razão do dinheiro, fonte ÚNICA do DRE
+  - id, tipo: receita | despesa
+  - origem: manual | anotai | ifood | pagbank | marmita_b2b
+  - valor          -- numeric(12,2), SEMPRE positivo; o sinal vem de `tipo`
+  - data, descricao
+  - categoria: fixa | variavel (nullable — só despesa)
+  - subtipo: aluguel | salario | vale_transporte | imposto | fornecedor |
+             insumo | equipamento | manutencao | taxa_plataforma | outro (nullable)
+  - origem_tipo, origem_id (nullable)   -- conta_a_pagar | conta_a_receber_b2b
+  - referencia_externa, sincronizado_em (nullable)  -- prontos p/ integração futura
+  - user_id (FK, nullable), created_at
+  -- índices: data, (tipo,data), origem, (origem_tipo,origem_id)
 
 conta_a_pagar
-  - id, descricao
-  - categoria: fixa | variavel
-  - subtipo: aluguel | salario | vale_transporte | imposto | fornecedor | outro
+  - id, descricao, categoria, subtipo
   - valor, data_vencimento
-  - status: pago | pendente | atrasado
+  - status: pendente | pago
+  - data_pagamento (nullable), observacao, user_id (nullable), created_at
 
 conta_a_receber_b2b
-  - id, empresa_id (FK), periodo, valor
-  - status: pago | pendente | atrasado
+  - id, empresa_id (FK, NULLABLE), empresa_nome (text, obrigatório)
+  - periodo (ex: "2026-08"), valor, data_vencimento
+  - status: pendente | pago
+  - data_pagamento (nullable), observacao, user_id (nullable), created_at
+
+meta
+  - id, descricao, tipo: financeira | operacional
+  - valor_alvo (nullable), inicio, prazo, ativa, created_at
+
+progresso_meta                          -- só aportes/retiradas manuais
+  - id, meta_id (FK cascade), data
+  - valor          -- DELTA (+aporte / −retirada), não total acumulado
+  - origem: dre_automatico | ajuste_manual
+  - observacao, user_id (nullable), created_at
 ```
 
-**DRE Simplificado:** Receita (soma transacao_financeira tipo=receita) − Custo/Despesa (soma tipo=despesa) = Lucro, por mês.
-**Margem por Canal:** agrupar transacao_financeira por origem, descontando comissão (iFood 12-26,5%, AnotaAí 0%).
+**A regra que sustenta o módulo:** `transacao_financeira` é para dinheiro o que
+`estoque_movimento` é para estoque. Conta a pagar/receber é **previsão** e nunca entra
+no DRE direto — só vira linha no livro-razão quando marcada como paga, e a transação
+nasce no mesmo `db.batch` da mudança de status. Desfazer o pagamento apaga a transação
+vinculada. É isso que impede o mesmo dinheiro ser contado duas vezes.
+
+**Três desvios deliberados do desenho original:**
+
+1. `status` guarda só `pendente | pago` — **"atrasado" é derivado** (`pendente &&
+   vencimento < hoje`). Guardar as três exigiria um job para virar pendente→atrasado;
+   sem ele rodando, o dado mentiria. Mesmo princípio dos alertas de estoque.
+2. `meta.inicio` é campo novo — somar "o lucro desde o começo do período" exige uma
+   data de partida.
+3. `progresso_meta.valor` é delta, não `valor_acumulado`: o progresso automático é
+   calculado ao vivo do DRE, então a tabela só guarda o que o DRE não enxerga.
+
+**DRE Simplificado:** Receita − Despesa = Lucro, por mês, lido só de `transacao_financeira`.
+Separa despesa fixa de variável para mostrar o ponto de equilíbrio.
+**Margem por Canal:** agrupa `transacao_financeira` por origem (iFood 12-26,5%, AnotaAí 0%
+de comissão — desconto entra na fase de integração).
+**Ainda fora (Fase 2b):** `compra`, `fornecedor_item`, `avaliacao_fornecedor` e a UI de
+fornecedor. A tabela `fornecedor` já existe desde a Fase 1.
 
 ## Metas (unificado — inclui Meta de Novembro)
 

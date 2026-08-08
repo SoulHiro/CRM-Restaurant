@@ -6,6 +6,7 @@ import {
   BookOpen,
   Building2,
   Package,
+  Wallet,
   Users,
   CreditCard,
   BarChart3,
@@ -46,6 +47,12 @@ const NAV_ITEMS = [
     url: '/estoque',
     icon: Package,
     roles: ['admin', 'cozinha'],
+  },
+  {
+    title: 'Financeiro',
+    url: '/financeiro',
+    icon: Wallet,
+    roles: ['admin', 'financeiro'],
   },
   {
     title: 'Funcionários',

@@ -63,12 +63,36 @@ Três coisas que valem para qualquer feature nova deste app:
 
 - **`db.batch([...])`, não `db.transaction(cb)`.** O driver `neon-http` só tem
   transação não-interativa; a variante com callback lança em runtime. Leia e
-  calcule antes, depois mande os statements prontos no lote.
+  calcule antes, depois mande os statements prontos no lote — use
+  `executarLote` de `lib/db-batch.ts`.
 - **`numeric` chega como string.** Converta em `queries.ts` e devolva `number`
-  nos tipos — componente nenhum deve ver `"9.000"`.
+  nos tipos (`lib/numeric.ts`) — componente nenhum deve ver `"9.000"`.
 - **Erro de action só aparece na tela se for `ActionError`** (`lib/safe-action.ts`).
   Qualquer outra exceção vira mensagem genérica de propósito, para não vazar
   detalhe de banco.
+
+## Livro-razão: o padrão dos dois módulos
+
+`estoque_movimento` (Fase 1) e `transacao_financeira` (Fase 2a) seguem a mesma
+ideia, e features novas que mexam com saldo devem copiá-la:
+
+- Uma tabela append-only é a **fonte única** do número derivado (saldo de item,
+  DRE do mês). Nada soma "por fora".
+- Um caminho de escrita só (`aplicar-movimento.ts` no estoque; a própria action
+  no financeiro), sempre dentro de um `db.batch`, para o registro e o efeito
+  nunca saírem de sincronia.
+- Desfazer apaga o registro vinculado (`origem_tipo` + `origem_id`), sem deixar
+  linha órfã inflando o total.
+- Estado que apodrece (estoque "baixo", conta "atrasada") é **derivado por
+  query/helper**, nunca gravado — sem job para atualizar, dado gravado mente.
+
+## Datas: dia de calendário ≠ instante
+
+`lib/formatters.ts` trata os dois casos separadamente, e isso não é detalhe:
+`new Date('2026-11-08')` é meia-noite **UTC** e, formatado em Brasília (−3h),
+volta um dia — 08/11 vira 07/11. Colunas `date` do Postgres são reordenadas
+como texto, sem `Date` no caminho; só timestamp real passa por fuso. Coberto em
+`lib/formatters.test.ts`.
 
 ## Testes
 
