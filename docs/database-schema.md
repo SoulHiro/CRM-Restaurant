@@ -202,34 +202,64 @@ sem mudança de schema.
 **Fluxo de baixa:** venda de qualquer canal → consulta ficha_tecnica_item →
 grava movimento `baixa_venda` → decrementa estoque_item. **Fase futura.**
 
-## Compras e Fornecedores
+## Compras e Fornecedores — IMPLEMENTADO (Fase 2b)
 
-`fornecedor` já existe no banco (criado junto com o módulo de Estoque, para
-que `estoque_item.fornecedor_padrao_id` e `historico_preco_insumo.fornecedor_id`
-fossem FKs reais desde o início). Ainda **sem UI** — entra na Fase 2.
+`fornecedor` já existia (criado junto com Estoque, para que
+`estoque_item.fornecedor_padrao_id` e `historico_preco_insumo.fornecedor_id`
+fossem FKs reais desde o início) e agora tem UI em `/compras`.
 
 ```
 fornecedor
   - id, nome, contato, prazo_entrega_dias, prazo_pagamento, created_at
+  -- prazo_pagamento é TEXTO LIVRE ("30 dias", "à vista", "15/30"): é assim
+  --   que a condição vem na conversa. `diasDoPrazo()` lê o primeiro número.
+
+compra                                  -- CABEÇALHO: uma nota fiscal
+  - id, fornecedor_id (FK)
+  - numero_nota_fiscal (nullable)
+  - arquivo_nota_fiscal (nullable — Vercel Blob, fase futura)
+  - categoria_despesa (reusa despesa_subtipo do Financeiro)
+  - status: pedido_feito | aguardando_entrega | recebido | cancelado
+  - data_pedido, data_recebimento (nullable), forma_pagamento, observacao
+  - user_id (FK, nullable), created_at
+  - index: (status, data_pedido), fornecedor_id
+
+compra_item                             -- LINHAS da nota
+  - id, compra_id (FK cascade), estoque_item_id (FK)
+  - quantidade numeric(12,3), valor_unitario numeric(12,2)
+  - unique (compra_id, estoque_item_id)
+  -- total da linha é DERIVADO, nunca gravado
 
 fornecedor_item (N:N — múltiplos fornecedores por insumo)
-  - fornecedor_id (FK), estoque_item_id (FK)
-  - preco, prazo_entrega_dias
-
-compra
-  - id, fornecedor_id (FK), estoque_item_id (FK)
-  - item, quantidade, valor_unitario
-  - numero_nota_fiscal
-  - arquivo_nota_fiscal (Vercel Blob — PDF)
-  - categoria_despesa: insumo | equipamento | manutencao | outro
-  - status: pedido_feito | aguardando_entrega | recebido
-  - data_pedido, data_recebimento (nullable), forma_pagamento
+  - id, fornecedor_id (FK cascade), estoque_item_id (FK cascade)
+  - preco, prazo_entrega_dias (nullable), observacao, created_at
+  - unique (fornecedor_id, estoque_item_id)
 
 avaliacao_fornecedor
-  - id, fornecedor_id (FK)
+  - id, fornecedor_id (FK cascade)
   - data, nota (1-5), observacao
   - tipo: atraso | qualidade | produto_vencido | outro
+  - user_id (FK, nullable), created_at
+  - index: (fornecedor_id, data)
 ```
+
+Uma nota é **uma entrega e um pagamento só** — por isso cabeçalho + linhas, e
+não um registro por item (mesma decisão do inventário físico).
+
+**Registrar compra** (um `db.batch`): insere `compra` + `compra_item[]` +
+`conta_a_pagar` com `origem_tipo='compra'`. É o que elimina a digitação dupla:
+a despesa não depende de alguém lembrar de lançá-la.
+
+**Marcar recebida** (um `db.batch`): `status → recebido`, um movimento
+`entrada_compra` por linha (via `planejarMovimento`, do Estoque) e uma linha
+nova em `historico_preco_insumo` com o fornecedor. **É irreversível**: os
+movimentos encadeiam `saldo_resultante`, e apagá-los faria todo movimento
+posterior daquele item mentir. Depois de recebida, a correção é por "Ajustar
+quantidade". Antes disso dá para cancelar — e o cancelamento apaga a conta a
+pagar gerada (bloqueado se ela já foi quitada).
+
+Entrega atrasada é **derivada** (`pedido + prazo_entrega_dias < hoje`), nunca
+gravada — mesma regra do "estoque baixo" e da "conta atrasada".
 
 ## Financeiro Consolidado — IMPLEMENTADO (Fase 2a)
 
@@ -252,6 +282,8 @@ conta_a_pagar
   - valor, data_vencimento
   - status: pendente | pago
   - data_pagamento (nullable), observacao, user_id (nullable), created_at
+  - origem_tipo, origem_id (nullable)   -- 'compra' hoje; salário/benefício na Fase 3
+  -- índices: (status,data_vencimento), data_vencimento, (origem_tipo,origem_id)
 
 conta_a_receber_b2b
   - id, empresa_id (FK, NULLABLE), empresa_nome (text, obrigatório)

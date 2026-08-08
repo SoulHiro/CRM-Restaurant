@@ -71,10 +71,24 @@ Três coisas que valem para qualquer feature nova deste app:
   Qualquer outra exceção vira mensagem genérica de propósito, para não vazar
   detalhe de banco.
 
-## Livro-razão: o padrão dos dois módulos
+## Um módulo nunca escreve na tabela de outro
 
-`estoque_movimento` (Fase 1) e `transacao_financeira` (Fase 2a) seguem a mesma
-ideia, e features novas que mexam com saldo devem copiá-la:
+`features/compras` (Fase 2b) é o primeiro caso: registrar uma compra precisa
+mexer em estoque e em financeiro. Ele **não** escreve em `estoque_movimento`
+nem em `conta_a_pagar` por conta própria — pede para quem é dono da regra:
+
+- `features/estoque/lib/aplicar-movimento.ts` → `planejarMovimento()`
+- `features/financeiro/lib/planejar-conta.ts` → `planejarContaPagar()`
+
+Os dois **devolvem statements, nunca executam** — o chamador junta tudo num
+`executarLote` só. A dependência anda numa direção só (compras → estoque e
+financeiro), e a regra de negócio de cada domínio continua num lugar só.
+
+## Livro-razão: o padrão dos três módulos
+
+`estoque_movimento` (Fase 1), `transacao_financeira` (Fase 2a) e `compra`
+(Fase 2b) seguem a mesma ideia, e features novas que mexam com saldo devem
+copiá-la:
 
 - Uma tabela append-only é a **fonte única** do número derivado (saldo de item,
   DRE do mês). Nada soma "por fora".
@@ -82,7 +96,11 @@ ideia, e features novas que mexam com saldo devem copiá-la:
   no financeiro), sempre dentro de um `db.batch`, para o registro e o efeito
   nunca saírem de sincronia.
 - Desfazer apaga o registro vinculado (`origem_tipo` + `origem_id`), sem deixar
-  linha órfã inflando o total.
+  linha órfã inflando o total. **Onde o saldo é encadeado, não se desfaz**:
+  receber uma compra e finalizar um inventário geram movimentos com
+  `saldo_resultante`, e apagá-los faria todo movimento posterior daquele item
+  mentir — a correção vira "Ajustar quantidade". Financeiro pode apagar porque
+  `transacao_financeira` é uma lista plana que se soma.
 - Estado que apodrece (estoque "baixo", conta "atrasada") é **derivado por
   query/helper**, nunca gravado — sem job para atualizar, dado gravado mente.
 
