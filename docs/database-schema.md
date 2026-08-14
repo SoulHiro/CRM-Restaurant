@@ -343,47 +343,136 @@ progresso_meta
   - origem: dre_automatico | ajuste_manual
 ```
 
-## RH Interno — PRIORIDADE DE IMPLEMENTAÇÃO (em sequência)
+## RH Interno — IMPLEMENTADO (Fase 3)
 
 ```
 cargo
   - id, nome (ex: Cozinheiro, Caixa, Garçom, Entregador)
-  - salario_base
+  - salario_base numeric(12,2)          -- por mês
+  - valor_diaria_padrao (nullable)      -- por dia, em cargo de diarista
+  - ativo, created_at
+  -- os dois são só a SUGESTÃO que aparece ao admitir; o valor de cada pessoa
+  -- vem do histórico de salário ou da extensão entregador. Cargo com
+  -- `valor_diaria_padrao` preenchido já marca o admitido como entregador.
 
-funcionarios_internos
+funcionario_interno                     -- quem trabalha NO restaurante
   - id, nome
-  - cpf (ENCRYPTED)
-  - cnpj (nullable — apenas se modelo_contratual = PJ)
+  - cpf_cifrado (nullable), cpf_final (nullable)   -- ver Criptografia do CPF
+  - cnpj (nullable — só quando PJ/MEI)
   - cargo_id (FK)
-  - salario (herda de cargo.salario_base, com ajuste individual opcional)
   - turno: dia | noite | ambos
-  - modelo_contratual: CLT | PJ | temporario | estagio
-  - data_admissao
+  - modelo_contratual: CLT | PJ | MEI | temporario | estagio | informal
+  - data_admissao, data_desligamento (nullable)
   - status: ativo | desligado
-  - motivo_desligamento: dispensado_sem_justa_causa | dispensado_com_justa_causa | pedido_demissao | fim_contrato (nullable)
-  - user_id (FK, nullable — apenas quem tem login no sistema: admin/caixa/financeiro/cozinha)
+  - motivo_desligamento (nullable): dispensado_sem_justa_causa |
+      dispensado_com_justa_causa | pedido_demissao | fim_contrato
+  - user_id (FK, nullable — só quem tem login: admin/caixa/financeiro/cozinha)
+  - index: status, cargo_id
+  -- SEM coluna de salário: ver historico_salario
+  -- NÃO confundir com `funcionario`, que é o funcionário da empresa-CLIENTE
 
-entregador (extensão de funcionarios_internos)
-  - funcionario_interno_id (FK)
-  - valor_diaria (R$100, fixo para todos)
-  - taxa_entrega_percentual (repasse quando aplicável)
-  - modelo_contratual: CLT | MEI | informal
+historico_salario
+  - id, funcionario_interno_id (FK cascade)
+  - valor numeric(12,2), vigente_desde date
+  - motivo: admissao | reajuste | promocao | acordo
+  - observacao, user_id (nullable), created_at
+  - index: (funcionario_interno_id, vigente_desde)
+
+entregador                              -- EXTENSÃO, não tabela de pessoa
+  - id, funcionario_interno_id (FK cascade, UNIQUE)
+  - valor_diaria numeric(12,2)
+  - taxa_entrega_percentual (nullable)
+  - folga_semanal integer (nullable)    -- 0 = domingo … 6 = sábado
+  - created_at
   -- SEM zona fixa (modelo flexível confirmado)
+  -- SEM modelo_contratual próprio: já está no funcionário
 
 ausencia_funcionario
-  - id, funcionario_interno_id (FK)
+  - id, funcionario_interno_id (FK cascade)
   - tipo: atestado_medico | folga | ferias | falta_justificada | falta_injustificada
   - data_inicio, data_fim
-  - documento_anexo (Vercel Blob, nullable)
-  - observacao
+  - documento_anexo (nullable — Vercel Blob, campo nasce, upload liga depois)
+  - observacao, user_id (nullable), created_at
+  - index: (funcionario_interno_id, data_inicio)
 
 beneficio_funcionario
-  - id, funcionario_interno_id (FK)
-  - tipo: vale_transporte | outro
-  - valor, data_referencia
-  - status: pago | pendente | atrasado
-  -- alimenta conta_a_pagar (Financeiro)
+  - id, funcionario_interno_id (FK cascade)
+  - tipo: vale_transporte | vale_refeicao | bonus | outro
+  - valor numeric(12,2)
+  - recorrente boolean   -- entra na folha todo mês
+  - ativo boolean, observacao, created_at
+  -- SEM status próprio: quem controla pagamento é a conta_a_pagar gerada
+
+folha_pagamento                         -- CABEÇALHO da competência
+  - id, competencia text UNIQUE ('YYYY-MM')
+  - data_vencimento, observacao, user_id (nullable), created_at
+
+folha_item                              -- LINHAS
+  - id, folha_id (FK cascade), funcionario_interno_id (FK)
+  - tipo: salario | diaria | beneficio
+  - descricao ("03/08 a 08/08 · 6 diárias", "Vale transporte"), valor
+  - data_vencimento (nullable)          -- próprio da linha; nulo cai no da folha
+  - unique (folha_id, funcionario_interno_id, tipo, descricao)
 ```
+
+### Como a diária do entregador é contada
+
+Regras da operação, todas em `features/rh/lib/ausencia-helpers.ts`:
+
+- **Domingo não se trabalha** — nunca é dia de diária, antes de qualquer outra
+  regra. A semana de trabalho é **segunda a sábado**.
+- **Folga fixa semanal**: cada entregador escolhe um dia (`folga_semanal`) e ele
+  sai da conta todo mês, sem ninguém precisar registrar nada.
+- **Rodízio de sábado**: não é dia fixo de ninguém, então entra como
+  `ausencia_funcionario` do tipo `folga` quando acontece — ~1 registro por mês
+  por pessoa, em vez de 5.
+- Os três se juntam num `Set` de datas, nunca em subtrações somadas: atestado
+  que cai justo na folga não pode descontar duas diárias.
+
+Agosto/2026, diária de R$100: 31 dias − 5 domingos = 26 úteis. Quem folga na
+segunda fica com 21 diárias (R$2.100); quem não tem dia fixo, 26 (R$2.600).
+
+**Salário é linha, não coluna.** `historico_salario` é para o RH o que
+`historico_preco_insumo` é para o estoque: o valor atual é derivado (última
+vigência `<= a data`), nunca gravado no funcionário. É isso que impede um
+reajuste de hoje reescrever a folha de um mês já fechado — a folha de agosto
+pergunta pelo salário vigente **em** agosto.
+
+**Fechar a folha** (um `db.batch`): grava `folha_pagamento` + `folha_item[]` +
+uma `conta_a_pagar` por linha (`origem_tipo='folha_item'`, subtipo `salario`
+para salário/diária e `vale_transporte` para o benefício). A prévia é montada
+na hora e **editável antes de confirmar** — quantidade, valor e vencimento de
+cada linha —, porque folha real sempre tem ajuste.
+
+**Mensalista e diarista fecham juntos, mas pagam diferente.** O mensalista sai
+numa linha só, vencendo no dia escolhido para a competência. O entregador recebe
+por semana, então vira **uma linha por semana de segunda a sábado**, cada uma
+com seu vencimento: a primeira ocorrência do dia de pagamento em ou depois do
+fim da semana. Pagando no sábado, a semana vence no próprio sábado dela; pagando
+na quarta, vence na quarta seguinte. O dia é escolhido na tela ao fechar
+(`?pagamento=0..6`, padrão sábado).
+
+A semana que atravessa a virada do mês entra recortada: só a parte que cai
+dentro da competência, e o resto aparece na folha do mês seguinte. Sem esse
+recorte, a mesma semana seria paga duas vezes.
+
+**Desfazer a folha** apaga as contas geradas — diferente de receber compra, não
+há saldo encadeado aqui. Mas se alguma já foi quitada, o dinheiro saiu e o
+desfazer é bloqueado. `unique(competencia)` impede fechar o mesmo mês duas vezes.
+
+### Criptografia do CPF
+
+`cpf_cifrado` é AES-256-GCM (`apps/admin/lib/crypto.ts`, `node:crypto`, chave em
+`CPF_ENCRYPTION_KEY`); `iv` e `authTag` viajam dentro do próprio blob, e a tag é
+o que faz a leitura **falhar** se o valor for adulterado no banco. `cpf_final`
+guarda só os últimos 5 dígitos em claro, para a tela mostrar `•••.•••.123-45` e
+buscar sem decifrar a tabela inteira. Guarda **só os dígitos**: com a máscara, o
+mesmo CPF digitado de dois jeitos viraria dois valores diferentes.
+
+`queries.ts` nunca devolve o CPF completo. Ler o número inteiro é uma action
+própria (`revelarCpfAction`) que registra em `audit_log` quem revelou, de quem e
+quando. As funções puras de máscara e validação ficam em `lib/cpf.ts`, que não é
+server-only — só cifrar/decifrar precisa do servidor.
 
 ## Ocorrências e Feedback
 
@@ -468,9 +557,8 @@ audit_log
 2. **Consumer é FASE FUTURA** — pedido.envio_consumer_id e envio_consumer ficam prontos no schema, mas a integração automática NÃO é prioridade da primeira fase; lançamento pode ser manual
 3. **Regra de edição de pedido:** funcionário só edita `data > hoje` — validar client E server
 4. **external_code vive em prato_tamanho_preco** (cada tamanho é um SKU), não em prato
-5. **entregador é extensão de funcionarios_internos** — não criar tabela standalone.
-   ⚠️ **Dívida aberta:** `packages/db/src/schema/entregador.ts` hoje define
-   `entregador` como tabela standalone e ela já existe no Neon. Corrigir na
-   Fase 3, quando `funcionarios_internos` nascer.
+5. **entregador é extensão de funcionario_interno** — não criar tabela standalone.
+   ✅ Resolvido na Fase 3: a tabela standalone (que tinha `nome` e `salario`
+   próprios) foi derrubada e recriada com `funcionario_interno_id UNIQUE`.
 6. **transacao_financeira é populada manualmente na fase inicial** — sem sync automático de API ainda
 7. **meta unifica Meta de Novembro (tipo=financeira) com metas operacionais** — não são sistemas separados

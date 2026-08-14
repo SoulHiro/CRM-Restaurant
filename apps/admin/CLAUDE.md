@@ -104,6 +104,28 @@ copiá-la:
 - Estado que apodrece (estoque "baixo", conta "atrasada") é **derivado por
   query/helper**, nunca gravado — sem job para atualizar, dado gravado mente.
 
+## Número que muda com o tempo vira linha, não coluna
+
+`historico_preco_insumo` (estoque) e `historico_salario` (RH) são a mesma ideia:
+o valor atual é **derivado** da última vigência `<= a data`, nunca gravado na
+entidade. Sem isso, um reajuste de hoje reescreveria a folha de um mês já
+fechado, e um preço novo mudaria o custo de uma compra antiga. `salarioVigenteEm`
+em `features/rh/lib/salario-helpers.ts` é a implementação de referência.
+
+## Dado pessoal: cifrado no banco, mascarado na tela, auditado na leitura
+
+O CPF do funcionário interno é o primeiro caso (Fase 3) e o padrão para os
+próximos:
+
+- `lib/crypto.ts` (server-only) faz AES-256-GCM; `lib/cpf.ts` tem as funções
+  puras de máscara e validação, que rodam também no cliente.
+- A coluna guarda o cifrado + os últimos dígitos em claro, para exibir e buscar
+  sem decifrar a tabela.
+- `queries.ts` **nunca** devolve o valor completo. Ler é uma action própria que
+  grava em `audit_log`.
+- `CPF_ENCRYPTION_KEY` está em `.env.local` (gitignored) e declarada em
+  `turbo.json`. Trocar a chave torna os dados já gravados ilegíveis.
+
 ## Datas: dia de calendário ≠ instante
 
 `lib/formatters.ts` trata os dois casos separadamente, e isso não é detalhe:
@@ -115,8 +137,13 @@ como texto, sem `Date` no caminho; só timestamp real passa por fuso. Coberto em
 ## Testes
 
 `pnpm --filter admin test` (Vitest, `environment: 'node'`). Os alvos são
-helpers puros — filtro/ordenação/paginação, aritmética de saldo e diferença de
-inventário. Componente não é testado aqui.
+helpers puros — filtro/ordenação/paginação, aritmética de saldo, diferença de
+inventário, vigência de salário, criptografia. Componente não é testado aqui.
+
+`server-only` lança fora de um Server Component, e o Vitest roda em node puro:
+`vitest.config.ts` aliasa esse pacote para um stub (`test/server-only-stub.ts`)
+para que módulos com a diretiva possam ser testados. A proteção continua
+valendo no build.
 
 ## Dados ainda mock
 
