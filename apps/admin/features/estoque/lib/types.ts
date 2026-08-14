@@ -36,6 +36,11 @@ export interface EstoqueItem {
   criadoEm: string
 }
 
+/** Item da lista, com o último preço pago — null quando nunca foi comprado. */
+export interface EstoqueListItem extends EstoqueItem {
+  precoAtual: number | null
+}
+
 export interface EstoqueMovimento {
   id: string
   tipo: MovimentoTipo

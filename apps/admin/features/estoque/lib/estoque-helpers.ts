@@ -134,8 +134,8 @@ export function parseEstoqueFilters(
   }
 }
 
-export interface EstoqueResult {
-  items: EstoqueItem[]
+export interface EstoqueResult<T extends EstoqueItem = EstoqueItem> {
+  items: T[]
   total: number
   page: number
   pageSize: EstoquePageSize
@@ -162,11 +162,11 @@ function compareItens(sort: EstoqueSort) {
   }
 }
 
-export function filterEstoque(
-  itens: EstoqueItem[],
+export function filterEstoque<T extends EstoqueItem>(
+  itens: T[],
   filters: EstoqueFilters,
   hoje: string
-): EstoqueResult {
+): EstoqueResult<T> {
   const unidadesDisponiveis = Array.from(
     new Set(itens.map((item) => item.unidade))
   ).sort()

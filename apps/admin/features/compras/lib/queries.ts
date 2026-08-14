@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { desc, eq, inArray } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 
 import { hojeISO } from '@/lib/formatters'
 import { db } from '@/lib/db'
@@ -11,8 +11,9 @@ import {
   compra_item,
   fornecedor,
   fornecedor_item,
-  historico_preco_insumo,
 } from '@repo/db'
+
+import { getUltimosPrecos } from '@/features/estoque/lib/queries'
 
 import { entregaAtrasada, totalCompra, totalLinha } from './compra-helpers'
 import { mediaAvaliacao } from './fornecedor-helpers'
@@ -222,37 +223,6 @@ export async function getFornecedorDetalhe(
   }
 }
 
-/**
- * Último preço pago por item, numa consulta só — a alternativa (um SELECT por
- * item da sugestão) seria N+1 justamente na tela que precisa abrir rápido.
- */
-async function getUltimosPrecos(
-  estoqueItemIds: readonly string[]
-): Promise<Map<string, number>> {
-  if (estoqueItemIds.length === 0) return new Map()
-
-  const rows = await db
-    .select({
-      estoqueItemId: historico_preco_insumo.estoque_item_id,
-      preco: historico_preco_insumo.preco,
-      dataVigencia: historico_preco_insumo.data_vigencia,
-    })
-    .from(historico_preco_insumo)
-    .where(inArray(historico_preco_insumo.estoque_item_id, [...estoqueItemIds]))
-    .orderBy(
-      desc(historico_preco_insumo.data_vigencia),
-      desc(historico_preco_insumo.created_at)
-    )
-
-  const precos = new Map<string, number>()
-  for (const row of rows) {
-    if (!precos.has(row.estoqueItemId)) {
-      precos.set(row.estoqueItemId, toNumber(row.preco))
-    }
-  }
-  return precos
-}
-
 export async function getSugestaoCompra(): Promise<SugestaoGrupo[]> {
   const itens = await db.query.estoque_item.findMany({
     where: (item, { eq: igual }) => igual(item.ativo, true),
@@ -267,7 +237,9 @@ export async function getSugestaoCompra(): Promise<SugestaoGrupo[]> {
       nome: item.nome,
       unidade: item.unidade,
       tamanhoEmbalagem:
-        item.tamanho_embalagem == null ? null : toNumber(item.tamanho_embalagem),
+        item.tamanho_embalagem == null
+          ? null
+          : toNumber(item.tamanho_embalagem),
       quantidadeAtual: toNumber(item.quantidade_atual),
       pontoReposicao: toNumber(item.ponto_reposicao),
       ultimoPreco: precos.get(item.id) ?? null,
@@ -309,7 +281,9 @@ export async function getOfertasDoItem(
  * O editor de linhas usa isso para já preencher o valor unitário quando o item
  * é escolhido — é a diferença entre digitar 3 campos e digitar 1.
  */
-export async function getPrecosPorFornecedor(): Promise<Record<string, number>> {
+export async function getPrecosPorFornecedor(): Promise<
+  Record<string, number>
+> {
   const rows = await db
     .select({
       fornecedorId: fornecedor_item.fornecedor_id,

@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { count, desc, eq } from 'drizzle-orm'
+import { count, desc, eq, inArray } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { hojeISO } from '@/lib/formatters'
@@ -17,6 +17,7 @@ import type {
   AlertasEstoque,
   EstoqueItem,
   EstoqueItemDetalhe,
+  EstoqueListItem,
   EstoqueMovimento,
   InventarioDetalhe,
   InventarioResumo,
@@ -47,13 +48,48 @@ function mapItem(
   }
 }
 
-export async function getEstoqueItens(): Promise<EstoqueItem[]> {
+/**
+ * Último preço pago por item, numa consulta só — a alternativa (um SELECT por
+ * item) seria N+1. Usado pela lista de estoque e pela sugestão de compra.
+ */
+export async function getUltimosPrecos(
+  estoqueItemIds: readonly string[]
+): Promise<Map<string, number>> {
+  if (estoqueItemIds.length === 0) return new Map()
+
+  const rows = await db
+    .select({
+      estoqueItemId: historico_preco_insumo.estoque_item_id,
+      preco: historico_preco_insumo.preco,
+    })
+    .from(historico_preco_insumo)
+    .where(inArray(historico_preco_insumo.estoque_item_id, [...estoqueItemIds]))
+    .orderBy(
+      desc(historico_preco_insumo.data_vigencia),
+      desc(historico_preco_insumo.created_at)
+    )
+
+  const precos = new Map<string, number>()
+  for (const row of rows) {
+    if (!precos.has(row.estoqueItemId)) {
+      precos.set(row.estoqueItemId, toNumber(row.preco))
+    }
+  }
+  return precos
+}
+
+export async function getEstoqueItens(): Promise<EstoqueListItem[]> {
   const rows = await db.query.estoque_item.findMany({
     with: { fornecedorPadrao: { columns: { nome: true } } },
     orderBy: (item, { asc }) => [asc(item.nome)],
   })
 
-  return rows.map(mapItem)
+  const precos = await getUltimosPrecos(rows.map((row) => row.id))
+
+  return rows.map((row) => ({
+    ...mapItem(row),
+    precoAtual: precos.get(row.id) ?? null,
+  }))
 }
 
 export async function getEstoqueItemById(
@@ -148,9 +184,7 @@ export async function getEstoqueItemDetalhe(
   return { item, movimentos, perdas, precos }
 }
 
-export async function getPerdasRecentes(
-  limite = 50
-): Promise<PerdaEstoque[]> {
+export async function getPerdasRecentes(limite = 50): Promise<PerdaEstoque[]> {
   const rows = await db
     .select({
       id: perda_estoque.id,

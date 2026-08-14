@@ -4,8 +4,9 @@ import { useRouter } from 'next/navigation'
 
 import { cn } from '@repo/ui/lib/utils'
 
+import { formatCurrencyBRL } from '@/lib/formatters'
 import { nivelEstoque } from '../../lib/estoque-helpers'
-import type { EstoqueItem } from '../../lib/types'
+import type { EstoqueListItem } from '../../lib/types'
 import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
 import { NivelEstoqueBadge } from '../shared/nivel-estoque-badge'
 import { Quantidade } from '../shared/quantidade'
@@ -16,7 +17,7 @@ export function EstoqueRow({
   hoje,
   className,
 }: {
-  item: EstoqueItem
+  item: EstoqueListItem
   hoje: string
   className: string
 }) {
@@ -53,6 +54,21 @@ export function EstoqueRow({
 
       <span
         role="cell"
+        className="flex items-center justify-between gap-2 text-sm text-muted-foreground sm:block sm:text-right"
+      >
+        <MobileCellLabel>Preço</MobileCellLabel>
+        {item.precoAtual == null ? (
+          '—'
+        ) : (
+          <span className="tabular-nums">
+            {formatCurrencyBRL(item.precoAtual)}
+            <span className="text-xs">/{item.unidade}</span>
+          </span>
+        )}
+      </span>
+
+      <span
+        role="cell"
         className="flex items-center justify-between gap-2 sm:flex-col sm:items-end sm:gap-0.5"
       >
         <MobileCellLabel>Quantidade</MobileCellLabel>
@@ -82,7 +98,10 @@ export function EstoqueRow({
         )}
       </span>
 
-      <span role="cell" className="flex items-center justify-between gap-2 sm:block">
+      <span
+        role="cell"
+        className="flex items-center justify-between gap-2 sm:block"
+      >
         <MobileCellLabel>Validade</MobileCellLabel>
         <ValidadeBadge validade={item.validade} hoje={hoje} />
       </span>

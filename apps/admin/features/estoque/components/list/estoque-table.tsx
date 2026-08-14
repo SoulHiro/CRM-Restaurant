@@ -1,18 +1,19 @@
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { cn } from '@repo/ui/lib/utils'
 
-import type { EstoqueItem } from '../../lib/types'
+import type { EstoqueListItem } from '../../lib/types'
 import { EstoqueRow } from './estoque-row'
 
-const GRID_COLUMNS = 'sm:grid-cols-[2.4fr_1.2fr_1fr_1.2fr]'
-const ROW_LAYOUT = 'flex flex-col gap-2 p-4 sm:grid sm:items-center sm:gap-4 sm:py-3'
+const GRID_COLUMNS = 'sm:grid-cols-[2fr_1fr_1.2fr_1fr_1.2fr]'
+const ROW_LAYOUT =
+  'flex flex-col gap-2 p-4 sm:grid sm:items-center sm:gap-4 sm:py-3'
 
 export function EstoqueTable({
   itens,
   hoje,
   vazioMensagem,
 }: {
-  itens: EstoqueItem[]
+  itens: EstoqueListItem[]
   hoje: string
   vazioMensagem: string
 }) {
@@ -34,6 +35,9 @@ export function EstoqueTable({
         )}
       >
         <span role="columnheader">Item</span>
+        <span role="columnheader" className="text-right">
+          Preço
+        </span>
         <span role="columnheader" className="text-right">
           Quantidade
         </span>
