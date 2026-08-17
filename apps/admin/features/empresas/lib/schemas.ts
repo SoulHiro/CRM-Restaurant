@@ -133,3 +133,40 @@ export const deletePausaSchema = z.object({
 })
 
 export type DeletePausaInput = z.infer<typeof deletePausaSchema>
+
+export const listarColaboradoresSchema = z.object({
+  empresaId: z.string().min(1),
+})
+
+export type ListarColaboradoresInput = z.infer<typeof listarColaboradoresSchema>
+
+export const obterImpressoraComandaSchema = z.object({})
+
+export const listarPedidosDoDiaSchema = z.object({
+  empresaId: z.string().min(1),
+  data: z.string().min(1),
+})
+
+export type ListarPedidosDoDiaInput = z.infer<typeof listarPedidosDoDiaSchema>
+
+const pedidoImportadoItemSchema = z.object({
+  nome: z.string().min(1),
+  colaboradorId: z.string().nullable(),
+  whatsapp: z.string().nullable(),
+  data: z.string().min(1),
+  turno: z.enum(['almoco', 'jantar']).nullable(),
+  tamanho: z.enum(['P', 'M', 'G']).nullable(),
+  prato: z.string().nullable(),
+  observacao: z.string().nullable(),
+  respondidoEm: z.string().nullable(),
+})
+
+export type PedidoImportadoItemInput = z.infer<typeof pedidoImportadoItemSchema>
+
+export const importarPedidosSchema = z.object({
+  empresaId: z.string().min(1),
+  arquivoOrigem: z.string().min(1),
+  itens: z.array(pedidoImportadoItemSchema).min(1),
+})
+
+export type ImportarPedidosInput = z.infer<typeof importarPedidosSchema>

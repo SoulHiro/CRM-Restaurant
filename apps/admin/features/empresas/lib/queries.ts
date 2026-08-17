@@ -1,19 +1,152 @@
 import 'server-only'
 
-import type { EmpresaDetail, EmpresaListItem } from './types'
-import { mockEmpresas } from './mock-data/empresas'
+import { and, count, eq } from 'drizzle-orm'
+
+import { db } from '@/lib/db'
+import { dataISO, hojeISO } from '@/lib/formatters'
+import { colaborador_pedido, empresa, pedido_dia_importado } from '@repo/db'
+
+import { ehRecusa } from './importacao-helpers'
+import type { EmpresaDetail, EmpresaListItem, PedidoDoDiaItem } from './types'
 import { EMPTY_DETAIL, mockEmpresaDetails } from './mock-data/empresa-details'
 
+/**
+ * `funcionariosTotal`/`funcionariosRespondidos`/`status` vêm do domínio leve
+ * de importação (`colaborador_pedido`/`pedido_dia_importado`), não de dado
+ * inventado — é a única parte de "empresa" com tabela real hoje. O resto de
+ * `EmpresaDetail` (contrato, funcionários estruturados, faturamento,
+ * satisfação) continua mock: não tem schema nenhum ainda.
+ */
+async function mapEmpresa(
+  row: typeof empresa.$inferSelect
+): Promise<EmpresaListItem> {
+  const hoje = hojeISO()
+
+  const [totalRow] = await db
+    .select({ total: count() })
+    .from(colaborador_pedido)
+    .where(
+      and(
+        eq(colaborador_pedido.empresa_id, row.id),
+        eq(colaborador_pedido.ativo, true)
+      )
+    )
+
+  const [respondidosRow] = await db
+    .select({ total: count() })
+    .from(pedido_dia_importado)
+    .innerJoin(
+      colaborador_pedido,
+      eq(pedido_dia_importado.colaborador_id, colaborador_pedido.id)
+    )
+    .where(
+      and(
+        eq(colaborador_pedido.empresa_id, row.id),
+        eq(pedido_dia_importado.data, hoje)
+      )
+    )
+
+  const total = totalRow?.total ?? 0
+  const respondidos = respondidosRow?.total ?? 0
+
+  return {
+    id: row.id,
+    nome: row.nome,
+    cnpj: row.cnpj,
+    email: row.email_contato ?? '',
+    responsavelNome: row.responsavel_nome ?? '',
+    responsavelTelefone: row.telefone_contato ?? '',
+    cadastradaEm: dataISO(row.created_at),
+    funcionariosTotal: total,
+    funcionariosRespondidos: respondidos,
+    // Sem colaborador nenhum ainda não é "aguardando resposta" — é "nada
+    // importado", mas a tela não distingue os dois hoje; tratar como
+    // aguardando é o lado seguro (não esconde uma empresa sem pedidos de hoje).
+    status: total > 0 && respondidos === total ? 'finalizado' : 'aguardando',
+  }
+}
+
 export async function getEmpresas(): Promise<EmpresaListItem[]> {
-  return mockEmpresas
+  const rows = await db.query.empresa.findMany({
+    orderBy: (e, { asc }) => [asc(e.nome)],
+  })
+
+  return Promise.all(rows.map(mapEmpresa))
 }
 
 export async function getEmpresaById(
   id: string
 ): Promise<EmpresaListItem | null> {
-  return mockEmpresas.find((empresa) => empresa.id === id) ?? null
+  const row = await db.query.empresa.findFirst({
+    where: eq(empresa.id, id),
+  })
+
+  return row ? mapEmpresa(row) : null
 }
 
+/**
+ * Continua mock: contrato, funcionários estruturados, envios, satisfação e
+ * faturamento não têm tabela nenhuma ainda (ver docs/database-schema.md). A
+ * aba "Pedidos" real (importação de planilha) usa `getPedidosDoDia`, uma
+ * função à parte — não passa por aqui.
+ */
 export async function getEmpresaDetail(id: string): Promise<EmpresaDetail> {
   return mockEmpresaDetails[id] ?? EMPTY_DETAIL
+}
+
+/**
+ * Um colaborador ativo por linha, com o pedido daquele dia (ou nada, se não
+ * respondeu). "Recusou" (`ehRecusa`) é diferente de "sem pedido" — separa
+ * quem disse explicitamente que não vai de quem só não importou nada ainda.
+ */
+export async function getPedidosDoDia(
+  empresaId: string,
+  data: string
+): Promise<PedidoDoDiaItem[]> {
+  const colaboradores = await db.query.colaborador_pedido.findMany({
+    where: (c, { and: andOp, eq: eqOp }) =>
+      andOp(eqOp(c.empresa_id, empresaId), eqOp(c.ativo, true)),
+    with: {
+      pedidos: {
+        where: (p, { eq: eqOp }) => eqOp(p.data, data),
+        limit: 1,
+      },
+    },
+    orderBy: (c, { asc }) => [asc(c.nome)],
+  })
+
+  return colaboradores.map((colaborador) => {
+    const pedido = colaborador.pedidos[0] ?? null
+    return {
+      colaboradorId: colaborador.id,
+      nome: colaborador.nome,
+      whatsapp: colaborador.whatsapp,
+      turno: pedido?.turno ?? null,
+      tamanho: pedido?.tamanho ?? null,
+      prato: pedido?.prato ?? null,
+      observacao: pedido?.observacao ?? null,
+      respondidoEm: pedido?.respondido_em?.toISOString() ?? null,
+      recusou: ehRecusa(pedido?.prato ?? null),
+    }
+  })
+}
+
+/**
+ * A primeira impressora de comanda ativa configurada. Enquanto o
+ * restaurante tem só uma Elgin i9, não há necessidade de escolher entre
+ * várias — se isso mudar, essa função é o único lugar a ajustar.
+ */
+export async function getImpressoraComanda(): Promise<{
+  id: string
+  nome: string
+  identificadorQz: string
+} | null> {
+  const row = await db.query.impressora.findFirst({
+    where: (i, { and: andOp, eq: eqOp }) =>
+      andOp(eqOp(i.tipo, 'comanda'), eqOp(i.ativo, true)),
+  })
+
+  return row
+    ? { id: row.id, nome: row.nome, identificadorQz: row.identificador_qz }
+    : null
 }

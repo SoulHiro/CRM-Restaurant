@@ -75,17 +75,6 @@ export interface EmpresaFuncionario {
   historicoSemanas: EmpresaSemanaPedidos[]
 }
 
-export interface EmpresaEnvio {
-  id: string
-  data: string
-  horario: string
-  status: 'enviado' | 'confirmado' | 'erro'
-  notaFiscalNumero: string | null
-  notaFiscalEmitidaEm: string | null
-  responsavel: string
-  motivoErro: string | null
-}
-
 export interface EmpresaRespostaSemanal {
   dia: string
   responderam: number
@@ -112,8 +101,20 @@ export interface EmpresaFaturamentoMensal {
 
 export interface EmpresaComparativoSemanal {
   funcionariosAtivos: number
-  pedidosEnviados: number
   taxaResposta: number
+}
+
+export interface PedidoDoDiaItem {
+  colaboradorId: string
+  nome: string
+  whatsapp: string | null
+  turno: 'almoco' | 'jantar' | null
+  tamanho: 'P' | 'M' | 'G' | null
+  prato: string | null
+  observacao: string | null
+  /** ISO — quando o funcionário respondeu no formulário, não quando importamos. */
+  respondidoEm: string | null
+  recusou: boolean
 }
 
 export interface EmpresaDetail {
@@ -122,7 +123,6 @@ export interface EmpresaDetail {
   contrato?: EmpresaContrato
   pausas: EmpresaPausa[]
   funcionarios: EmpresaFuncionario[]
-  envios: EmpresaEnvio[]
   respostasSemanais: EmpresaRespostaSemanal[]
   satisfacao?: EmpresaSatisfacao
   faturamentoMensal: EmpresaFaturamentoMensal[]
