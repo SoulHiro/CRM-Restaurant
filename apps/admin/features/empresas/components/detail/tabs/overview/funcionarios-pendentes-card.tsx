@@ -21,7 +21,7 @@ export function FuncionariosPendentesCard({
   totalFuncionarios: number
 }) {
   return (
-    <Card className="flex h-full flex-col overflow-hidden border-0">
+    <Card className="col-span-2 flex h-full flex-col overflow-hidden border-0">
       <CardHeader>
         <CardTitle className="text-base">
           Funcionários que não responderam

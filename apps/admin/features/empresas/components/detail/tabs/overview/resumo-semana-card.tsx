@@ -14,8 +14,6 @@ import { TrendBadge } from '../../../shared/trend-badge'
 export function ResumoSemanaCard({
   funcionariosAtivos,
   deltaFuncionarios,
-  pedidosEnviados,
-  deltaPedidos,
   taxaResposta,
   deltaTaxaResposta,
   ultimoFaturamento,
@@ -23,8 +21,6 @@ export function ResumoSemanaCard({
 }: {
   funcionariosAtivos: number
   deltaFuncionarios: number | null
-  pedidosEnviados: number
-  deltaPedidos: number | null
   taxaResposta: string
   deltaTaxaResposta: number | null
   ultimoFaturamento: number | undefined
@@ -41,24 +37,14 @@ export function ResumoSemanaCard({
       <CardContent className="min-h-0 flex-1">
         <div className="grid h-full min-h-0 grid-cols-3 gap-4">
           <div className="grid h-full min-h-0 grid-rows-3 gap-3">
-            <div className="flex min-h-0 gap-3">
-              <StatCard
-                className="min-h-0 flex-1 overflow-hidden"
-                contentClassName="h-full justify-between gap-2 p-4"
-                labelClassName="text-xs"
-                label="Funcionários ativos"
-                value={String(funcionariosAtivos)}
-                trailing={<TrendBadge delta={deltaFuncionarios} />}
-              />
-              <StatCard
-                className="min-h-0 flex-1 overflow-hidden"
-                contentClassName="h-full justify-between gap-2 p-4"
-                labelClassName="text-xs"
-                label="Pedidos enviados"
-                value={String(pedidosEnviados)}
-                trailing={<TrendBadge delta={deltaPedidos} />}
-              />
-            </div>
+            <StatCard
+              className="min-h-0 overflow-hidden"
+              contentClassName="h-full justify-between gap-2 p-4"
+              labelClassName="text-xs"
+              label="Funcionários ativos"
+              value={String(funcionariosAtivos)}
+              trailing={<TrendBadge delta={deltaFuncionarios} />}
+            />
             <StatCard
               className="row-span-2 min-h-0 overflow-hidden"
               contentClassName="h-full justify-between gap-2 p-4"

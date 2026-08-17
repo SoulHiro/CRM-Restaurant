@@ -1,12 +1,6 @@
 import type { EmpresaDetail } from '../../../../lib/types'
-import {
-  getEnviosHeatmap,
-  getProximaPausa,
-  percentChange,
-} from '../../../../lib/overview-helpers'
-import { EnviosComErroCard } from './envios-com-erro-card'
+import { getProximaPausa, percentChange } from '../../../../lib/overview-helpers'
 import { FuncionariosPendentesCard } from './funcionarios-pendentes-card'
-import { PedidosEnviadosCard } from './pedidos-enviados-card'
 import { RespostasPorDiaCard } from './respostas-por-dia-card'
 import { ResumoSemanaCard } from './resumo-semana-card'
 import { SatisfacaoCard } from './satisfacao-card'
@@ -14,7 +8,6 @@ import { SatisfacaoCard } from './satisfacao-card'
 export function OverviewTab({ detail }: { detail: EmpresaDetail }) {
   const {
     respostasSemanais,
-    envios,
     funcionarios,
     pausas,
     satisfacao,
@@ -22,11 +15,9 @@ export function OverviewTab({ detail }: { detail: EmpresaDetail }) {
     comparativoSemanaAnterior,
   } = detail
 
-  const enviosHeatmap = getEnviosHeatmap(envios)
   const naoResponderam = funcionarios.filter(
     (f) => f.vinculoStatus === 'ativo' && !f.respondeuEstaSemana
   )
-  const enviosComErro = envios.filter((envio) => envio.status === 'erro')
   const proximaPausa = getProximaPausa(pausas)
 
   const funcionariosAtivos = funcionarios.filter(
@@ -53,10 +44,6 @@ export function OverviewTab({ detail }: { detail: EmpresaDetail }) {
     funcionariosAtivos,
     comparativoSemanaAnterior?.funcionariosAtivos
   )
-  const deltaPedidos = percentChange(
-    envios.length,
-    comparativoSemanaAnterior?.pedidosEnviados
-  )
   const deltaTaxaResposta =
     taxaRespostaNumero != null && comparativoSemanaAnterior
       ? taxaRespostaNumero - comparativoSemanaAnterior.taxaResposta
@@ -67,20 +54,16 @@ export function OverviewTab({ detail }: { detail: EmpresaDetail }) {
       <ResumoSemanaCard
         funcionariosAtivos={funcionariosAtivos}
         deltaFuncionarios={deltaFuncionarios}
-        pedidosEnviados={envios.length}
-        deltaPedidos={deltaPedidos}
         taxaResposta={taxaResposta}
         deltaTaxaResposta={deltaTaxaResposta}
         ultimoFaturamento={ultimoFaturamento}
         proximaPausa={proximaPausa}
       />
       <RespostasPorDiaCard respostasSemanais={respostasSemanais} />
-      <PedidosEnviadosCard heatmap={enviosHeatmap} />
       <FuncionariosPendentesCard
         naoResponderam={naoResponderam}
         totalFuncionarios={funcionarios.length}
       />
-      <EnviosComErroCard envios={enviosComErro} />
       <SatisfacaoCard satisfacao={satisfacao} />
     </div>
   )
