@@ -5,6 +5,13 @@ import type { CampoComandaKey } from '@/features/configuracoes/lib/types'
 
 const MM_TO_PT = 2.834645669
 const LARGURA_BOBINA = 80 * MM_TO_PT
+// react-pdf/pdfkit exige largura E altura — não existe "cresce com o
+// conteúdo" real. Sem a altura, `size` vira [largura, undefined] e cai num
+// fallback de página inteira (foi o que imprimiu grande e deitado). 150mm é
+// folga generosa pra qualquer combinação de campos sem cortar texto; o
+// excesso de papel em branco antes do corte é o preço de não medir o texto
+// antes de renderizar.
+const ALTURA_MAXIMA = 150 * MM_TO_PT
 
 const TURNO_LABEL: Record<'almoco' | 'jantar', string> = {
   almoco: 'ALMOÇO',
@@ -102,9 +109,10 @@ function renderCampo(campo: CampoComandaKey, comanda: ComandaDados) {
 }
 
 /**
- * Página com largura da bobina de 80mm; altura cresce com o conteúdo. O
- * nome é sempre a âncora fixa no topo — o resto vem de `campos`, na ordem
- * configurada em Configurações → Impressão de comanda.
+ * Página com largura da bobina de 80mm, altura fixa generosa (não existe
+ * "cresce com o conteúdo" em PDF). O nome é sempre a âncora fixa no topo —
+ * o resto vem de `campos`, na ordem configurada em Configurações →
+ * Impressão de comanda.
  */
 export function ComandaPDF({
   comanda,
@@ -115,7 +123,11 @@ export function ComandaPDF({
 }) {
   return (
     <Document>
-      <Page size={[LARGURA_BOBINA]} style={styles.page}>
+      <Page
+        size={[LARGURA_BOBINA, ALTURA_MAXIMA]}
+        orientation="portrait"
+        style={styles.page}
+      >
         <Text style={styles.nome}>{comanda.nome}</Text>
         {campos.map((campo) => renderCampo(campo, comanda))}
       </Page>
