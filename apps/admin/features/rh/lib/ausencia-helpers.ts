@@ -1,3 +1,5 @@
+import { somarDiasISO } from '@/lib/dates'
+
 import type { AusenciaTipo } from './types'
 import { diasEntre } from './salario-helpers'
 
@@ -38,12 +40,6 @@ export function ultimoDiaDoMes(competencia: string): string {
   // bissexto sem tabela de dias por mês.
   const dia = new Date(Date.UTC(ano, mes, 0)).getUTCDate()
   return `${competencia}-${String(dia).padStart(2, '0')}`
-}
-
-export function somarDiasISO(data: string, dias: number): string {
-  const [ano, mes, dia] = data.split('-').map(Number)
-  if (!ano || !mes || !dia) return data
-  return new Date(Date.UTC(ano, mes - 1, dia + dias)).toISOString().slice(0, 10)
 }
 
 function diaDaSemana(data: string): number {
