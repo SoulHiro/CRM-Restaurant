@@ -1,15 +1,5 @@
-import {
-  boolean,
-  jsonb,
-  numeric,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core'
+import { boolean, jsonb, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
-
-const PRECO = { precision: 12, scale: 2 } as const
 
 export const impressoraTipoEnum = pgEnum('impressora_tipo', [
   'comanda',
@@ -46,16 +36,14 @@ export const configuracaoComanda = pgTable('configuracao_comanda', {
 })
 
 /**
- * Singleton — mesma ideia de `configuracaoComanda`. Dados do nosso próprio
- * estabelecimento e preços dos itens avulsos (não vêm de planilha nenhuma)
- * que aparecem na nota de fechamento do dia.
+ * Singleton — mesma ideia de `configuracaoComanda`. Só os dados do nosso
+ * próprio estabelecimento (aparecem no cabeçalho da nota de fechamento do
+ * dia) — café/suco/lanche não têm preço padrão global, são digitados na
+ * hora, direto no drawer "Finalizar dia" de cada empresa.
  */
 export const configuracaoResumoDia = pgTable('configuracao_resumo_dia', {
   id: text('id').primaryKey().default('default'),
   cnpj: text('cnpj'),
   nome_estabelecimento: text('nome_estabelecimento'),
-  preco_cafe: numeric('preco_cafe', PRECO).notNull().default('0'),
-  preco_suco: numeric('preco_suco', PRECO).notNull().default('0'),
-  preco_lanche: numeric('preco_lanche', PRECO).notNull().default('0'),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 })

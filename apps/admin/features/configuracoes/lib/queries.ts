@@ -1,7 +1,6 @@
 import 'server-only'
 
 import { db } from '@/lib/db'
-import { toNumber } from '@/lib/numeric'
 
 import {
   CAMPOS_COMANDA_PADRAO,
@@ -53,8 +52,5 @@ export async function getConfiguracaoResumoDia(): Promise<ConfiguracaoResumoDia>
   return {
     cnpj: row?.cnpj ?? '',
     nomeEstabelecimento: row?.nome_estabelecimento ?? '',
-    precoCafe: toNumber(row?.preco_cafe),
-    precoSuco: toNumber(row?.preco_suco),
-    precoLanche: toNumber(row?.preco_lanche),
   }
 }

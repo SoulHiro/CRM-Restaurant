@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 
 import { db } from '@/lib/db'
 import { authActionClient } from '@/lib/safe-action'
-import { toMoneyString } from '@/lib/numeric'
 import { configuracaoComanda, configuracaoResumoDia, impressora } from '@repo/db'
 
 import {
@@ -90,18 +89,12 @@ export const salvarConfiguracaoResumoDiaAction = authActionClient
         id: 'default',
         cnpj: parsedInput.cnpj?.trim() || null,
         nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
-        preco_cafe: toMoneyString(parsedInput.precoCafe),
-        preco_suco: toMoneyString(parsedInput.precoSuco),
-        preco_lanche: toMoneyString(parsedInput.precoLanche),
       })
       .onConflictDoUpdate({
         target: configuracaoResumoDia.id,
         set: {
           cnpj: parsedInput.cnpj?.trim() || null,
           nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
-          preco_cafe: toMoneyString(parsedInput.precoCafe),
-          preco_suco: toMoneyString(parsedInput.precoSuco),
-          preco_lanche: toMoneyString(parsedInput.precoLanche),
           updated_at: new Date(),
         },
       })

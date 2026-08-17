@@ -20,11 +20,6 @@ export function ResumoDoDiaTab({
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState(
     configuracaoInicial.nomeEstabelecimento
   )
-  const [precoCafe, setPrecoCafe] = useState(String(configuracaoInicial.precoCafe))
-  const [precoSuco, setPrecoSuco] = useState(String(configuracaoInicial.precoSuco))
-  const [precoLanche, setPrecoLanche] = useState(
-    String(configuracaoInicial.precoLanche)
-  )
 
   const { execute, isExecuting } = useAction(salvarConfiguracaoResumoDiaAction, {
     onSuccess: () => toast.success('Configuração salva'),
@@ -32,21 +27,16 @@ export function ResumoDoDiaTab({
   })
 
   function salvar() {
-    execute({
-      cnpj,
-      nomeEstabelecimento,
-      precoCafe: Number(precoCafe) || 0,
-      precoSuco: Number(precoSuco) || 0,
-      precoLanche: Number(precoLanche) || 0,
-    })
+    execute({ cnpj, nomeEstabelecimento })
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 rounded-lg bg-card p-4">
         <p className="text-sm text-muted-foreground">
-          Aparece na nota de fechamento do dia, impressa pela aba Pedidos de
-          cada empresa.
+          Aparece no cabeçalho da nota de fechamento do dia, impressa pela aba
+          Pedidos de cada empresa. Café/suco/lanche são lançados na hora, no
+          próprio &quot;Finalizar dia&quot;.
         </p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -64,42 +54,6 @@ export function ResumoDoDiaTab({
               value={cnpj}
               onChange={(e) => setCnpj(e.target.value)}
               placeholder="00.000.000/0000-00"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm">Preço do café (R$)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              inputMode="decimal"
-              value={precoCafe}
-              onChange={(e) => setPrecoCafe(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm">Preço do suco (R$)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              inputMode="decimal"
-              value={precoSuco}
-              onChange={(e) => setPrecoSuco(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm">Preço do lanche (R$)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              inputMode="decimal"
-              value={precoLanche}
-              onChange={(e) => setPrecoLanche(e.target.value)}
             />
           </div>
         </div>

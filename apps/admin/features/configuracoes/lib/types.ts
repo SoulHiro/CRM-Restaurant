@@ -50,7 +50,4 @@ export interface ImpressoraOption {
 export interface ConfiguracaoResumoDia {
   cnpj: string
   nomeEstabelecimento: string
-  precoCafe: number
-  precoSuco: number
-  precoLanche: number
 }
