@@ -39,4 +39,10 @@ export const CAMPOS_COMANDA_PADRAO: CampoComandaKey[] = [
 
 export interface ConfiguracaoComanda {
   campos: CampoComandaKey[]
+  impressoraId: string | null
+}
+
+export interface ImpressoraOption {
+  id: string
+  nome: string
 }

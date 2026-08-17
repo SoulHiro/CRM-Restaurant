@@ -132,19 +132,28 @@ export async function getPedidosDoDia(
 }
 
 /**
- * A primeira impressora de comanda ativa configurada. Enquanto o
- * restaurante tem só uma Elgin i9, não há necessidade de escolher entre
- * várias — se isso mudar, essa função é o único lugar a ajustar.
+ * A impressora escolhida em Configurações → Impressão
+ * (`configuracao_comanda.impressora_id`); sem escolha ainda, cai na primeira
+ * comanda ativa cadastrada.
  */
 export async function getImpressoraComanda(): Promise<{
   id: string
   nome: string
   identificadorQz: string
 } | null> {
-  const row = await db.query.impressora.findFirst({
-    where: (i, { and: andOp, eq: eqOp }) =>
-      andOp(eqOp(i.tipo, 'comanda'), eqOp(i.ativo, true)),
+  const config = await db.query.configuracaoComanda.findFirst({
+    where: (c, { eq }) => eq(c.id, 'default'),
+    columns: { impressora_id: true },
   })
+
+  const row = config?.impressora_id
+    ? await db.query.impressora.findFirst({
+        where: (i, { eq }) => eq(i.id, config.impressora_id!),
+      })
+    : await db.query.impressora.findFirst({
+        where: (i, { and: andOp, eq: eqOp }) =>
+          andOp(eqOp(i.tipo, 'comanda'), eqOp(i.ativo, true)),
+      })
 
   return row
     ? { id: row.id, nome: row.nome, identificadorQz: row.identificador_qz }

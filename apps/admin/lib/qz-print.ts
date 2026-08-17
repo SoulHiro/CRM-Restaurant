@@ -16,6 +16,15 @@ async function conectar() {
   return qz
 }
 
+/**
+ * Nomes de impressora exatamente como o QZ Tray os enxerga no sistema
+ * operacional — é esse nome, não o do Windows, que `qz.print()` espera.
+ */
+export async function listarImpressorasDetectadas(): Promise<string[]> {
+  const qz = await conectar()
+  return qz.printers.find()
+}
+
 async function blobParaBase64(blob: Blob): Promise<string> {
   const buffer = await blob.arrayBuffer()
   const bytes = new Uint8Array(buffer)

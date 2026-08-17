@@ -186,13 +186,17 @@ configuracao_comanda
   - campos (jsonb, string[] -- chaves dos campos opcionais, na ordem em
     que aparecem abaixo do nome na comanda: turno, prato, tamanho,
     observacao, empresa, respondido_em, impresso_em)
+  - impressora_id (FK impressora, nullable -- sem escolha ainda, cai na
+    primeira comanda ativa cadastrada)
   - updated_at
 ```
 
 Um layout só vale pro restaurante inteiro (não por empresa). O nome do
 colaborador nunca entra em `campos` — é sempre o topo fixo e grande da
-comanda, não configurável. Editável em `/configuracoes`
-(`features/configuracoes/`), com pré-visualização ao vivo do PDF real.
+comanda, não configurável. Editável em `/configuracoes/impressao`
+(`features/configuracoes/`), com pré-visualização instantânea (espelho em
+HTML, não o PDF real) e cadastro de impressora (nome + impressora
+detectada via QZ Tray) na mesma tela.
 
 ## Estoque (fonte de verdade PRÓPRIA — não espelho do AnotaAí) — IMPLEMENTADO
 

@@ -1,68 +1,54 @@
-'use client'
+import { formatDateTimeBR } from '@/lib/formatters'
+import { type CampoComandaKey } from '../lib/types'
 
-import { useEffect, useState } from 'react'
+const TURNO_LABEL = 'ALMOÇO'
+const AGORA = new Date().toISOString()
 
-import type { ComandaDados } from '@/features/empresas/lib/comanda-pdf'
-import type { CampoComandaKey } from '../lib/types'
-
-const COMANDA_EXEMPLO: ComandaDados = {
-  nome: 'Nome do Colaborador',
-  empresaNome: 'Nome da Empresa',
-  turno: 'almoco',
-  tamanho: 'M',
-  prato: 'Prato escolhido do dia',
-  observacao: 'Observação de exemplo, ex: sem cebola',
-  respondidoEm: new Date().toISOString(),
-  impressoEm: new Date().toISOString(),
+const CAMPO_CONTEUDO: Record<CampoComandaKey, React.ReactNode> = {
+  turno: (
+    <div className="rounded border-2 border-zinc-900 py-1.5 text-center text-sm font-bold tracking-wide">
+      {TURNO_LABEL}
+    </div>
+  ),
+  prato: <p className="text-[13px] text-zinc-800">Frango grelhado com arroz</p>,
+  tamanho: <p className="text-xs text-zinc-600">Tamanho: Média</p>,
+  observacao: <p className="text-xs text-zinc-600">Obs: sem cebola</p>,
+  empresa: (
+    <p className="border-t border-dashed border-zinc-300 pt-1.5 text-[10px] text-zinc-500">
+      Restaurante Nosso Quintal
+    </p>
+  ),
+  respondido_em: (
+    <p className="text-[10px] text-zinc-500">
+      Respondido em {formatDateTimeBR(AGORA)}
+    </p>
+  ),
+  impresso_em: (
+    <p className="text-[10px] text-zinc-500">
+      Impresso em {formatDateTimeBR(AGORA)}
+    </p>
+  ),
 }
 
 /**
- * Gera o mesmo PDF que sai na impressora e mostra num iframe sem chrome de
- * visualizador — a moldura branca com sombra é o suficiente pra comunicar
- * "isso é a bobina física", sem precisar de um desenho de impressora.
+ * Espelho em HTML do que o `ComandaPDF` real gera — sem PDF, sem iframe,
+ * sem chrome de visualizador (zoom, busca, contador de página). O que
+ * importa aqui é mostrar ordem e visibilidade dos campos instantaneamente;
+ * o PDF exato só existe na hora de imprimir de verdade. Nome e empresa são
+ * um exemplo fixo — "Restaurante Nosso Quintal" pra não parecer dado real.
  */
 export function ComandaPreview({ campos }: { campos: CampoComandaKey[] }) {
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    let ativo = true
-    let urlAnterior: string | null = null
-
-    async function gerar() {
-      const [{ pdf }, { ComandaPDF }] = await Promise.all([
-        import('@react-pdf/renderer'),
-        import('@/features/empresas/lib/comanda-pdf'),
-      ])
-      const blob = await pdf(
-        <ComandaPDF comanda={COMANDA_EXEMPLO} campos={campos} />
-      ).toBlob()
-      if (!ativo) return
-      const novaUrl = URL.createObjectURL(blob)
-      urlAnterior = novaUrl
-      setUrl(novaUrl)
-    }
-
-    void gerar()
-
-    return () => {
-      ativo = false
-      if (urlAnterior) URL.revokeObjectURL(urlAnterior)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(campos)])
-
   return (
-    <div className="flex flex-1 items-start justify-center overflow-auto bg-muted p-8">
-      <div className="w-[240px] shrink-0 overflow-hidden rounded-sm bg-white shadow-lg">
-        {url ? (
-          <iframe
-            title="Pré-visualização da comanda"
-            src={`${url}#toolbar=0&navpanes=0&scrollbar=0`}
-            className="h-[420px] w-full border-0"
-          />
-        ) : (
-          <div className="h-[420px] w-full animate-pulse bg-zinc-100" />
-        )}
+    <div className="flex h-full flex-col items-center overflow-y-auto p-6">
+      <div className="w-full max-w-[260px] shrink-0 rounded-sm bg-white p-4 text-zinc-900 shadow-lg">
+        <p className="mb-3 text-lg font-bold leading-tight">
+          Ana Beatriz Ferreira
+        </p>
+        <div className="flex flex-col gap-2">
+          {campos.map((campo) => (
+            <div key={campo}>{CAMPO_CONTEUDO[campo]}</div>
+          ))}
+        </div>
       </div>
     </div>
   )

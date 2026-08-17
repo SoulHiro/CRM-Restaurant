@@ -27,5 +27,10 @@ export const configuracaoComanda = pgTable('configuracao_comanda', {
   // um campo ausente da lista é um campo escondido. O nome do colaborador
   // não entra aqui: é sempre o topo fixo da comanda.
   campos: jsonb('campos').$type<string[]>().notNull(),
+  // Qual `impressora` (tipo comanda) recebe os pedidos — nullable: sem
+  // escolha ainda, cai no fallback de "primeira comanda ativa".
+  impressora_id: text('impressora_id').references(() => impressora.id, {
+    onDelete: 'set null',
+  }),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 })

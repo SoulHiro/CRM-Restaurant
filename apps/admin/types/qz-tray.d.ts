@@ -20,6 +20,9 @@ declare module 'qz-tray' {
     configs: {
       create(printer: string): QzConfig
     }
+    printers: {
+      find(): Promise<string[]>
+    }
     print(config: QzConfig, data: QzPrintData[]): Promise<void>
   }
 

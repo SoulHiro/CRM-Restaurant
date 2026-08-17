@@ -7,6 +7,7 @@ import {
   TODOS_CAMPOS_COMANDA,
   type CampoComandaKey,
   type ConfiguracaoComanda,
+  type ImpressoraOption,
 } from './types'
 
 function ehCampoValido(valor: string): valor is CampoComandaKey {
@@ -23,8 +24,21 @@ export async function getConfiguracaoComanda(): Promise<ConfiguracaoComanda> {
     where: (c, { eq }) => eq(c.id, 'default'),
   })
 
-  if (!row) return { campos: CAMPOS_COMANDA_PADRAO }
+  if (!row) return { campos: CAMPOS_COMANDA_PADRAO, impressoraId: null }
 
   const campos = row.campos.filter(ehCampoValido)
-  return { campos: campos.length > 0 ? campos : CAMPOS_COMANDA_PADRAO }
+  return {
+    campos: campos.length > 0 ? campos : CAMPOS_COMANDA_PADRAO,
+    impressoraId: row.impressora_id,
+  }
+}
+
+export async function listarImpressorasComanda(): Promise<ImpressoraOption[]> {
+  const rows = await db.query.impressora.findMany({
+    where: (i, { and, eq }) => and(eq(i.tipo, 'comanda'), eq(i.ativo, true)),
+    columns: { id: true, nome: true },
+    orderBy: (i, { asc }) => [asc(i.nome)],
+  })
+
+  return rows
 }
