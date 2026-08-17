@@ -19,7 +19,10 @@ import {
 import { ComandaPreview } from './comanda-preview'
 import { ImpressorasTab } from './impressoras-tab'
 import { PedidosTabConfig } from './pedidos-tab-config'
+import { ResumoDiaPreview } from './resumo-dia-preview'
 import { ResumoDoDiaTab } from './resumo-do-dia-tab'
+
+type AbaAtiva = 'pedidos' | 'impressoras' | 'resumo'
 
 function ordemInicial(ativos: CampoComandaKey[]): CampoComandaKey[] {
   const resto = TODOS_CAMPOS_COMANDA.filter((c) => !ativos.includes(c))
@@ -35,6 +38,8 @@ export function ComandaLayoutConfig({
   impressorasIniciais: ImpressoraOption[]
   configuracaoResumoDiaInicial: ConfiguracaoResumoDia
 }) {
+  const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('pedidos')
+
   const [ordem, setOrdem] = useState<CampoComandaKey[]>(() =>
     ordemInicial(configuracaoInicial.campos)
   )
@@ -46,6 +51,11 @@ export function ComandaLayoutConfig({
   )
   const [impressoras, setImpressoras] = useState<ImpressoraOption[]>(
     impressorasIniciais
+  )
+
+  const [cnpj, setCnpj] = useState(configuracaoResumoDiaInicial.cnpj)
+  const [nomeEstabelecimento, setNomeEstabelecimento] = useState(
+    configuracaoResumoDiaInicial.nomeEstabelecimento
   )
 
   const campos = useMemo(
@@ -64,9 +74,20 @@ export function ComandaLayoutConfig({
 
   return (
     <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-[2fr_3fr]">
-      <ComandaPreview campos={campos} />
+      {abaAtiva === 'resumo' ? (
+        <ResumoDiaPreview
+          nomeEstabelecimento={nomeEstabelecimento}
+          cnpj={cnpj}
+        />
+      ) : (
+        <ComandaPreview campos={campos} />
+      )}
 
-      <Tabs defaultValue="pedidos" className="flex flex-col">
+      <Tabs
+        value={abaAtiva}
+        onValueChange={(v) => setAbaAtiva(v as AbaAtiva)}
+        className="flex flex-col"
+      >
         <TabsList className="flex w-fit justify-start">
           <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
           <TabsTrigger value="impressoras">Impressoras</TabsTrigger>
@@ -94,7 +115,12 @@ export function ComandaLayoutConfig({
         </TabsContent>
 
         <TabsContent value="resumo" className="mt-4">
-          <ResumoDoDiaTab configuracaoInicial={configuracaoResumoDiaInicial} />
+          <ResumoDoDiaTab
+            cnpj={cnpj}
+            setCnpj={setCnpj}
+            nomeEstabelecimento={nomeEstabelecimento}
+            setNomeEstabelecimento={setNomeEstabelecimento}
+          />
         </TabsContent>
       </Tabs>
     </div>

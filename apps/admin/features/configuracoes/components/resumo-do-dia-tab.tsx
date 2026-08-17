@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useAction } from 'next-safe-action/hooks'
 import { toast } from 'sonner'
 
@@ -9,26 +8,22 @@ import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 
 import { salvarConfiguracaoResumoDiaAction } from '../lib/actions'
-import type { ConfiguracaoResumoDia } from '../lib/types'
 
 export function ResumoDoDiaTab({
-  configuracaoInicial,
+  cnpj,
+  setCnpj,
+  nomeEstabelecimento,
+  setNomeEstabelecimento,
 }: {
-  configuracaoInicial: ConfiguracaoResumoDia
+  cnpj: string
+  setCnpj: (v: string) => void
+  nomeEstabelecimento: string
+  setNomeEstabelecimento: (v: string) => void
 }) {
-  const [cnpj, setCnpj] = useState(configuracaoInicial.cnpj)
-  const [nomeEstabelecimento, setNomeEstabelecimento] = useState(
-    configuracaoInicial.nomeEstabelecimento
-  )
-
   const { execute, isExecuting } = useAction(salvarConfiguracaoResumoDiaAction, {
     onSuccess: () => toast.success('Configuração salva'),
     onError: () => toast.error('Não foi possível salvar'),
   })
-
-  function salvar() {
-    execute({ cnpj, nomeEstabelecimento })
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,7 +53,11 @@ export function ResumoDoDiaTab({
           </div>
         </div>
 
-        <Button className="self-start" disabled={isExecuting} onClick={salvar}>
+        <Button
+          className="self-start"
+          disabled={isExecuting}
+          onClick={() => execute({ cnpj, nomeEstabelecimento })}
+        >
           {isExecuting ? 'Salvando...' : 'Salvar configuração'}
         </Button>
       </div>
