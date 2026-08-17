@@ -46,3 +46,11 @@ export interface ImpressoraOption {
   id: string
   nome: string
 }
+
+export interface ConfiguracaoResumoDia {
+  cnpj: string
+  nomeEstabelecimento: string
+  precoCafe: number
+  precoSuco: number
+  precoLanche: number
+}

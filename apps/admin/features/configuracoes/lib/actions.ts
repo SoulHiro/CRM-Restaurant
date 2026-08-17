@@ -4,14 +4,21 @@ import { revalidatePath } from 'next/cache'
 
 import { db } from '@/lib/db'
 import { authActionClient } from '@/lib/safe-action'
-import { configuracaoComanda, impressora } from '@repo/db'
+import { toMoneyString } from '@/lib/numeric'
+import { configuracaoComanda, configuracaoResumoDia, impressora } from '@repo/db'
 
-import { getConfiguracaoComanda, listarImpressorasComanda } from './queries'
+import {
+  getConfiguracaoComanda,
+  getConfiguracaoResumoDia,
+  listarImpressorasComanda,
+} from './queries'
 import {
   criarImpressoraSchema,
   listarImpressorasComandaSchema,
   obterConfiguracaoComandaSchema,
+  obterConfiguracaoResumoDiaSchema,
   salvarConfiguracaoComandaSchema,
+  salvarConfiguracaoResumoDiaSchema,
 } from './schemas'
 
 export const obterConfiguracaoComandaAction = authActionClient
@@ -66,4 +73,39 @@ export const salvarConfiguracaoComandaAction = authActionClient
 
     revalidatePath('/configuracoes/impressao')
     return { campos: parsedInput.campos, impressoraId: parsedInput.impressoraId }
+  })
+
+export const obterConfiguracaoResumoDiaAction = authActionClient
+  .schema(obterConfiguracaoResumoDiaSchema)
+  .action(async () => {
+    return getConfiguracaoResumoDia()
+  })
+
+export const salvarConfiguracaoResumoDiaAction = authActionClient
+  .schema(salvarConfiguracaoResumoDiaSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .insert(configuracaoResumoDia)
+      .values({
+        id: 'default',
+        cnpj: parsedInput.cnpj?.trim() || null,
+        nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
+        preco_cafe: toMoneyString(parsedInput.precoCafe),
+        preco_suco: toMoneyString(parsedInput.precoSuco),
+        preco_lanche: toMoneyString(parsedInput.precoLanche),
+      })
+      .onConflictDoUpdate({
+        target: configuracaoResumoDia.id,
+        set: {
+          cnpj: parsedInput.cnpj?.trim() || null,
+          nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
+          preco_cafe: toMoneyString(parsedInput.precoCafe),
+          preco_suco: toMoneyString(parsedInput.precoSuco),
+          preco_lanche: toMoneyString(parsedInput.precoLanche),
+          updated_at: new Date(),
+        },
+      })
+
+    revalidatePath('/configuracoes/impressao')
+    return parsedInput
   })

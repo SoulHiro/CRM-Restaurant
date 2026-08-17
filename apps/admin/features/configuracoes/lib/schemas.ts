@@ -25,3 +25,17 @@ export const salvarConfiguracaoComandaSchema = z.object({
 export type SalvarConfiguracaoComandaInput = z.infer<
   typeof salvarConfiguracaoComandaSchema
 >
+
+export const obterConfiguracaoResumoDiaSchema = z.object({})
+
+export const salvarConfiguracaoResumoDiaSchema = z.object({
+  cnpj: z.string().optional(),
+  nomeEstabelecimento: z.string().optional(),
+  precoCafe: z.number().min(0),
+  precoSuco: z.number().min(0),
+  precoLanche: z.number().min(0),
+})
+
+export type SalvarConfiguracaoResumoDiaInput = z.infer<
+  typeof salvarConfiguracaoResumoDiaSchema
+>

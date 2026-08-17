@@ -1,12 +1,14 @@
 import 'server-only'
 
 import { db } from '@/lib/db'
+import { toNumber } from '@/lib/numeric'
 
 import {
   CAMPOS_COMANDA_PADRAO,
   TODOS_CAMPOS_COMANDA,
   type CampoComandaKey,
   type ConfiguracaoComanda,
+  type ConfiguracaoResumoDia,
   type ImpressoraOption,
 } from './types'
 
@@ -41,4 +43,18 @@ export async function listarImpressorasComanda(): Promise<ImpressoraOption[]> {
   })
 
   return rows
+}
+
+export async function getConfiguracaoResumoDia(): Promise<ConfiguracaoResumoDia> {
+  const row = await db.query.configuracaoResumoDia.findFirst({
+    where: (c, { eq }) => eq(c.id, 'default'),
+  })
+
+  return {
+    cnpj: row?.cnpj ?? '',
+    nomeEstabelecimento: row?.nome_estabelecimento ?? '',
+    precoCafe: toNumber(row?.preco_cafe),
+    precoSuco: toNumber(row?.preco_suco),
+    precoLanche: toNumber(row?.preco_lanche),
+  }
 }

@@ -13,6 +13,7 @@ import {
   TODOS_CAMPOS_COMANDA,
   type CampoComandaKey,
   type ConfiguracaoComanda,
+  type ConfiguracaoResumoDia,
   type ImpressoraOption,
 } from '../lib/types'
 import { ComandaPreview } from './comanda-preview'
@@ -28,9 +29,11 @@ function ordemInicial(ativos: CampoComandaKey[]): CampoComandaKey[] {
 export function ComandaLayoutConfig({
   configuracaoInicial,
   impressorasIniciais,
+  configuracaoResumoDiaInicial,
 }: {
   configuracaoInicial: ConfiguracaoComanda
   impressorasIniciais: ImpressoraOption[]
+  configuracaoResumoDiaInicial: ConfiguracaoResumoDia
 }) {
   const [ordem, setOrdem] = useState<CampoComandaKey[]>(() =>
     ordemInicial(configuracaoInicial.campos)
@@ -91,7 +94,7 @@ export function ComandaLayoutConfig({
         </TabsContent>
 
         <TabsContent value="resumo" className="mt-4">
-          <ResumoDoDiaTab />
+          <ResumoDoDiaTab configuracaoInicial={configuracaoResumoDiaInicial} />
         </TabsContent>
       </Tabs>
     </div>
