@@ -2,7 +2,6 @@ import { pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
 import { funcionario_empresa } from './funcionario'
 import { cardapio_dia, item_adicional, tamanhoEnum } from './cardapio'
-import { envio_consumer } from './consumer'
 
 export const statusImpressaoEnum = pgEnum('status_impressao', [
   'pendente',
@@ -25,9 +24,6 @@ export const pedido = pgTable('pedido', {
     .notNull()
     .default('pendente'),
   motivo_erro: text('motivo_erro'),
-  envio_consumer_id: text('envio_consumer_id').references(
-    () => envio_consumer.id
-  ),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 })
