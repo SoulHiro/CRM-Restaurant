@@ -123,53 +123,74 @@ export function PassoRevisar({
   }
 
   const totalDias = pessoas.reduce((soma, p) => soma + p.dias.length, 0)
+  // Só quem tem nome parecido com alguém já cadastrado precisa de revisão —
+  // pra quem não tem nenhum parecido, "criar novo" já é a única opção
+  // sensata, então nem pausa o fluxo pedindo confirmação.
+  const pessoasParaRevisar = pessoas.filter((p) => p.sugestao != null)
+  const pessoasNovas = pessoas.filter((p) => p.sugestao == null)
 
   return (
     <>
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-6">
         <p className="text-sm text-muted-foreground">
           {pessoas.length} pessoa{pessoas.length === 1 ? '' : 's'} ·{' '}
-          {totalDias} pedido{totalDias === 1 ? '' : 's'} de dia. Confira o
-          vínculo de cada uma antes de confirmar.
+          {totalDias} pedido{totalDias === 1 ? '' : 's'} de dia.
         </p>
 
-        <div className="flex flex-col gap-2">
-          {pessoas.map((pessoa) => (
-            <div
-              key={pessoa.nome}
-              className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex flex-col">
-                <span className="font-medium">{pessoa.nome}</span>
-                <span className="text-xs text-muted-foreground">
-                  {pessoa.dias.length} dia{pessoa.dias.length === 1 ? '' : 's'}
-                  {pessoa.sugestao && !pessoa.colaboradorId
-                    ? ` · parecido com "${pessoa.sugestao.nome}"`
-                    : ''}
-                </span>
-              </div>
+        {pessoasNovas.length > 0 && (
+          <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+            {pessoasNovas.length} pessoa{pessoasNovas.length === 1 ? '' : 's'}{' '}
+            sem nome parecido com ninguém cadastrado — ser
+            {pessoasNovas.length === 1 ? 'á criada' : 'ão criadas'} como
+            colaborador{pessoasNovas.length === 1 ? '' : 'es'} nov
+            {pessoasNovas.length === 1 ? 'o' : 'os'} automaticamente.
+          </p>
+        )}
 
-              <Select
-                value={pessoa.colaboradorId ?? NOVO}
-                onValueChange={(v) =>
-                  setColaboradorId(pessoa.nome, v === NOVO ? null : v)
-                }
+        {pessoasParaRevisar.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">
+              Nomes parecidos com quem já está cadastrado — confira antes de
+              confirmar:
+            </p>
+            {pessoasParaRevisar.map((pessoa) => (
+              <div
+                key={pessoa.nome}
+                className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
               >
-                <SelectTrigger className="w-full sm:w-64">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NOVO}>Criar colaborador novo</SelectItem>
-                  {existentes.map((colaborador) => (
-                    <SelectItem key={colaborador.id} value={colaborador.id}>
-                      Vincular a {colaborador.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
-        </div>
+                <div className="flex flex-col">
+                  <span className="font-medium">{pessoa.nome}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {pessoa.dias.length} dia
+                    {pessoa.dias.length === 1 ? '' : 's'}
+                    {!pessoa.colaboradorId
+                      ? ` · parecido com "${pessoa.sugestao!.nome}"`
+                      : ''}
+                  </span>
+                </div>
+
+                <Select
+                  value={pessoa.colaboradorId ?? NOVO}
+                  onValueChange={(v) =>
+                    setColaboradorId(pessoa.nome, v === NOVO ? null : v)
+                  }
+                >
+                  <SelectTrigger className="w-full sm:w-64">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NOVO}>Criar colaborador novo</SelectItem>
+                    {existentes.map((colaborador) => (
+                      <SelectItem key={colaborador.id} value={colaborador.id}>
+                        Vincular a {colaborador.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <DrawerFooter className="flex-row justify-end gap-2 border-t">

@@ -4,7 +4,12 @@ import { and, count, eq } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { dataISO, hojeISO } from '@/lib/formatters'
-import { colaborador_pedido, empresa, pedido_dia_importado } from '@repo/db'
+import {
+  colaborador_pedido,
+  empresa,
+  fechamento_dia_empresa,
+  pedido_dia_importado,
+} from '@repo/db'
 
 import { toNumber } from '@/lib/numeric'
 import { ehRecusa } from './importacao-helpers'
@@ -174,18 +179,11 @@ export async function getContagemTamanhos(
   return contagem
 }
 
-export async function getFechamentoDoDia(
-  empresaId: string,
-  data: string
-): Promise<FechamentoDia | null> {
-  const row = await db.query.fechamento_dia_empresa.findFirst({
-    where: (f, { and: andOp, eq: eqOp }) =>
-      andOp(eqOp(f.empresa_id, empresaId), eqOp(f.data, data)),
-  })
-
-  if (!row) return null
-
+function mapFechamento(
+  row: typeof fechamento_dia_empresa.$inferSelect
+): FechamentoDia {
   return {
+    data: row.data,
     quantidadeP: row.quantidade_p,
     quantidadeM: row.quantidade_m,
     quantidadeG: row.quantidade_g,
@@ -198,6 +196,31 @@ export async function getFechamentoDoDia(
     finalizadoPor: row.finalizado_por,
     finalizadoEm: row.finalizado_em.toISOString(),
   }
+}
+
+export async function getFechamentoDoDia(
+  empresaId: string,
+  data: string
+): Promise<FechamentoDia | null> {
+  const row = await db.query.fechamento_dia_empresa.findFirst({
+    where: (f, { and: andOp, eq: eqOp }) =>
+      andOp(eqOp(f.empresa_id, empresaId), eqOp(f.data, data)),
+  })
+
+  return row ? mapFechamento(row) : null
+}
+
+/** Mais recentes primeiro — histórico de fechamentos já feitos pra empresa. */
+export async function listarFechamentosDaEmpresa(
+  empresaId: string
+): Promise<FechamentoDia[]> {
+  const rows = await db.query.fechamento_dia_empresa.findMany({
+    where: (f, { eq: eqOp }) => eqOp(f.empresa_id, empresaId),
+    orderBy: (f, { desc }) => [desc(f.data)],
+    limit: 60,
+  })
+
+  return rows.map(mapFechamento)
 }
 
 /**

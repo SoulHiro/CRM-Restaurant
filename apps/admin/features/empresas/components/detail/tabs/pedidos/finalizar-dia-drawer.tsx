@@ -24,6 +24,7 @@ import {
   finalizarDiaAction,
   obterFechamentoDoDiaAction,
   obterImpressoraComandaAction,
+  reabrirDiaAction,
 } from '../../../../lib/actions'
 import type { PedidoDoDiaItem } from '../../../../lib/types'
 
@@ -32,11 +33,13 @@ export function FinalizarDiaDrawer({
   empresaNome,
   data,
   pedidos,
+  onFinalizado,
 }: {
   empresaId: string
   empresaNome: string
   data: string
   pedidos: PedidoDoDiaItem[]
+  onFinalizado: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [jaFinalizado, setJaFinalizado] = useState(false)
@@ -80,9 +83,6 @@ export function FinalizarDiaDrawer({
         if (!resultado) return
         setNomeEstabelecimento(resultado.nomeEstabelecimento)
         setCnpj(resultado.cnpj)
-        setPrecoCafe(String(resultado.precoCafe))
-        setPrecoSuco(String(resultado.precoSuco))
-        setPrecoLanche(String(resultado.precoLanche))
       },
     }
   )
@@ -103,12 +103,24 @@ export function FinalizarDiaDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, empresaId, data])
 
+  const { execute: reabrir, isExecuting: reabrindo } = useAction(
+    reabrirDiaAction,
+    {
+      onSuccess: () => {
+        toast.success('Fechamento desfeito — ajuste os pedidos e finalize de novo')
+        setJaFinalizado(false)
+      },
+      onError: () => toast.error('Não foi possível reabrir o dia'),
+    }
+  )
+
   const { execute, isExecuting } = useAction(finalizarDiaAction, {
     onSuccess: async ({ data: resultado }) => {
       if (!resultado) return
       toast.success('Dia finalizado')
       await imprimir(resultado)
       setConcluido(true)
+      onFinalizado()
     },
     onError: ({ error }) => {
       toast.error(error.serverError ?? 'Não foi possível finalizar o dia')
@@ -196,8 +208,16 @@ export function FinalizarDiaDrawer({
             <p className="font-medium">Esse dia já foi finalizado</p>
             <p className="text-sm text-muted-foreground">
               {empresaNome} em {formatDateBR(data)} já tem um fechamento
-              registrado.
+              registrado. Reabrir apaga esse fechamento — ajuste os pedidos e
+              finalize de novo.
             </p>
+            <Button
+              variant="outline"
+              disabled={reabrindo}
+              onClick={() => reabrir({ empresaId, data })}
+            >
+              {reabrindo ? 'Reabrindo...' : 'Reabrir dia'}
+            </Button>
           </div>
         ) : (
           <>

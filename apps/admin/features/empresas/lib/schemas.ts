@@ -192,3 +192,23 @@ export const obterFechamentoDoDiaSchema = z.object({
 export type ObterFechamentoDoDiaInput = z.infer<
   typeof obterFechamentoDoDiaSchema
 >
+
+export const reabrirDiaSchema = z.object({
+  empresaId: z.string().min(1),
+  data: z.string().min(1),
+})
+
+export type ReabrirDiaInput = z.infer<typeof reabrirDiaSchema>
+
+export const listarFechamentosSchema = z.object({
+  empresaId: z.string().min(1),
+})
+
+export type ListarFechamentosInput = z.infer<typeof listarFechamentosSchema>
+
+export const removerPedidoSchema = z.object({
+  colaboradorId: z.string().min(1),
+  data: z.string().min(1),
+})
+
+export type RemoverPedidoInput = z.infer<typeof removerPedidoSchema>

@@ -194,19 +194,22 @@ fechamento_dia_empresa
   -- UNIQUE (empresa_id, data) -- não dá pra finalizar o mesmo dia duas vezes
 ```
 
-Café/suco/lanche não têm fonte de dado própria (não vêm de planilha) — por
-isso quantidade e preço unitário são digitados manualmente no drawer
-"Finalizar dia" (aba Pedidos da empresa), com preço unitário pré-preenchido
-a partir de `configuracao_resumo_dia` mas editável por lançamento. Preço e
-quantidade ficam gravados como snapshot no fechamento — se o preço
-configurado mudar depois, o fechamento já feito não muda junto (mesmo
-princípio de `historico_preco_insumo`/`historico_salario`: número que muda
-com o tempo vira linha, não coluna).
+Café/suco/lanche não têm fonte de dado própria (não vêm de planilha, nem
+preço padrão configurado em lugar nenhum) — quantidade e preço unitário são
+digitados manualmente, do zero, direto no drawer "Finalizar dia" (aba
+Pedidos da empresa) a cada fechamento.
 
 Ao finalizar, gera uma nota única (80mm, sem itemização) via
 `features/empresas/lib/resumo-dia-pdf.tsx` — nome/CNPJ do estabelecimento,
 data/hora de impressão, nome da empresa cliente, P/M/G em destaque grande, e
 só o número de café/suco/lanche (sem valor).
+
+Reabrir (`reabrirDiaAction`) apaga a linha — não edita. Corrigir um
+fechamento errado é: reabrir, ajustar os pedidos daquele dia (adicionar,
+remover ou editar via importação), finalizar de novo. `getFechamentoDoDia`
+lê pelo par `(empresa_id, data)`; `listarFechamentosDaEmpresa` traz os
+últimos 60, mais recente primeiro — é o que alimenta o "Histórico de
+fechamentos" dentro da própria aba Pedidos.
 
 ## Configuração de impressão — `configuracao_comanda` IMPLEMENTADO (Fase 4)
 
@@ -233,13 +236,12 @@ configuracao_resumo_dia
   - id (fixo: 'default' — singleton)
   - cnpj, nome_estabelecimento (nullable — do nosso próprio restaurante,
     não da empresa-cliente)
-  - preco_cafe, preco_suco, preco_lanche
   - updated_at
 ```
 
-Editável na aba "Resumo do dia" de `/configuracoes/impressao`. Só fornece o
-valor **padrão** pro drawer de fechamento — o preço de fato lançado fica
-gravado em `fechamento_dia_empresa`, não lido daqui depois.
+Editável na aba "Resumo do dia" de `/configuracoes/impressao`. Só o
+cabeçalho da nota — café/suco/lanche não têm preço configurado aqui, ver
+"Fechamento do dia" acima.
 
 ## Estoque (fonte de verdade PRÓPRIA — não espelho do AnotaAí) — IMPLEMENTADO
 

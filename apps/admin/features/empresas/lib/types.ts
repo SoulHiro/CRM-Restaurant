@@ -124,6 +124,7 @@ export interface ContagemTamanhos {
 }
 
 export interface FechamentoDia {
+  data: string
   quantidadeP: number
   quantidadeM: number
   quantidadeG: number

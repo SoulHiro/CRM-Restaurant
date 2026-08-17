@@ -7,8 +7,13 @@ import { db } from '@/lib/db'
 import { executarLote, type Statement } from '@/lib/db-batch'
 import { ActionError, actionClient, authActionClient } from '@/lib/safe-action'
 import { onlyDigits } from '@repo/ui/lib/masks'
-import { colaborador_pedido, empresa, pedido_dia_importado } from '@repo/db'
-import { eq } from 'drizzle-orm'
+import {
+  colaborador_pedido,
+  empresa,
+  fechamento_dia_empresa,
+  pedido_dia_importado,
+} from '@repo/db'
+import { and, eq } from 'drizzle-orm'
 import {
   createEmpresaSchema,
   createFuncionarioSchema,
@@ -17,9 +22,12 @@ import {
   finalizarDiaSchema,
   importarPedidosSchema,
   listarColaboradoresSchema,
+  listarFechamentosSchema,
   listarPedidosDoDiaSchema,
   obterFechamentoDoDiaSchema,
   obterImpressoraComandaSchema,
+  reabrirDiaSchema,
+  removerPedidoSchema,
   updateFuncionarioSchema,
   updateFuncionarioStatusSchema,
 } from './schemas'
@@ -28,8 +36,8 @@ import {
   getFechamentoDoDia,
   getImpressoraComanda,
   getPedidosDoDia,
+  listarFechamentosDaEmpresa,
 } from './queries'
-import { fechamento_dia_empresa } from '@repo/db'
 import { toMoneyString } from '@/lib/numeric'
 
 export const createEmpresaAction = authActionClient
@@ -299,4 +307,47 @@ export const finalizarDiaAction = authActionClient
       quantidadeM: contagem.m,
       quantidadeG: contagem.g,
     }
+  })
+
+/**
+ * Apaga o fechamento — não edita. Se errou algo, refaz do zero: reabre,
+ * ajusta os pedidos (adiciona/remove), finaliza de novo. Nunca deixa dois
+ * fechamentos pro mesmo dia (a UNIQUE de `fechamento_dia_empresa` já
+ * garantiria isso mesmo sem essa checagem, mas a mensagem fica melhor aqui).
+ */
+export const reabrirDiaAction = authActionClient
+  .schema(reabrirDiaSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .delete(fechamento_dia_empresa)
+      .where(
+        and(
+          eq(fechamento_dia_empresa.empresa_id, parsedInput.empresaId),
+          eq(fechamento_dia_empresa.data, parsedInput.data)
+        )
+      )
+
+    revalidatePath(`/empresas/${parsedInput.empresaId}`)
+  })
+
+export const listarFechamentosAction = authActionClient
+  .schema(listarFechamentosSchema)
+  .action(async ({ parsedInput }) => {
+    const fechamentos = await listarFechamentosDaEmpresa(parsedInput.empresaId)
+    return { fechamentos }
+  })
+
+export const removerPedidoAction = authActionClient
+  .schema(removerPedidoSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .delete(pedido_dia_importado)
+      .where(
+        and(
+          eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),
+          eq(pedido_dia_importado.data, parsedInput.data)
+        )
+      )
+
+    revalidatePath('/empresas')
   })

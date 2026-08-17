@@ -20,6 +20,7 @@ import {
 import { AdicionarPedidoManualDrawer } from './form/adicionar-pedido-manual-drawer'
 import { ImportarPlanilhaDrawer } from './form/importar-planilha-drawer'
 import { FinalizarDiaDrawer } from './finalizar-dia-drawer'
+import { HistoricoFechamentos } from './historico-fechamentos'
 import { PedidoDiaRow } from './pedido-dia-row'
 
 function paraComanda(
@@ -46,6 +47,7 @@ export function PedidosTab({
 }) {
   const [data, setData] = useState(hojeISO())
   const [pedidos, setPedidos] = useState<PedidoDoDiaItem[] | null>(null)
+  const [versaoHistorico, setVersaoHistorico] = useState(0)
   const { imprimir, imprimindo } = useImprimirComandas()
 
   const { execute, isExecuting } = useAction(listarPedidosDoDiaAction, {
@@ -97,6 +99,7 @@ export function PedidosTab({
             empresaNome={empresaNome}
             data={data}
             pedidos={pedidos ?? []}
+            onFinalizado={() => setVersaoHistorico((v) => v + 1)}
           />
         </div>
       </div>
@@ -117,11 +120,18 @@ export function PedidosTab({
             <PedidoDiaRow
               key={pedido.colaboradorId}
               pedido={pedido}
+              data={data}
               onImprimir={() => imprimir([paraComanda(pedido, empresaNome)])}
+              onRemovido={() => execute({ empresaId, data })}
             />
           ))}
         </div>
       )}
+
+      <HistoricoFechamentos
+        empresaId={empresaId}
+        recarregarQuando={versaoHistorico}
+      />
     </div>
   )
 }
