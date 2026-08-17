@@ -117,6 +117,26 @@ export interface PedidoDoDiaItem {
   recusou: boolean
 }
 
+export interface ContagemTamanhos {
+  p: number
+  m: number
+  g: number
+}
+
+export interface FechamentoDia {
+  quantidadeP: number
+  quantidadeM: number
+  quantidadeG: number
+  quantidadeCafe: number
+  precoUnitarioCafe: number
+  quantidadeSuco: number
+  precoUnitarioSuco: number
+  quantidadeLanche: number
+  precoUnitarioLanche: number
+  finalizadoPor: string | null
+  finalizadoEm: string
+}
+
 export interface EmpresaDetail {
   status: EmpresaRecordStatus
   endereco: EmpresaEndereco

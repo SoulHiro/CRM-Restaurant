@@ -178,6 +178,36 @@ O carimbo de data/hora chega do xlsx como `Date` de verdade (`cellDates:
 true` no parse do SheetJS) — não como número serial do Excel, que só entra
 como fallback se a célula não estiver formatada como data.
 
+## Fechamento do dia por empresa — `fechamento_dia_empresa` IMPLEMENTADO (Fase 4)
+
+```
+fechamento_dia_empresa
+  - id, empresa_id (FK empresa, cascade)
+  - data
+  - quantidade_p, quantidade_m, quantidade_g (integer -- somados dos
+    pedido_dia_importado reais daquele dia, SEMPRE recalculados no
+    servidor no momento do fechamento, nunca recebidos do cliente)
+  - quantidade_cafe, preco_unitario_cafe
+  - quantidade_suco, preco_unitario_suco
+  - quantidade_lanche, preco_unitario_lanche
+  - finalizado_por, finalizado_em
+  -- UNIQUE (empresa_id, data) -- não dá pra finalizar o mesmo dia duas vezes
+```
+
+Café/suco/lanche não têm fonte de dado própria (não vêm de planilha) — por
+isso quantidade e preço unitário são digitados manualmente no drawer
+"Finalizar dia" (aba Pedidos da empresa), com preço unitário pré-preenchido
+a partir de `configuracao_resumo_dia` mas editável por lançamento. Preço e
+quantidade ficam gravados como snapshot no fechamento — se o preço
+configurado mudar depois, o fechamento já feito não muda junto (mesmo
+princípio de `historico_preco_insumo`/`historico_salario`: número que muda
+com o tempo vira linha, não coluna).
+
+Ao finalizar, gera uma nota única (80mm, sem itemização) via
+`features/empresas/lib/resumo-dia-pdf.tsx` — nome/CNPJ do estabelecimento,
+data/hora de impressão, nome da empresa cliente, P/M/G em destaque grande, e
+só o número de café/suco/lanche (sem valor).
+
 ## Configuração de impressão — `configuracao_comanda` IMPLEMENTADO (Fase 4)
 
 ```
@@ -197,6 +227,19 @@ comanda, não configurável. Editável em `/configuracoes/impressao`
 (`features/configuracoes/`), com pré-visualização instantânea (espelho em
 HTML, não o PDF real) e cadastro de impressora (nome + impressora
 detectada via QZ Tray) na mesma tela.
+
+```
+configuracao_resumo_dia
+  - id (fixo: 'default' — singleton)
+  - cnpj, nome_estabelecimento (nullable — do nosso próprio restaurante,
+    não da empresa-cliente)
+  - preco_cafe, preco_suco, preco_lanche
+  - updated_at
+```
+
+Editável na aba "Resumo do dia" de `/configuracoes/impressao`. Só fornece o
+valor **padrão** pro drawer de fechamento — o preço de fato lançado fica
+gravado em `fechamento_dia_empresa`, não lido daqui depois.
 
 ## Estoque (fonte de verdade PRÓPRIA — não espelho do AnotaAí) — IMPLEMENTADO
 

@@ -6,8 +6,15 @@ import { db } from '@/lib/db'
 import { dataISO, hojeISO } from '@/lib/formatters'
 import { colaborador_pedido, empresa, pedido_dia_importado } from '@repo/db'
 
+import { toNumber } from '@/lib/numeric'
 import { ehRecusa } from './importacao-helpers'
-import type { EmpresaDetail, EmpresaListItem, PedidoDoDiaItem } from './types'
+import type {
+  ContagemTamanhos,
+  EmpresaDetail,
+  EmpresaListItem,
+  FechamentoDia,
+  PedidoDoDiaItem,
+} from './types'
 import { EMPTY_DETAIL, mockEmpresaDetails } from './mock-data/empresa-details'
 
 /**
@@ -129,6 +136,68 @@ export async function getPedidosDoDia(
       recusou: ehRecusa(pedido?.prato ?? null),
     }
   })
+}
+
+/**
+ * Soma P/M/G dos pedidos reais daquele dia — quem recusou (`ehRecusa`) não
+ * entra na conta, é diferente de "vai comer". Usado no fechamento do dia,
+ * sempre recalculado no servidor: nunca confia em contagem vinda do cliente.
+ */
+export async function getContagemTamanhos(
+  empresaId: string,
+  data: string
+): Promise<ContagemTamanhos> {
+  const rows = await db
+    .select({
+      tamanho: pedido_dia_importado.tamanho,
+      prato: pedido_dia_importado.prato,
+    })
+    .from(pedido_dia_importado)
+    .innerJoin(
+      colaborador_pedido,
+      eq(pedido_dia_importado.colaborador_id, colaborador_pedido.id)
+    )
+    .where(
+      and(
+        eq(colaborador_pedido.empresa_id, empresaId),
+        eq(pedido_dia_importado.data, data)
+      )
+    )
+
+  const contagem: ContagemTamanhos = { p: 0, m: 0, g: 0 }
+  for (const row of rows) {
+    if (!row.tamanho || ehRecusa(row.prato)) continue
+    if (row.tamanho === 'P') contagem.p++
+    else if (row.tamanho === 'M') contagem.m++
+    else if (row.tamanho === 'G') contagem.g++
+  }
+  return contagem
+}
+
+export async function getFechamentoDoDia(
+  empresaId: string,
+  data: string
+): Promise<FechamentoDia | null> {
+  const row = await db.query.fechamento_dia_empresa.findFirst({
+    where: (f, { and: andOp, eq: eqOp }) =>
+      andOp(eqOp(f.empresa_id, empresaId), eqOp(f.data, data)),
+  })
+
+  if (!row) return null
+
+  return {
+    quantidadeP: row.quantidade_p,
+    quantidadeM: row.quantidade_m,
+    quantidadeG: row.quantidade_g,
+    quantidadeCafe: row.quantidade_cafe,
+    precoUnitarioCafe: toNumber(row.preco_unitario_cafe),
+    quantidadeSuco: row.quantidade_suco,
+    precoUnitarioSuco: toNumber(row.preco_unitario_suco),
+    quantidadeLanche: row.quantidade_lanche,
+    precoUnitarioLanche: toNumber(row.preco_unitario_lanche),
+    finalizadoPor: row.finalizado_por,
+    finalizadoEm: row.finalizado_em.toISOString(),
+  }
 }
 
 /**

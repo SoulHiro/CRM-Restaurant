@@ -170,3 +170,25 @@ export const importarPedidosSchema = z.object({
 })
 
 export type ImportarPedidosInput = z.infer<typeof importarPedidosSchema>
+
+export const finalizarDiaSchema = z.object({
+  empresaId: z.string().min(1),
+  data: z.string().min(1),
+  quantidadeCafe: z.number().int().min(0),
+  precoUnitarioCafe: z.number().min(0),
+  quantidadeSuco: z.number().int().min(0),
+  precoUnitarioSuco: z.number().min(0),
+  quantidadeLanche: z.number().int().min(0),
+  precoUnitarioLanche: z.number().min(0),
+})
+
+export type FinalizarDiaInput = z.infer<typeof finalizarDiaSchema>
+
+export const obterFechamentoDoDiaSchema = z.object({
+  empresaId: z.string().min(1),
+  data: z.string().min(1),
+})
+
+export type ObterFechamentoDoDiaInput = z.infer<
+  typeof obterFechamentoDoDiaSchema
+>

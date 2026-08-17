@@ -3,6 +3,8 @@ import {
   boolean,
   date,
   index,
+  integer,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -12,6 +14,8 @@ import {
 import { createId } from '@paralleldrive/cuid2'
 
 import { empresa } from './empresa'
+
+const PRECO = { precision: 12, scale: 2 } as const
 
 export const turnoRefeicaoEnum = pgEnum('pedido_importado_turno', [
   'almoco',
@@ -84,6 +88,43 @@ export const pedido_dia_importado = pgTable(
     // Reimportar a mesma semana faz upsert por dia, não duplica.
     unique().on(t.colaborador_id, t.data),
     index('pedido_dia_importado_data_idx').on(t.data),
+  ]
+)
+
+/**
+ * Uma nota resumo por empresa/dia — snapshot no momento do fechamento, não
+ * referência ao preço configurado hoje. Se o preço do lanche mudar amanhã,
+ * o fechamento de ontem não pode mudar junto: por isso quantidade e preço
+ * unitário de cada item vêm gravados aqui, não recalculados na leitura.
+ */
+export const fechamento_dia_empresa = pgTable(
+  'fechamento_dia_empresa',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    empresa_id: text('empresa_id')
+      .notNull()
+      .references(() => empresa.id, { onDelete: 'cascade' }),
+    data: date('data').notNull(),
+    // P/M/G somados dos pedido_dia_importado reais daquele dia, no momento
+    // do fechamento.
+    quantidade_p: integer('quantidade_p').notNull().default(0),
+    quantidade_m: integer('quantidade_m').notNull().default(0),
+    quantidade_g: integer('quantidade_g').notNull().default(0),
+    quantidade_cafe: integer('quantidade_cafe').notNull().default(0),
+    preco_unitario_cafe: numeric('preco_unitario_cafe', PRECO).notNull().default('0'),
+    quantidade_suco: integer('quantidade_suco').notNull().default(0),
+    preco_unitario_suco: numeric('preco_unitario_suco', PRECO).notNull().default('0'),
+    quantidade_lanche: integer('quantidade_lanche').notNull().default(0),
+    preco_unitario_lanche: numeric('preco_unitario_lanche', PRECO).notNull().default('0'),
+    finalizado_por: text('finalizado_por'),
+    finalizado_em: timestamp('finalizado_em').notNull().defaultNow(),
+  },
+  (t) => [
+    // Um fechamento por empresa/dia — evita finalizar o mesmo dia duas vezes
+    // sem perceber.
+    unique().on(t.empresa_id, t.data),
   ]
 )
 

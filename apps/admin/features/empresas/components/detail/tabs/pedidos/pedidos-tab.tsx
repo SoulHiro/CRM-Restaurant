@@ -17,7 +17,9 @@ import {
   useImprimirComandas,
   type ComandaEntrada,
 } from '../../../../hooks/use-imprimir-comandas'
+import { AdicionarPedidoManualDrawer } from './form/adicionar-pedido-manual-drawer'
 import { ImportarPlanilhaDrawer } from './form/importar-planilha-drawer'
+import { FinalizarDiaDrawer } from './finalizar-dia-drawer'
 import { PedidoDiaRow } from './pedido-dia-row'
 
 function paraComanda(
@@ -84,7 +86,18 @@ export function PedidosTab({
             <Printer className="size-4" />
             Imprimir todos ({comImprimivel.length})
           </Button>
+          <AdicionarPedidoManualDrawer
+            empresaId={empresaId}
+            data={data}
+            onAdicionado={() => execute({ empresaId, data })}
+          />
           <ImportarPlanilhaDrawer empresaId={empresaId} />
+          <FinalizarDiaDrawer
+            empresaId={empresaId}
+            empresaNome={empresaNome}
+            data={data}
+            pedidos={pedidos ?? []}
+          />
         </div>
       </div>
 

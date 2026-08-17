@@ -14,14 +14,23 @@ import {
   createFuncionarioSchema,
   createPausaSchema,
   deletePausaSchema,
+  finalizarDiaSchema,
   importarPedidosSchema,
   listarColaboradoresSchema,
   listarPedidosDoDiaSchema,
+  obterFechamentoDoDiaSchema,
   obterImpressoraComandaSchema,
   updateFuncionarioSchema,
   updateFuncionarioStatusSchema,
 } from './schemas'
-import { getImpressoraComanda, getPedidosDoDia } from './queries'
+import {
+  getContagemTamanhos,
+  getFechamentoDoDia,
+  getImpressoraComanda,
+  getPedidosDoDia,
+} from './queries'
+import { fechamento_dia_empresa } from '@repo/db'
+import { toMoneyString } from '@/lib/numeric'
 
 export const createEmpresaAction = authActionClient
   .schema(createEmpresaSchema)
@@ -234,5 +243,60 @@ export const importarPedidosAction = authActionClient
     return {
       colaboradoresNovos: idPorColaboradorNovo.size,
       diasImportados: parsedInput.itens.length,
+    }
+  })
+
+export const obterFechamentoDoDiaAction = authActionClient
+  .schema(obterFechamentoDoDiaSchema)
+  .action(async ({ parsedInput }) => {
+    const fechamento = await getFechamentoDoDia(
+      parsedInput.empresaId,
+      parsedInput.data
+    )
+    return { fechamento }
+  })
+
+/**
+ * P/M/G nunca vêm do cliente — são recalculados aqui, na hora, a partir dos
+ * pedidos reais daquele dia. Só café/suco/lanche (sem fonte de dado própria
+ * ainda) são o que o usuário de fato informa.
+ */
+export const finalizarDiaAction = authActionClient
+  .schema(finalizarDiaSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const jaFechado = await getFechamentoDoDia(
+      parsedInput.empresaId,
+      parsedInput.data
+    )
+    if (jaFechado) {
+      throw new ActionError('Esse dia já foi finalizado para essa empresa.')
+    }
+
+    const contagem = await getContagemTamanhos(
+      parsedInput.empresaId,
+      parsedInput.data
+    )
+
+    await db.insert(fechamento_dia_empresa).values({
+      empresa_id: parsedInput.empresaId,
+      data: parsedInput.data,
+      quantidade_p: contagem.p,
+      quantidade_m: contagem.m,
+      quantidade_g: contagem.g,
+      quantidade_cafe: parsedInput.quantidadeCafe,
+      preco_unitario_cafe: toMoneyString(parsedInput.precoUnitarioCafe),
+      quantidade_suco: parsedInput.quantidadeSuco,
+      preco_unitario_suco: toMoneyString(parsedInput.precoUnitarioSuco),
+      quantidade_lanche: parsedInput.quantidadeLanche,
+      preco_unitario_lanche: toMoneyString(parsedInput.precoUnitarioLanche),
+      finalizado_por: ctx.user.name,
+    })
+
+    revalidatePath(`/empresas/${parsedInput.empresaId}`)
+
+    return {
+      quantidadeP: contagem.p,
+      quantidadeM: contagem.m,
+      quantidadeG: contagem.g,
     }
   })
