@@ -18,6 +18,15 @@ const shortDateFormatter = new Intl.DateTimeFormat('pt-BR', {
   month: '2-digit',
 })
 
+const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: FUSO_RESTAURANTE,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
 /** Colunas `date` do Postgres chegam assim: dia de calendário, sem hora. */
 const DIA_DE_CALENDARIO = /^(\d{4})-(\d{2})-(\d{2})$/
 
@@ -52,6 +61,13 @@ export function formatDateBR(value: string | Date): string {
   return dateFormatter.format(new Date(value))
 }
 
+/** Instante real com hora — carimbo de resposta, horário de impressão. */
+export function formatDateTimeBR(value: string | Date): string {
+  // Intl separa data e hora com vírgula ("10/08/2026, 11:32") — sem vírgula
+  // fica mais limpo tanto na tela quanto impresso na comanda.
+  return dateTimeFormatter.format(new Date(value)).replace(',', '')
+}
+
 export function formatShortDateBR(value: string | Date): string {
   if (typeof value === 'string') {
     const dia = DIA_DE_CALENDARIO.exec(value)
@@ -68,9 +84,15 @@ const isoDateFormatter = new Intl.DateTimeFormat('en-CA', {
 })
 
 /**
- * Data de hoje no fuso do restaurante, em 'YYYY-MM-DD'. O servidor roda em UTC
- * na Vercel — usar `toISOString()` viraria o dia às 21h de Brasília.
+ * Um instante (timestamp) no dia de calendário do fuso do restaurante, em
+ * 'YYYY-MM-DD'. O servidor roda em UTC na Vercel — usar `toISOString()`
+ * viraria o dia às 21h de Brasília.
  */
+export function dataISO(instante: Date): string {
+  return isoDateFormatter.format(instante)
+}
+
+/** Data de hoje no fuso do restaurante, em 'YYYY-MM-DD'. */
 export function hojeISO(): string {
-  return isoDateFormatter.format(new Date())
+  return dataISO(new Date())
 }

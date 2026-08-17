@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatCurrencyBRL, formatDateBR, formatShortDateBR } from './formatters'
+import {
+  formatCurrencyBRL,
+  formatDateBR,
+  formatDateTimeBR,
+  formatShortDateBR,
+} from './formatters'
 
 /**
  * `Intl.NumberFormat` separa "R$" do número com espaço não-quebrável (U+00A0),
@@ -57,5 +62,11 @@ describe('formatShortDateBR', () => {
 
   it('converte timestamp real para o horário do restaurante', () => {
     expect(formatShortDateBR('2026-08-08T01:00:00.000Z')).toBe('07/08')
+  })
+})
+
+describe('formatDateTimeBR', () => {
+  it('mostra data e hora no fuso do restaurante', () => {
+    expect(formatDateTimeBR('2026-08-10T14:32:00.000Z')).toBe('10/08/2026 11:32')
   })
 })
