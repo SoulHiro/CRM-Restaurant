@@ -72,34 +72,53 @@ export function FinalizarDiaDrawer({
     return { p, m, g }
   }, [pedidos])
 
-  const { execute: buscarFechamento } = useAction(obterFechamentoDoDiaAction, {
-    onSuccess: ({ data: resultado }) =>
-      setJaFinalizado(resultado?.fechamento != null),
-  })
-  const { execute: buscarConfigResumo } = useAction(
-    obterConfiguracaoResumoDiaAction,
+  const { executeAsync: buscarFechamento } = useAction(
+    obterFechamentoDoDiaAction,
     {
-      onSuccess: ({ data: resultado }) => {
-        if (!resultado) return
-        setNomeEstabelecimento(resultado.nomeEstabelecimento)
-        setCnpj(resultado.cnpj)
-      },
+      onError: () => toast.error('Não foi possível checar o fechamento do dia'),
     }
   )
-  const { execute: buscarImpressora } = useAction(obterImpressoraComandaAction, {
-    onSuccess: ({ data: resultado }) =>
-      setIdentificadorImpressora(resultado?.impressora?.identificadorQz ?? null),
-  })
+  const { executeAsync: buscarConfigResumo } = useAction(
+    obterConfiguracaoResumoDiaAction,
+    {
+      onError: () => toast.error('Não foi possível carregar a configuração'),
+    }
+  )
+  const { executeAsync: buscarImpressora } = useAction(
+    obterImpressoraComandaAction,
+    {
+      onError: () => toast.error('Não foi possível checar a impressora'),
+    }
+  )
 
   useEffect(() => {
     if (!open) return
     setCarregando(true)
     setConcluido(false)
+
+    // `execute()` do next-safe-action não devolve promise de verdade — só
+    // `executeAsync()` espera a resposta chegar antes do Promise.all
+    // resolver. Sem isso, `carregando` virava `false` antes dos dados
+    // chegarem, e "nenhuma impressora configurada" aparecia mesmo com uma
+    // cadastrada, porque o estado ainda não tinha sido atualizado.
     Promise.all([
       buscarFechamento({ empresaId, data }),
       buscarConfigResumo({}),
       buscarImpressora({}),
-    ]).finally(() => setCarregando(false))
+    ])
+      .then(([resultadoFechamento, resultadoConfig, resultadoImpressora]) => {
+        setJaFinalizado(resultadoFechamento?.data?.fechamento != null)
+
+        if (resultadoConfig?.data) {
+          setNomeEstabelecimento(resultadoConfig.data.nomeEstabelecimento)
+          setCnpj(resultadoConfig.data.cnpj)
+        }
+
+        setIdentificadorImpressora(
+          resultadoImpressora?.data?.impressora?.identificadorQz ?? null
+        )
+      })
+      .finally(() => setCarregando(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, empresaId, data])
 
