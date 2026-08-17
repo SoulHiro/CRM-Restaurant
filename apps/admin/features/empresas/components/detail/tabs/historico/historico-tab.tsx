@@ -16,7 +16,7 @@ import { cn } from '@repo/ui/lib/utils'
 import {
   filterHistorico,
   flattenHistoricoSemanas,
-} from '../../../../lib/pedidos-semana-helpers'
+} from '../../../../lib/historico-helpers'
 import type { EmpresaFuncionario } from '../../../../lib/types'
 import { HistoricoDateRangePicker } from './historico-date-range-picker'
 import { HistoricoSearchInput } from './historico-search-input'

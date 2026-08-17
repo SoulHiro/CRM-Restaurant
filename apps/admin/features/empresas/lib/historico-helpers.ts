@@ -8,49 +8,6 @@ export interface PedidoSemanaRow {
   pedido: EmpresaFuncionarioPedido
 }
 
-export function flattenPedidosSemana(
-  funcionarios: EmpresaFuncionario[]
-): PedidoSemanaRow[] {
-  const rows: PedidoSemanaRow[] = []
-
-  for (const funcionario of funcionarios) {
-    for (const pedido of funcionario.pedidosSemana) {
-      if (!pedido.prato) continue
-      rows.push({
-        funcionarioId: funcionario.id,
-        funcionarioNome: funcionario.nome,
-        setor: funcionario.setor,
-        turno: funcionario.turno,
-        pedido,
-      })
-    }
-  }
-
-  return rows.sort((a, b) => {
-    const porDia = a.pedido.dia.localeCompare(b.pedido.dia)
-    if (porDia !== 0) return porDia
-    return (a.pedido.prato ?? '').localeCompare(b.pedido.prato ?? '', 'pt-BR')
-  })
-}
-
-export interface DiaOption {
-  dia: string
-  diaSemanaLabel: string
-}
-
-export function getDiasDisponiveis(rows: PedidoSemanaRow[]): DiaOption[] {
-  const map = new Map<string, string>()
-  for (const row of rows) {
-    if (!map.has(row.pedido.dia)) {
-      map.set(row.pedido.dia, row.pedido.diaSemanaLabel)
-    }
-  }
-  return Array.from(map, ([dia, diaSemanaLabel]) => ({
-    dia,
-    diaSemanaLabel,
-  })).sort((a, b) => a.dia.localeCompare(b.dia))
-}
-
 export function getHojeISO(): string {
   return new Date().toISOString().slice(0, 10)
 }

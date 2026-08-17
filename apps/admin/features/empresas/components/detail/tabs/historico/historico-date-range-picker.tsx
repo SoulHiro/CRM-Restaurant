@@ -11,7 +11,7 @@ import {
   PopoverTrigger,
 } from '@repo/ui/components/popover'
 
-import { getFimSemanaAtualISO } from '../../../../lib/pedidos-semana-helpers'
+import { getFimSemanaAtualISO } from '../../../../lib/historico-helpers'
 
 function toISODate(date: Date): string {
   return date.toISOString().slice(0, 10)

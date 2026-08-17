@@ -8,7 +8,7 @@ import {
 } from '@repo/ui/components/table'
 
 import { formatDateBR } from '@/lib/formatters'
-import type { SemanaAgrupada } from '../../../../lib/pedidos-semana-helpers'
+import type { SemanaAgrupada } from '../../../../lib/historico-helpers'
 
 const STATUS_LABEL: Record<string, string> = {
   pendente: 'Pendente',
