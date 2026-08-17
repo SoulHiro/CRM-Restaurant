@@ -47,7 +47,7 @@ nosso-quintal/
 ## Camada de API
 
 - **Server Actions** → tudo que o usuário logado aciona (interno, dentro do próprio app)
-- **Route Handlers** → conexões externas que chamam nosso sistema (Consumer via polling, AnotaAí, futuros webhooks)
+- **Route Handlers** → conexões externas que chamam nosso sistema (AnotaAí, futuros webhooks)
 
 ## Permissões — RBAC (não ABAC)
 
@@ -71,12 +71,9 @@ Roles: `admin` (acesso total, inclusive impersonation), `caixa`, `financeiro`, `
 
 ## Integrações Externas
 
-### Consumer (fiscal / PDV)
-
-- API de parceiro funciona por **polling** — o Consumer consulta periodicamente nossos endpoints (Route Handlers), não o contrário
-- **Um pedido consolidado por empresa/dia** no Consumer, contendo múltiplos itens — **um item por funcionário** (nome + pedido na descrição), ordenados por prato no payload para facilitar a cozinha. Não são agregados por prato ("3× Frango G") — cada pessoa é um item separado, pois o slip vai em cima da marmita individual
-- "Imprimir Todos" dispara **simultaneamente**: chamada à API do Consumer (fiscal) + impressão local via QZ Tray (formato próprio)
-- Requer assinatura Premium do Consumer
+Não integramos com um parceiro fiscal/PDV (Consumer) — a impressão de comanda
+é só local, via QZ Tray (ver seção acima). "Imprimir Todos" itera a lista e
+dispara um `qz.print()` por comanda, em sequência.
 
 ### AnotaAí
 

@@ -147,10 +147,36 @@ valendo no build.
 
 ## Dados ainda mock
 
-`features/empresas` está 100% em cima de dados mock — a camada
-`lib/queries.ts`/`lib/actions.ts` existe justamente para que a troca por
-Drizzle real (`@repo/db`, `import { db } from "@/lib/db"`) seja uma mudança
-isolada dentro desses arquivos, sem tocar em componente nenhum. Campos como
-"funcionários que responderam", "envios", "faturamento" e "satisfação" não
-têm tabela no schema hoje — só `empresa`, `empresa_contrato` e
-`empresa_pausa_dia` existem em `packages/db/src/schema/empresa.ts`.
+`features/empresas` tem duas camadas: `empresa` (cadastro) e o domínio leve
+de pedidos importados (`colaborador_pedido`/`pedido_dia_importado`) já usam
+Drizzle real. O resto — "envios", "faturamento", "satisfação", funcionários
+estruturados via `funcionario`/`setor`/`turno` — continua mock; essas tabelas
+não existem no schema hoje.
+
+## Pedidos importados por planilha (aba "Pedidos" de uma empresa)
+
+A GPK Componentes e outras empresas-cliente respondem um Google Forms
+semanal fora do sistema; a aba "Pedidos" em `features/empresas/components/
+detail/tabs/pedidos/` importa a planilha de respostas exportada, em vez de
+depender do fluxo estruturado `funcionario`/`turno`/`pedido` (que exige CPF e
+setor — a planilha não dá nem um nem outro). Ver a seção "Pedidos importados
+por planilha" em `docs/database-schema.md` para o schema e a armadilha do
+formato do Google Forms.
+
+- `lib/importacao-helpers.ts` — parsing puro (semana, mapeamento de coluna,
+  dedup por carimbo, detecção de recusa, sugestão de correspondência de
+  nome), testado.
+- `components/detail/tabs/pedidos/form/importar-planilha-drawer.tsx` — wizard
+  de 4 passos; o Excel é lido no navegador (`xlsx`), só o JSON estruturado
+  vai para `importarPedidosAction`. Vínculo de nome duplicado/parecido é
+  sempre revisão manual — a importação nunca funde ou cria sozinha.
+- `lib/comanda-pdf.tsx` (`@react-pdf/renderer`, 80mm) + `lib/qz-print.ts`
+  (raiz do app) — impressão via QZ Tray. Um `qz.print()` por comanda,
+  `await`ado em sequência, nunca em lote: é isso que faz a guilhotina da
+  impressora térmica cortar entre uma comanda e a próxima, em vez de imprimir
+  tudo numa folha só. A conexão real com o agente QZ Tray e o corte físico só
+  se verificam na máquina do restaurante.
+- O layout da comanda (quais campos aparecem abaixo do nome, e em que ordem)
+  é configurável em `/configuracoes` (`features/configuracoes/`), gravado no
+  singleton `configuracao_comanda`. `ComandaPDF` recebe `campos` de lá — o
+  nome do colaborador nunca é opcional, é sempre o topo fixo e grande.

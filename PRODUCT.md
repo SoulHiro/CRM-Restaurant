@@ -20,7 +20,7 @@ O diferencial não é uma feature isolada — é a ausência de redigitação em
 
 ## Operating Context
 
-Uso diário, durante o expediente do restaurante, sob pressão de horário: fechamento do pedido do dia e hora de imprimir comandas antes do preparo. Papéis fixos via RBAC: admin/gestão cadastra empresas e acompanha tudo; caixa opera o corte diário e a impressão; cozinha só vê o necessário pra produção; financeiro acompanha faturamento e contratos. Fluxo semanal fixo: cada funcionário de empresa cliente responde o pedido pra semana inteira via link público sem login, com edição travada para dias já passados. Impressão física acontece no PC do restaurante via QZ Tray (WebSocket local, nunca sai da rede do restaurante); envio fiscal consolidado acontece via polling do parceiro Consumer. Hoje 100% mock — ainda não plugado no Postgres real nem nas integrações externas.
+Uso diário, durante o expediente do restaurante, sob pressão de horário: fechamento do pedido do dia e hora de imprimir comandas antes do preparo. Papéis fixos via RBAC: admin/gestão cadastra empresas e acompanha tudo; caixa opera o corte diário e a impressão; cozinha só vê o necessário pra produção; financeiro acompanha faturamento e contratos. Fluxo semanal fixo: cada funcionário de empresa cliente responde o pedido pra semana inteira via link público sem login, com edição travada para dias já passados. Impressão física acontece no PC do restaurante via QZ Tray (WebSocket local, nunca sai da rede do restaurante) — não há integração fiscal/PDV externa, a impressão é só isso.
 
 ## Brand Personality
 

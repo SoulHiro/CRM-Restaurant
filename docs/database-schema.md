@@ -114,7 +114,6 @@ pedido
   - tamanho: P | M | G
   - status_impressao: pendente | impresso | erro_impressao
   - motivo_erro (nullable)
-  - envio_consumer_id (FK, nullable) -- FASE INICIAL: pode ficar sempre null (lançamento manual)
   - created_at, updated_at
   -- editável pelo funcionário via link público SOMENTE para data > hoje
   -- atualização gera notificação (Pusher) para o caixa reimprimir
@@ -123,17 +122,10 @@ pedido_item_adicional (N:N)
   - pedido_id (FK), item_adicional_id (FK)
 ```
 
-## Consumer (integração fiscal — FASE FUTURA, manual por enquanto)
+Sem integração fiscal/PDV externa (Consumer) — a impressão é só local, via
+QZ Tray (ver "Configurações" abaixo e "Pedidos importados por planilha").
 
-```
-envio_consumer
-  - id, empresa_id (FK), data
-  - status: enviado | confirmado | erro
-  - nota_fiscal_numero, nota_fiscal_chave_acesso, nota_fiscal_emitida_em
-  - created_at
-```
-
-## Configurações
+## Configurações — `impressora` IMPLEMENTADO (Fase 4)
 
 ```
 impressora
@@ -141,6 +133,66 @@ impressora
   - identificador_qz
   - ativo
 ```
+
+## Pedidos importados por planilha — IMPLEMENTADO (Fase 4)
+
+Fluxo leve e paralelo ao `funcionario`/`pedido` estruturados acima. As
+empresas-cliente hoje respondem via Google Forms semanal (uma linha por
+pessoa, por semana) e a planilha de respostas é importada direto — sem CPF,
+sem setor, sem vínculo com `cardapio_dia`/`prato`. Enquanto isso for
+suficiente, não force o encaixe no fluxo estruturado; promover para lá exige
+CPF e setor, que a planilha não fornece.
+
+```
+colaborador_pedido
+  - id, empresa_id (FK empresa, cascade)
+  - nome, whatsapp (nullable)
+  - ativo (bool, default true) -- soft: nunca deletado
+  -- INDEX (empresa_id, nome)
+
+pedido_dia_importado
+  - id, colaborador_id (FK colaborador_pedido, cascade)
+  - data (date -- um dia real, calculado na importação a partir da
+    "Semana do Cardápio" da planilha + offset do dia da semana)
+  - turno: almoco | jantar (nullable)
+  - tamanho: P | M | G (nullable)
+  - prato (text, nullable -- texto livre, como veio da planilha)
+  - observacao (text, nullable)
+  - arquivo_origem (text, nullable -- nome do arquivo, sem Blob)
+  - respondido_em (timestamp, nullable -- carimbo de data/hora ORIGINAL da
+    resposta no formulário, não quando importamos)
+  - importado_em
+  -- UNIQUE (colaborador_id, data) -- reimportar a mesma semana faz upsert
+  -- INDEX (data)
+```
+
+A armadilha do formato do Google Forms: o texto das colunas de dia
+("Segunda-Feira 17/08/2026") é só o rótulo da semana *atualmente aberta* no
+formulário — não muda por linha. A data real de cada linha vem exclusivamente
+do campo "Semana do Cardápio", em texto livre (formato inconsistente entre
+empresas: separador `a`/`Á`/`á`). `features/empresas/lib/importacao-helpers.ts`
+faz esse parsing e mapeia colunas por regex, não por texto exato — absorve a
+variação de formato entre planilhas de empresas diferentes.
+
+O carimbo de data/hora chega do xlsx como `Date` de verdade (`cellDates:
+true` no parse do SheetJS) — não como número serial do Excel, que só entra
+como fallback se a célula não estiver formatada como data.
+
+## Configuração de impressão — `configuracao_comanda` IMPLEMENTADO (Fase 4)
+
+```
+configuracao_comanda
+  - id (fixo: 'default' — singleton, sempre uma linha só)
+  - campos (jsonb, string[] -- chaves dos campos opcionais, na ordem em
+    que aparecem abaixo do nome na comanda: turno, prato, tamanho,
+    observacao, empresa, respondido_em, impresso_em)
+  - updated_at
+```
+
+Um layout só vale pro restaurante inteiro (não por empresa). O nome do
+colaborador nunca entra em `campos` — é sempre o topo fixo e grande da
+comanda, não configurável. Editável em `/configuracoes`
+(`features/configuracoes/`), com pré-visualização ao vivo do PDF real.
 
 ## Estoque (fonte de verdade PRÓPRIA — não espelho do AnotaAí) — IMPLEMENTADO
 
