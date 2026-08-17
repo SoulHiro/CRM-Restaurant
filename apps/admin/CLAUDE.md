@@ -177,6 +177,25 @@ formato do Google Forms.
   tudo numa folha só. A conexão real com o agente QZ Tray e o corte físico só
   se verificam na máquina do restaurante.
 - O layout da comanda (quais campos aparecem abaixo do nome, e em que ordem)
-  é configurável em `/configuracoes` (`features/configuracoes/`), gravado no
-  singleton `configuracao_comanda`. `ComandaPDF` recebe `campos` de lá — o
-  nome do colaborador nunca é opcional, é sempre o topo fixo e grande.
+  é configurável em `/configuracoes/impressao` (`features/configuracoes/`),
+  gravado no singleton `configuracao_comanda`. `ComandaPDF` recebe `campos`
+  de lá — o nome do colaborador nunca é opcional, é sempre o topo fixo e
+  grande. `configuracao_comanda.impressora_id` guarda qual `impressora`
+  cadastrada recebe os pedidos (cadastro de impressora novo é feito ali
+  mesmo, aba Impressoras — nome + impressora escolhida numa lista detectada
+  via QZ Tray, `lib/qz-print.ts` → `listarImpressorasDetectadas()`).
+
+## Seção de Configurações não é uma rota-listagem
+
+`/configuracoes` não renderiza nada — só redireciona pra
+`/configuracoes/impressao` (única seção hoje). Entrar em Configurações troca
+a lista inteira do sidebar (`components/sidebar-nav.tsx`): os itens
+principais saem em escada (fade + leve deslocamento, um por um de cima pra
+baixo) e os da seção de configuração entram do mesmo jeito, com fade +
+slide da esquerda, atrás de um cabeçalho-botão "← Configurações" que só
+troca a lista de volta pra `items` — nem "Configurações" nem "voltar"
+navegam, é troca de estado local (`SidebarNav`), nunca `router.push`/`back`;
+a rota real só muda quando o usuário clica num item de destino (ex:
+"Impressão"). Adicionar uma nova seção de configuração é só um item novo
+em `CONFIG_NAV_ITEMS` (`components/app-sidebar.tsx`) apontando pra uma nova
+rota — não crie uma página de menu/listagem pra isso.

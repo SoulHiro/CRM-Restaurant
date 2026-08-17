@@ -12,6 +12,7 @@ import {
   CreditCard,
   BarChart3,
   Bike,
+  Printer,
   Settings,
   UserCog,
 } from 'lucide-react'
@@ -25,7 +26,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@repo/ui/components/sidebar'
-import { NavMain } from '@/components/nav-main'
+import { SidebarNav, type NavItem } from '@/components/sidebar-nav'
 import { NavUser } from '@/components/nav-user'
 import type { User } from '@repo/auth'
 
@@ -82,11 +83,16 @@ const NAV_ITEMS = [
   { title: 'Entregadores', url: '/entregadores', icon: Bike, roles: ['admin'] },
   {
     title: 'Configurações',
-    url: '/configuracoes',
+    url: '/configuracoes/impressao',
     icon: Settings,
     roles: ['admin', 'caixa'],
+    abreConfig: true,
   },
   { title: 'Usuários', url: '/usuarios', icon: UserCog, roles: ['admin'] },
+]
+
+const CONFIG_NAV_ITEMS: NavItem[] = [
+  { title: 'Impressão', url: '/configuracoes/impressao', icon: Printer },
 ]
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
@@ -112,7 +118,7 @@ export function AppSidebar({ user, role, ...props }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={visibleItems} />
+        <SidebarNav items={visibleItems} configItems={CONFIG_NAV_ITEMS} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={{ name: user.name, email: user.email }} />
