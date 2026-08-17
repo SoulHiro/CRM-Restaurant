@@ -15,6 +15,19 @@ declare module 'qz-tray' {
     connect(): Promise<void>
   }
 
+  type QzPromiseHandler = (
+    resolve: (value: string) => void,
+    reject: (reason?: unknown) => void
+  ) => void
+
+  interface QzSecurity {
+    setCertificatePromise(handler: () => Promise<string>): void
+    setSignaturePromise(
+      factory: (paraAssinar: string) => QzPromiseHandler
+    ): void
+    setSignatureAlgorithm(algorithm: 'SHA1' | 'SHA256' | 'SHA512'): void
+  }
+
   interface Qz {
     websocket: QzWebsocket
     configs: {
@@ -23,6 +36,7 @@ declare module 'qz-tray' {
     printers: {
       find(): Promise<string[]>
     }
+    security: QzSecurity
     print(config: QzConfig, data: QzPrintData[]): Promise<void>
   }
 

@@ -1,13 +1,41 @@
 'use client'
 
+let assinaturaConfigurada = false
+
+/**
+ * Certificado + assinatura por requisição (SHA512withRSA, gerados no
+ * servidor via `lib/qz-signing.ts`) — sem isso, o QZ Tray pergunta
+ * "Allow/Block" a cada `qz.print()` individual, não só uma vez por sessão.
+ * Com um certificado confiado, a primeira aprovação vale pras próximas.
+ */
+function configurarAssinatura(qz: Awaited<typeof import('qz-tray')>['default']) {
+  if (assinaturaConfigurada) return
+  assinaturaConfigurada = true
+
+  qz.security.setCertificatePromise(async () => {
+    const resposta = await fetch('/api/qz/cert')
+    return resposta.text()
+  })
+
+  qz.security.setSignaturePromise((paraAssinar) => (resolve, reject) => {
+    fetch('/api/qz/sign', { method: 'POST', body: paraAssinar })
+      .then((resposta) => resposta.text())
+      .then(resolve)
+      .catch(reject)
+  })
+
+  qz.security.setSignatureAlgorithm('SHA512')
+}
+
 /**
  * Ponte com o agente local QZ Tray — só existe no navegador, nunca no
- * servidor. A primeira conexão pede pro usuário autorizar o certificado
- * (não assinado) na própria janela do QZ Tray; isso só acontece na máquina
- * do restaurante, não dá pra verificar remotamente.
+ * servidor. Mesmo assinado, a primeiríssima conexão ainda pede pro usuário
+ * aprovar o certificado uma vez na janela do QZ Tray; isso só acontece na
+ * máquina do restaurante, não dá pra verificar remotamente.
  */
 async function conectar() {
   const { default: qz } = await import('qz-tray')
+  configurarAssinatura(qz)
 
   if (!qz.websocket.isActive()) {
     await qz.websocket.connect()
