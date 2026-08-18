@@ -390,7 +390,10 @@ export const reabrirDiaAction = authActionClient
 export const listarFechamentosAction = authActionClient
   .schema(listarFechamentosSchema)
   .action(async ({ parsedInput }) => {
-    const fechamentos = await listarFechamentosDaEmpresa(parsedInput.empresaId)
+    const fechamentos = await listarFechamentosDaEmpresa(parsedInput.empresaId, {
+      from: parsedInput.from,
+      to: parsedInput.to,
+    })
     return { fechamentos }
   })
 

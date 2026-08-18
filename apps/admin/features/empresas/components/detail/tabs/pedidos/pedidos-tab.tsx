@@ -20,8 +20,8 @@ import {
 import { AdicionarPedidoManualDrawer } from './form/adicionar-pedido-manual-drawer'
 import { ImportarPlanilhaDrawer } from './form/importar-planilha-drawer'
 import { FinalizarDiaDrawer } from './finalizar-dia-drawer'
-import { HistoricoFechamentos } from './historico-fechamentos'
 import { PedidoDiaRow } from './pedido-dia-row'
+import { PedidosInsights } from './pedidos-insights'
 
 function paraComanda(
   pedido: PedidoDoDiaItem,
@@ -48,7 +48,6 @@ export function PedidosTab({
   const [data, setData] = useState(hojeISO())
   const [pedidos, setPedidos] = useState<PedidoDoDiaItem[] | null>(null)
   const [busca, setBusca] = useState('')
-  const [versaoHistorico, setVersaoHistorico] = useState(0)
   const { imprimir, imprimindo } = useImprimirComandas()
 
   const pedidosFiltrados = useMemo(() => {
@@ -118,41 +117,42 @@ export function PedidosTab({
             empresaNome={empresaNome}
             data={data}
             pedidos={pedidos ?? []}
-            onFinalizado={() => setVersaoHistorico((v) => v + 1)}
+            onFinalizado={() => execute({ empresaId, data })}
           />
         </div>
       </div>
 
-      {isExecuting && !pedidos ? (
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
-      ) : !pedidos || pedidos.length === 0 ? (
-        <EmptyState
-          message={`Nenhum colaborador importado para ${empresaNome} ainda.`}
-        />
-      ) : !pedidosFiltrados || pedidosFiltrados.length === 0 ? (
-        <EmptyState message={`Nenhuma pessoa encontrada para "${busca}".`} />
-      ) : (
-        <div className="flex flex-col gap-2">
-          {pedidosFiltrados.map((pedido) => (
-            <PedidoDiaRow
-              key={pedido.colaboradorId}
-              pedido={pedido}
-              data={data}
-              onImprimir={() => imprimir([paraComanda(pedido, empresaNome)])}
-              onRemovido={() => execute({ empresaId, data })}
-            />
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
+        <PedidosInsights pedidos={pedidos ?? []} />
 
-      <HistoricoFechamentos
-        empresaId={empresaId}
-        recarregarQuando={versaoHistorico}
-      />
+        <div className="flex flex-col gap-4">
+          {isExecuting && !pedidos ? (
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : !pedidos || pedidos.length === 0 ? (
+            <EmptyState
+              message={`Nenhum colaborador importado para ${empresaNome} ainda.`}
+            />
+          ) : !pedidosFiltrados || pedidosFiltrados.length === 0 ? (
+            <EmptyState message={`Nenhuma pessoa encontrada para "${busca}".`} />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {pedidosFiltrados.map((pedido) => (
+                <PedidoDiaRow
+                  key={pedido.colaboradorId}
+                  pedido={pedido}
+                  data={data}
+                  onImprimir={() => imprimir([paraComanda(pedido, empresaNome)])}
+                  onRemovido={() => execute({ empresaId, data })}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

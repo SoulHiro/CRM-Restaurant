@@ -258,13 +258,20 @@ export async function getFechamentoDoDia(
 
 /**
  * Mais recentes primeiro — histórico de fechamentos já feitos pra empresa.
- * Sem itens (lista, não precisa do detalhe linha a linha).
+ * Sem itens (lista, não precisa do detalhe linha a linha). `from`/`to`
+ * filtram por data do fechamento, não por quando foi finalizado.
  */
 export async function listarFechamentosDaEmpresa(
-  empresaId: string
+  empresaId: string,
+  intervalo?: { from?: string | null; to?: string | null }
 ): Promise<FechamentoDia[]> {
   const rows = await db.query.fechamento_dia_empresa.findMany({
-    where: (f, { eq: eqOp }) => eqOp(f.empresa_id, empresaId),
+    where: (f, { and: andOp, eq: eqOp, gte, lte }) =>
+      andOp(
+        eqOp(f.empresa_id, empresaId),
+        intervalo?.from ? gte(f.data, intervalo.from) : undefined,
+        intervalo?.to ? lte(f.data, intervalo.to) : undefined
+      ),
     orderBy: (f, { desc }) => [desc(f.data)],
     limit: 60,
   })

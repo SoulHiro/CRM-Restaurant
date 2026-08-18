@@ -205,6 +205,8 @@ export type ReabrirDiaInput = z.infer<typeof reabrirDiaSchema>
 
 export const listarFechamentosSchema = z.object({
   empresaId: z.string().min(1),
+  from: z.string().nullable().optional(),
+  to: z.string().nullable().optional(),
 })
 
 export type ListarFechamentosInput = z.infer<typeof listarFechamentosSchema>

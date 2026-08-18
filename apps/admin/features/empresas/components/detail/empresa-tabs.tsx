@@ -54,7 +54,11 @@ export function EmpresaTabs({
         <ValoresTab empresaId={empresa.id} />
       </TabsContent>
       <TabsContent value="historico" className="mt-6">
-        <HistoricoTab funcionarios={detail.funcionarios} />
+        <HistoricoTab
+          empresaId={empresa.id}
+          empresaNome={empresa.nome}
+          funcionarios={detail.funcionarios}
+        />
       </TabsContent>
       <TabsContent value="pausas" className="mt-6">
         <PausasTab empresaId={empresa.id} pausas={detail.pausas} />
