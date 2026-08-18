@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAction } from 'next-safe-action/hooks'
-import { Printer } from 'lucide-react'
+import { Printer, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
@@ -47,8 +47,15 @@ export function PedidosTab({
 }) {
   const [data, setData] = useState(hojeISO())
   const [pedidos, setPedidos] = useState<PedidoDoDiaItem[] | null>(null)
+  const [busca, setBusca] = useState('')
   const [versaoHistorico, setVersaoHistorico] = useState(0)
   const { imprimir, imprimindo } = useImprimirComandas()
+
+  const pedidosFiltrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    if (!termo) return pedidos
+    return (pedidos ?? []).filter((p) => p.nome.toLowerCase().includes(termo))
+  }, [pedidos, busca])
 
   const { execute, isExecuting } = useAction(listarPedidosDoDiaAction, {
     onSuccess: ({ data: resultado }) => setPedidos(resultado?.pedidos ?? []),
@@ -70,12 +77,24 @@ export function PedidosTab({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Input
-          type="date"
-          value={data}
-          onChange={(event) => setData(event.target.value)}
-          className="w-44"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            value={data}
+            onChange={(event) => setData(event.target.value)}
+            className="w-44"
+          />
+          <div className="relative w-56">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar pessoa..."
+              className="pl-8"
+              value={busca}
+              onChange={(event) => setBusca(event.target.value)}
+            />
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -114,9 +133,11 @@ export function PedidosTab({
         <EmptyState
           message={`Nenhum colaborador importado para ${empresaNome} ainda.`}
         />
+      ) : !pedidosFiltrados || pedidosFiltrados.length === 0 ? (
+        <EmptyState message={`Nenhuma pessoa encontrada para "${busca}".`} />
       ) : (
         <div className="flex flex-col gap-2">
-          {pedidos.map((pedido) => (
+          {pedidosFiltrados.map((pedido) => (
             <PedidoDiaRow
               key={pedido.colaboradorId}
               pedido={pedido}

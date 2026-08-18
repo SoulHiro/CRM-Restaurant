@@ -198,9 +198,23 @@ export function FinalizarDiaDrawer({
   )
 
   const { execute, isExecuting } = useAction(finalizarDiaAction, {
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Dia finalizado — agora é só imprimir as duas vias')
-      setDadosImpressao(construirDadosDoFormulario())
+
+      // Busca o fechamento recém-criado de volta do servidor em vez de
+      // montar a nota a partir do estado local do formulário — é a mesma
+      // fonte que o "Reimprimir" usa, e evita imprimir dado desatualizado
+      // do navegador quando o real, gravado no banco, está correto.
+      const resultado = await buscarFechamento({ empresaId, data })
+      const registro = resultado?.data?.fechamento
+      if (registro) {
+        setFechamento(registro)
+        setDadosImpressao(construirDadosDoHistorico(registro))
+      } else {
+        toast.error(
+          'Dia finalizado, mas não foi possível carregar os dados pra impressão.'
+        )
+      }
       setViasImpressas(0)
       onFinalizado()
     },
@@ -208,43 +222,6 @@ export function FinalizarDiaDrawer({
       toast.error(error.serverError ?? 'Não foi possível finalizar o dia')
     },
   })
-
-  function construirDadosDoFormulario(): ResumoDiaDados {
-    const itensMarmita: ItemResumoDia[] = pedidosMarmita.map((pedido) => ({
-      colaboradorNome: pedido.nome,
-      tipo: 'marmita',
-      prato: pedido.prato,
-      tamanho: pedido.tamanho as 'P' | 'M' | 'G',
-      preco:
-        pedido.tamanho === 'P'
-          ? Number(precoP) || 0
-          : pedido.tamanho === 'M'
-            ? Number(precoM) || 0
-            : Number(precoG) || 0,
-    }))
-
-    const itensLanche: ItemResumoDia[] = pedidosLanche.map((pedido) => ({
-      colaboradorNome: pedido.nome,
-      tipo: 'lanche',
-      prato: pedido.prato,
-      tamanho: null,
-      preco: pedido.preco ?? 0,
-    }))
-
-    return {
-      nomeEstabelecimento: nomeEstabelecimento || 'Nosso Quintal',
-      endereco,
-      cnpj,
-      inscricaoEstadual,
-      empresaClienteNome: empresaNome,
-      impressoEm: new Date().toISOString(),
-      itens: [...itensMarmita, ...itensLanche],
-      quantidadeCafe: Number(quantidadeCafe) || 0,
-      precoUnitarioCafe: Number(precoCafe) || 0,
-      quantidadeSuco: Number(quantidadeSuco) || 0,
-      precoUnitarioSuco: Number(precoSuco) || 0,
-    }
-  }
 
   function construirDadosDoHistorico(registro: FechamentoDia): ResumoDiaDados {
     const itens: ItemResumoDia[] = registro.itens.map(
