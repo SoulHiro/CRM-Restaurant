@@ -18,6 +18,7 @@ import {
 import { and, eq } from 'drizzle-orm'
 import {
   atualizarColaboradorAtivoSchema,
+  atualizarPrecoPedidoSchema,
   createEmpresaSchema,
   createPausaSchema,
   deletePausaSchema,
@@ -303,7 +304,7 @@ export const finalizarDiaAction = authActionClient
     const itensLanche = pedidos.filter((p) => p.tipo === 'lanche' && !p.recusou)
 
     const totalMarmitas = itensMarmita.reduce(
-      (soma, item) => soma + precoPorTamanho[item.tamanho],
+      (soma, item) => soma + (item.preco ?? precoPorTamanho[item.tamanho]),
       0
     )
     const totalLanches = itensLanche.reduce(
@@ -344,7 +345,7 @@ export const finalizarDiaAction = authActionClient
         tipo: 'marmita' as const,
         prato: item.prato,
         tamanho: item.tamanho,
-        preco: toMoneyString(precoPorTamanho[item.tamanho]),
+        preco: toMoneyString(item.preco ?? precoPorTamanho[item.tamanho]),
       })),
       ...itensLanche.map((item) => ({
         fechamento_id: criado.id,
@@ -431,6 +432,31 @@ export const marcarRecusaAction = authActionClient
     await db
       .update(pedido_dia_importado)
       .set({ recusou: parsedInput.recusou })
+      .where(
+        and(
+          eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),
+          eq(pedido_dia_importado.data, parsedInput.data)
+        )
+      )
+
+    revalidatePath('/empresas')
+  })
+
+/**
+ * Preço específico desse pedido, sobrepondo o padrão — marmita normalmente
+ * usa o preço do tamanho (decidido no "Finalizar dia"), lanche já tem preço
+ * próprio; isso deixa qualquer um dos dois zerado ou com outro valor sem
+ * afetar os demais pedidos do mesmo tamanho/lanche. `null` volta ao padrão.
+ */
+export const atualizarPrecoPedidoAction = authActionClient
+  .schema(atualizarPrecoPedidoSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .update(pedido_dia_importado)
+      .set({
+        preco:
+          parsedInput.preco != null ? toMoneyString(parsedInput.preco) : null,
+      })
       .where(
         and(
           eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),

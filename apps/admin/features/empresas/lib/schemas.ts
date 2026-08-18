@@ -214,6 +214,19 @@ export const marcarRecusaSchema = z.object({
 
 export type MarcarRecusaInput = z.infer<typeof marcarRecusaSchema>
 
+export const atualizarPrecoPedidoSchema = z.object({
+  colaboradorId: z.string().min(1),
+  data: z.string().min(1),
+  // null = volta a usar o preço padrão (o do tamanho, decidido no
+  // "Finalizar dia") — só marmita tem padrão pra voltar; lanche sem preço
+  // próprio zera.
+  preco: z.number().min(0).nullable(),
+})
+
+export type AtualizarPrecoPedidoInput = z.infer<
+  typeof atualizarPrecoPedidoSchema
+>
+
 const PRECO_PADRAO_TIPOS = [
   'marmita_p',
   'marmita_m',

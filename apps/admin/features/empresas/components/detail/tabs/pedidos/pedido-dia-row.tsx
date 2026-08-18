@@ -1,6 +1,7 @@
 'use client'
 
-import { Printer, Trash2, UserX } from 'lucide-react'
+import { useState } from 'react'
+import { CircleDollarSign, Printer, Trash2, UserX } from 'lucide-react'
 import { useAction } from 'next-safe-action/hooks'
 import { toast } from 'sonner'
 
@@ -17,9 +18,21 @@ import {
 } from '@repo/ui/components/alert-dialog'
 import { Badge } from '@repo/ui/components/badge'
 import { Button } from '@repo/ui/components/button'
+import { Input } from '@repo/ui/components/input'
+import { Label } from '@repo/ui/components/label'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@repo/ui/components/popover'
 import { cn } from '@repo/ui/lib/utils'
 
-import { marcarRecusaAction, removerPedidoAction } from '../../../../lib/actions'
+import { formatCurrencyBRL } from '@/lib/formatters'
+import {
+  atualizarPrecoPedidoAction,
+  marcarRecusaAction,
+  removerPedidoAction,
+} from '../../../../lib/actions'
 import type { PedidoDoDiaItem } from '../../../../lib/types'
 
 const TURNO_LABEL: Record<'almoco' | 'jantar', string> = {
@@ -38,6 +51,9 @@ export function PedidoDiaRow({
   onImprimir: () => void
   onRemovido: () => void
 }) {
+  const [precoAberto, setPrecoAberto] = useState(false)
+  const [precoInput, setPrecoInput] = useState(String(pedido.preco ?? ''))
+
   const { execute, isExecuting } = useAction(removerPedidoAction, {
     onSuccess: () => {
       toast.success('Pedido removido')
@@ -59,6 +75,22 @@ export function PedidoDiaRow({
     }
   )
 
+  const { execute: salvarPreco, isExecuting: salvandoPreco } = useAction(
+    atualizarPrecoPedidoAction,
+    {
+      onSuccess: () => {
+        toast.success('Valor do pedido atualizado')
+        setPrecoAberto(false)
+        onRemovido()
+      },
+      onError: () => toast.error('Não foi possível atualizar o valor'),
+    }
+  )
+
+  function confirmarPreco(valor: number | null) {
+    salvarPreco({ colaboradorId: pedido.colaboradorId, data, preco: valor })
+  }
+
   return (
     <div
       className={cn(
@@ -77,6 +109,13 @@ export function PedidoDiaRow({
             Obs: {pedido.observacao}
           </span>
         )}
+        {pedido.preco != null && (
+          <span className="truncate text-xs text-muted-foreground">
+            Valor: {formatCurrencyBRL(pedido.preco)}
+            {pedido.tipo === 'marmita' &&
+              (pedido.preco === 0 ? ' (não contabiliza)' : ' (personalizado)')}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -85,6 +124,77 @@ export function PedidoDiaRow({
             {TURNO_LABEL[pedido.turno]}
           </Badge>
         )}
+
+        <Popover
+          open={precoAberto}
+          onOpenChange={(open) => {
+            setPrecoAberto(open)
+            if (open) setPrecoInput(String(pedido.preco ?? ''))
+          }}
+        >
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Editar valor do pedido de ${pedido.nome}`}
+              disabled={pedido.recusou}
+            >
+              <CircleDollarSign
+                className={cn(
+                  'size-4',
+                  pedido.preco != null && 'text-primary'
+                )}
+              />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64" align="end">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-sm">Valor deste pedido (R$)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Padrão do tamanho"
+                  value={precoInput}
+                  onChange={(e) => setPrecoInput(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O pedido continua contando normalmente no resumo do dia — só
+                o valor cobrado muda.
+              </p>
+              <div className="flex justify-end gap-2">
+                {pedido.tipo === 'marmita' && pedido.preco != null && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={salvandoPreco}
+                    onClick={() => confirmarPreco(null)}
+                  >
+                    Usar padrão
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={salvandoPreco}
+                  onClick={() => confirmarPreco(0)}
+                >
+                  Grátis
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={salvandoPreco || precoInput.trim() === ''}
+                  onClick={() => confirmarPreco(Number(precoInput) || 0)}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
         <Button
           variant="ghost"
           size="icon"
