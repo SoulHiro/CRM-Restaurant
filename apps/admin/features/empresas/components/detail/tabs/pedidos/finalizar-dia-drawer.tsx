@@ -97,26 +97,37 @@ export function FinalizarDiaDrawer({
     setConcluido(false)
 
     // `execute()` do next-safe-action não devolve promise de verdade — só
-    // `executeAsync()` espera a resposta chegar antes do Promise.all
-    // resolver. Sem isso, `carregando` virava `false` antes dos dados
-    // chegarem, e "nenhuma impressora configurada" aparecia mesmo com uma
-    // cadastrada, porque o estado ainda não tinha sido atualizado.
-    Promise.all([
+    // `executeAsync()` espera a resposta chegar. E `Promise.allSettled` (não
+    // `Promise.all`) importa aqui: as três buscas são independentes — uma
+    // falhar não pode impedir as outras duas de aplicar o resultado delas.
+    // Com `Promise.all`, uma rejeição só (ex: `buscarFechamento` falhando)
+    // pulava o `.then()` inteiro e a impressora nunca era aplicada, mesmo
+    // tendo vindo certa — exatamente o "nenhuma impressora configurada"
+    // relatado.
+    Promise.allSettled([
       buscarFechamento({ empresaId, data }),
       buscarConfigResumo({}),
       buscarImpressora({}),
     ])
       .then(([resultadoFechamento, resultadoConfig, resultadoImpressora]) => {
-        setJaFinalizado(resultadoFechamento?.data?.fechamento != null)
-
-        if (resultadoConfig?.data) {
-          setNomeEstabelecimento(resultadoConfig.data.nomeEstabelecimento)
-          setCnpj(resultadoConfig.data.cnpj)
+        if (resultadoFechamento.status === 'fulfilled') {
+          setJaFinalizado(resultadoFechamento.value?.data?.fechamento != null)
         }
 
-        setIdentificadorImpressora(
-          resultadoImpressora?.data?.impressora?.identificadorQz ?? null
-        )
+        if (
+          resultadoConfig.status === 'fulfilled' &&
+          resultadoConfig.value?.data
+        ) {
+          setNomeEstabelecimento(resultadoConfig.value.data.nomeEstabelecimento)
+          setCnpj(resultadoConfig.value.data.cnpj)
+        }
+
+        if (resultadoImpressora.status === 'fulfilled') {
+          setIdentificadorImpressora(
+            resultadoImpressora.value?.data?.impressora?.identificadorQz ??
+              null
+          )
+        }
       })
       .finally(() => setCarregando(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -151,7 +162,18 @@ export function FinalizarDiaDrawer({
     quantidadeM: number
     quantidadeG: number
   }) {
-    if (!identificadorImpressora) {
+    // Não confia só no estado carregado quando o drawer abriu — busca de
+    // novo, na hora, se por algum motivo ainda estiver vazio. É o que
+    // garante que a impressão funciona sempre que existe impressora
+    // cadastrada, mesmo que a carga inicial tenha falhado silenciosamente.
+    let identificador = identificadorImpressora
+    if (!identificador) {
+      const resultado = await buscarImpressora({})
+      identificador = resultado?.data?.impressora?.identificadorQz ?? null
+      if (identificador) setIdentificadorImpressora(identificador)
+    }
+
+    if (!identificador) {
       toast.error(
         'Nenhuma impressora configurada — o fechamento foi salvo, mas não impresso.'
       )
@@ -183,7 +205,7 @@ export function FinalizarDiaDrawer({
         />
       ).toBlob()
 
-      await imprimirDocumentoUnico(identificadorImpressora, blob)
+      await imprimirDocumentoUnico(identificador, blob)
     } catch {
       toast.error(
         'Fechamento salvo, mas não foi possível imprimir. Confira o QZ Tray.'
