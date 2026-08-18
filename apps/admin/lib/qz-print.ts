@@ -62,11 +62,14 @@ async function blobParaBase64(blob: Blob): Promise<string> {
 }
 
 /**
- * Um `qz.print()` por PDF, aguardado em sequência — nunca em lote. É isso
- * que faz a guilhotina da Elgin i9 cortar entre uma comanda e a próxima: um
- * trabalho de impressão só teria todas as comandas na mesma folha contínua.
+ * Núcleo único da impressão — conecta, resolve a impressora e manda um
+ * `qz.print()` por PDF, aguardado em sequência, nunca em lote. É isso que
+ * faz a guilhotina da Elgin i9 cortar entre um documento e o próximo: um
+ * trabalho de impressão só teria tudo na mesma folha contínua. Com um único
+ * PDF (resumo do dia) o laço roda uma vez só — mesmo caminho, sem código
+ * duplicado entre os dois usos.
  */
-export async function imprimirComandasSequencial(
+async function imprimirSequencialmente(
   identificadorImpressora: string,
   pdfBlobs: Blob[],
   onProgresso?: (indice: number, total: number) => void
@@ -83,4 +86,21 @@ export async function imprimirComandasSequencial(
     ])
     onProgresso?.(i + 1, pdfBlobs.length)
   }
+}
+
+/** Um documento só — nota de fechamento do dia, por exemplo. */
+export async function imprimirDocumentoUnico(
+  identificadorImpressora: string,
+  pdfBlob: Blob
+): Promise<void> {
+  await imprimirSequencialmente(identificadorImpressora, [pdfBlob])
+}
+
+/** Vários documentos, um trabalho de impressão por vez — comandas, por exemplo. */
+export async function imprimirDocumentosSequencialmente(
+  identificadorImpressora: string,
+  pdfBlobs: Blob[],
+  onProgresso?: (indice: number, total: number) => void
+): Promise<void> {
+  await imprimirSequencialmente(identificadorImpressora, pdfBlobs, onProgresso)
 }

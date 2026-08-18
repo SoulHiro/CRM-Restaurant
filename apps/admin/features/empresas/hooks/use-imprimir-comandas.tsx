@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAction } from 'next-safe-action/hooks'
 import { toast } from 'sonner'
 
@@ -31,21 +31,29 @@ export function useImprimirComandas() {
   const [campos, setCampos] = useState<CampoComandaKey[]>(CAMPOS_COMANDA_PADRAO)
   const [imprimindo, setImprimindo] = useState(false)
 
-  const { execute: buscarImpressora } = useAction(obterImpressoraComandaAction, {
-    onSuccess: ({ data }) => setImpressora(data?.impressora ?? null),
-  })
-  const { execute: buscarConfiguracao } = useAction(
-    obterConfiguracaoComandaAction,
-    {
-      onSuccess: ({ data }) => {
-        if (data?.campos) setCampos(data.campos as CampoComandaKey[])
-      },
-    }
+  const { executeAsync: buscarImpressora } = useAction(
+    obterImpressoraComandaAction
+  )
+  const { executeAsync: buscarConfiguracao } = useAction(
+    obterConfiguracaoComandaAction
   )
 
+  // `execute()` do next-safe-action não devolve promise de verdade — só
+  // `executeAsync()` espera a resposta chegar. Guardamos a promise da carga
+  // inicial pra `imprimir()` sempre aguardar antes de checar `impressora`,
+  // mesmo que o clique aconteça antes da busca terminar.
+  const carregamentoInicial = useRef<Promise<void> | null>(null)
+
   useEffect(() => {
-    buscarImpressora({})
-    buscarConfiguracao({})
+    carregamentoInicial.current = Promise.all([
+      buscarImpressora({}),
+      buscarConfiguracao({}),
+    ]).then(([resultadoImpressora, resultadoConfig]) => {
+      setImpressora(resultadoImpressora?.data?.impressora ?? null)
+      if (resultadoConfig?.data?.campos) {
+        setCampos(resultadoConfig.data.campos as CampoComandaKey[])
+      }
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -54,6 +62,9 @@ export function useImprimirComandas() {
       toast.info('Nenhuma comanda para imprimir.')
       return
     }
+
+    await carregamentoInicial.current
+
     if (!impressora) {
       toast.error(
         'Nenhuma impressora de comanda configurada. Cadastre uma em Configurações.'
@@ -64,7 +75,9 @@ export function useImprimirComandas() {
     setImprimindo(true)
     try {
       const { pdf } = await import('@react-pdf/renderer')
-      const { imprimirComandasSequencial } = await import('@/lib/qz-print')
+      const { imprimirDocumentosSequencialmente } = await import(
+        '@/lib/qz-print'
+      )
 
       const impressoEm = new Date().toISOString()
       const blobs = await Promise.all(
@@ -75,7 +88,7 @@ export function useImprimirComandas() {
         )
       )
 
-      await imprimirComandasSequencial(
+      await imprimirDocumentosSequencialmente(
         impressora.identificadorQz,
         blobs,
         (indice, total) => {

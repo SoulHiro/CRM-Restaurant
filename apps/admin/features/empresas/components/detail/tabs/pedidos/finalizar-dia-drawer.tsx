@@ -159,7 +159,7 @@ export function FinalizarDiaDrawer({
     }
 
     try {
-      const [{ pdf }, { ResumoDiaPDF }, { imprimirComandasSequencial }] =
+      const [{ pdf }, { ResumoDiaPDF }, { imprimirDocumentoUnico }] =
         await Promise.all([
           import('@react-pdf/renderer'),
           import('../../../../lib/resumo-dia-pdf'),
@@ -183,7 +183,7 @@ export function FinalizarDiaDrawer({
         />
       ).toBlob()
 
-      await imprimirComandasSequencial(identificadorImpressora, [blob])
+      await imprimirDocumentoUnico(identificadorImpressora, blob)
     } catch {
       toast.error(
         'Fechamento salvo, mas não foi possível imprimir. Confira o QZ Tray.'
