@@ -44,6 +44,8 @@ export const configuracaoComanda = pgTable('configuracao_comanda', {
 export const configuracaoResumoDia = pgTable('configuracao_resumo_dia', {
   id: text('id').primaryKey().default('default'),
   cnpj: text('cnpj'),
+  inscricao_estadual: text('inscricao_estadual'),
   nome_estabelecimento: text('nome_estabelecimento'),
+  endereco: text('endereco'),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 })

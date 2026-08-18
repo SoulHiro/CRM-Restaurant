@@ -30,7 +30,9 @@ export const obterConfiguracaoResumoDiaSchema = z.object({})
 
 export const salvarConfiguracaoResumoDiaSchema = z.object({
   cnpj: z.string().optional(),
+  inscricaoEstadual: z.string().optional(),
   nomeEstabelecimento: z.string().optional(),
+  endereco: z.string().optional(),
 })
 
 export type SalvarConfiguracaoResumoDiaInput = z.infer<

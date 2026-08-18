@@ -27,6 +27,16 @@ const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
   minute: '2-digit',
 })
 
+const dateTimeSecondsFormatter = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: FUSO_RESTAURANTE,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+})
+
 /** Colunas `date` do Postgres chegam assim: dia de calendário, sem hora. */
 const DIA_DE_CALENDARIO = /^(\d{4})-(\d{2})-(\d{2})$/
 
@@ -66,6 +76,11 @@ export function formatDateTimeBR(value: string | Date): string {
   // Intl separa data e hora com vírgula ("10/08/2026, 11:32") — sem vírgula
   // fica mais limpo tanto na tela quanto impresso na comanda.
   return dateTimeFormatter.format(new Date(value)).replace(',', '')
+}
+
+/** Instante real com hora e segundos — carimbo de "Impresso em" na nota. */
+export function formatDateTimeSecondsBR(value: string | Date): string {
+  return dateTimeSecondsFormatter.format(new Date(value)).replace(',', '')
 }
 
 export function formatShortDateBR(value: string | Date): string {

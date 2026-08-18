@@ -54,8 +54,14 @@ export function ComandaLayoutConfig({
   )
 
   const [cnpj, setCnpj] = useState(configuracaoResumoDiaInicial.cnpj)
+  const [inscricaoEstadual, setInscricaoEstadual] = useState(
+    configuracaoResumoDiaInicial.inscricaoEstadual
+  )
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState(
     configuracaoResumoDiaInicial.nomeEstabelecimento
+  )
+  const [endereco, setEndereco] = useState(
+    configuracaoResumoDiaInicial.endereco
   )
 
   const campos = useMemo(
@@ -77,7 +83,9 @@ export function ComandaLayoutConfig({
       {abaAtiva === 'resumo' ? (
         <ResumoDiaPreview
           nomeEstabelecimento={nomeEstabelecimento}
+          endereco={endereco}
           cnpj={cnpj}
+          inscricaoEstadual={inscricaoEstadual}
         />
       ) : (
         <ComandaPreview campos={campos} />
@@ -118,8 +126,12 @@ export function ComandaLayoutConfig({
           <ResumoDoDiaTab
             cnpj={cnpj}
             setCnpj={setCnpj}
+            inscricaoEstadual={inscricaoEstadual}
+            setInscricaoEstadual={setInscricaoEstadual}
             nomeEstabelecimento={nomeEstabelecimento}
             setNomeEstabelecimento={setNomeEstabelecimento}
+            endereco={endereco}
+            setEndereco={setEndereco}
           />
         </TabsContent>
       </Tabs>

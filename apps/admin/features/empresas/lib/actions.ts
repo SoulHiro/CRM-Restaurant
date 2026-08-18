@@ -11,6 +11,7 @@ import {
   colaborador_pedido,
   empresa,
   fechamento_dia_empresa,
+  fechamento_dia_item,
   pedido_dia_importado,
 } from '@repo/db'
 import { and, eq } from 'drizzle-orm'
@@ -266,8 +267,11 @@ export const obterFechamentoDoDiaAction = authActionClient
 
 /**
  * P/M/G nunca vêm do cliente — são recalculados aqui, na hora, a partir dos
- * pedidos reais daquele dia. Só café/suco/lanche (sem fonte de dado própria
- * ainda) são o que o usuário de fato informa.
+ * pedidos reais daquele dia. Preço por tamanho e de café/suco/lanche (sem
+ * fonte de dado própria ainda) são o que o usuário de fato informa. Cada
+ * marmita vira uma linha em `fechamento_dia_item` — nome, prato e tamanho
+ * gravados como snapshot, para o histórico e uma eventual reimpressão
+ * sobreviverem à limpeza de `pedido_dia_importado`/`colaborador_pedido`.
  */
 export const finalizarDiaAction = authActionClient
   .schema(finalizarDiaSchema)
@@ -280,25 +284,56 @@ export const finalizarDiaAction = authActionClient
       throw new ActionError('Esse dia já foi finalizado para essa empresa.')
     }
 
-    const contagem = await getContagemTamanhos(
-      parsedInput.empresaId,
-      parsedInput.data
+    const [contagem, pedidos] = await Promise.all([
+      getContagemTamanhos(parsedInput.empresaId, parsedInput.data),
+      getPedidosDoDia(parsedInput.empresaId, parsedInput.data),
+    ])
+
+    const precoPorTamanho: Record<'P' | 'M' | 'G', number> = {
+      P: parsedInput.precoUnitarioP,
+      M: parsedInput.precoUnitarioM,
+      G: parsedInput.precoUnitarioG,
+    }
+
+    const [criado] = await db
+      .insert(fechamento_dia_empresa)
+      .values({
+        empresa_id: parsedInput.empresaId,
+        data: parsedInput.data,
+        quantidade_p: contagem.p,
+        preco_unitario_p: toMoneyString(parsedInput.precoUnitarioP),
+        quantidade_m: contagem.m,
+        preco_unitario_m: toMoneyString(parsedInput.precoUnitarioM),
+        quantidade_g: contagem.g,
+        preco_unitario_g: toMoneyString(parsedInput.precoUnitarioG),
+        quantidade_cafe: parsedInput.quantidadeCafe,
+        preco_unitario_cafe: toMoneyString(parsedInput.precoUnitarioCafe),
+        quantidade_suco: parsedInput.quantidadeSuco,
+        preco_unitario_suco: toMoneyString(parsedInput.precoUnitarioSuco),
+        quantidade_lanche: parsedInput.quantidadeLanche,
+        preco_unitario_lanche: toMoneyString(parsedInput.precoUnitarioLanche),
+        finalizado_por: ctx.user.name,
+      })
+      .returning({ id: fechamento_dia_empresa.id })
+
+    if (!criado) throw new ActionError('Não foi possível finalizar o dia')
+
+    const itens = pedidos.filter(
+      (p): p is typeof p & { tamanho: 'P' | 'M' | 'G' } =>
+        p.tamanho != null && !p.recusou
     )
 
-    await db.insert(fechamento_dia_empresa).values({
-      empresa_id: parsedInput.empresaId,
-      data: parsedInput.data,
-      quantidade_p: contagem.p,
-      quantidade_m: contagem.m,
-      quantidade_g: contagem.g,
-      quantidade_cafe: parsedInput.quantidadeCafe,
-      preco_unitario_cafe: toMoneyString(parsedInput.precoUnitarioCafe),
-      quantidade_suco: parsedInput.quantidadeSuco,
-      preco_unitario_suco: toMoneyString(parsedInput.precoUnitarioSuco),
-      quantidade_lanche: parsedInput.quantidadeLanche,
-      preco_unitario_lanche: toMoneyString(parsedInput.precoUnitarioLanche),
-      finalizado_por: ctx.user.name,
-    })
+    if (itens.length > 0) {
+      await db.insert(fechamento_dia_item).values(
+        itens.map((item) => ({
+          fechamento_id: criado.id,
+          colaborador_nome: item.nome,
+          prato: item.prato,
+          tamanho: item.tamanho,
+          preco: toMoneyString(precoPorTamanho[item.tamanho]),
+        }))
+      )
+    }
 
     revalidatePath(`/empresas/${parsedInput.empresaId}`)
 

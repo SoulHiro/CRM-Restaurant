@@ -88,13 +88,17 @@ export const salvarConfiguracaoResumoDiaAction = authActionClient
       .values({
         id: 'default',
         cnpj: parsedInput.cnpj?.trim() || null,
+        inscricao_estadual: parsedInput.inscricaoEstadual?.trim() || null,
         nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
+        endereco: parsedInput.endereco?.trim() || null,
       })
       .onConflictDoUpdate({
         target: configuracaoResumoDia.id,
         set: {
           cnpj: parsedInput.cnpj?.trim() || null,
+          inscricao_estadual: parsedInput.inscricaoEstadual?.trim() || null,
           nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
+          endereco: parsedInput.endereco?.trim() || null,
           updated_at: new Date(),
         },
       })

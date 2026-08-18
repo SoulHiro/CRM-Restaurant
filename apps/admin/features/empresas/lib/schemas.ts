@@ -174,6 +174,9 @@ export type ImportarPedidosInput = z.infer<typeof importarPedidosSchema>
 export const finalizarDiaSchema = z.object({
   empresaId: z.string().min(1),
   data: z.string().min(1),
+  precoUnitarioP: z.number().min(0),
+  precoUnitarioM: z.number().min(0),
+  precoUnitarioG: z.number().min(0),
   quantidadeCafe: z.number().int().min(0),
   precoUnitarioCafe: z.number().min(0),
   quantidadeSuco: z.number().int().min(0),

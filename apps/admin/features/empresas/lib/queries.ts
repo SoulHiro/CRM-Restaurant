@@ -8,6 +8,7 @@ import {
   colaborador_pedido,
   empresa,
   fechamento_dia_empresa,
+  fechamento_dia_item,
   pedido_dia_importado,
 } from '@repo/db'
 
@@ -18,6 +19,7 @@ import type {
   EmpresaDetail,
   EmpresaListItem,
   FechamentoDia,
+  ItemFechamento,
   PedidoDoDiaItem,
 } from './types'
 import { EMPTY_DETAIL, mockEmpresaDetails } from './mock-data/empresa-details'
@@ -179,14 +181,30 @@ export async function getContagemTamanhos(
   return contagem
 }
 
+function mapItemFechamento(
+  row: typeof fechamento_dia_item.$inferSelect
+): ItemFechamento {
+  return {
+    colaboradorNome: row.colaborador_nome,
+    prato: row.prato,
+    tamanho: row.tamanho,
+    preco: toNumber(row.preco),
+  }
+}
+
 function mapFechamento(
-  row: typeof fechamento_dia_empresa.$inferSelect
+  row: typeof fechamento_dia_empresa.$inferSelect & {
+    itens?: (typeof fechamento_dia_item.$inferSelect)[]
+  }
 ): FechamentoDia {
   return {
     data: row.data,
     quantidadeP: row.quantidade_p,
+    precoUnitarioP: toNumber(row.preco_unitario_p),
     quantidadeM: row.quantidade_m,
+    precoUnitarioM: toNumber(row.preco_unitario_m),
     quantidadeG: row.quantidade_g,
+    precoUnitarioG: toNumber(row.preco_unitario_g),
     quantidadeCafe: row.quantidade_cafe,
     precoUnitarioCafe: toNumber(row.preco_unitario_cafe),
     quantidadeSuco: row.quantidade_suco,
@@ -195,9 +213,11 @@ function mapFechamento(
     precoUnitarioLanche: toNumber(row.preco_unitario_lanche),
     finalizadoPor: row.finalizado_por,
     finalizadoEm: row.finalizado_em.toISOString(),
+    itens: (row.itens ?? []).map(mapItemFechamento),
   }
 }
 
+/** Com os itens (para reimpressão) — usado ao abrir o drawer "Finalizar dia". */
 export async function getFechamentoDoDia(
   empresaId: string,
   data: string
@@ -205,12 +225,16 @@ export async function getFechamentoDoDia(
   const row = await db.query.fechamento_dia_empresa.findFirst({
     where: (f, { and: andOp, eq: eqOp }) =>
       andOp(eqOp(f.empresa_id, empresaId), eqOp(f.data, data)),
+    with: { itens: true },
   })
 
   return row ? mapFechamento(row) : null
 }
 
-/** Mais recentes primeiro — histórico de fechamentos já feitos pra empresa. */
+/**
+ * Mais recentes primeiro — histórico de fechamentos já feitos pra empresa.
+ * Sem itens (lista, não precisa do detalhe linha a linha).
+ */
 export async function listarFechamentosDaEmpresa(
   empresaId: string
 ): Promise<FechamentoDia[]> {

@@ -1,63 +1,107 @@
-import { formatDateTimeBR } from '@/lib/formatters'
+import { formatCurrencyBRL, formatDateTimeSecondsBR } from '@/lib/formatters'
 
 const AGORA = new Date().toISOString()
 
+const ITENS_EXEMPLO = [
+  { prato: 'Frango grelhado', tamanho: 'G', nome: 'Maria Silva', preco: 22 },
+  { prato: 'Carne de panela', tamanho: 'M', nome: 'João Souza', preco: 18 },
+  { prato: 'Salada completa', tamanho: 'P', nome: 'Ana Costa', preco: 14 },
+]
+
 /**
  * Espelho em HTML do que `ResumoDiaPDF` gera — mesma ideia do
- * `ComandaPreview`, sem PDF/iframe. Nome e empresa são exemplo fixo; CNPJ e
- * nome do estabelecimento refletem o que está sendo digitado ao lado, ao
- * vivo, antes mesmo de salvar.
+ * `ComandaPreview`, sem PDF/iframe. Nome, endereço, CNPJ e I.E. refletem o
+ * que está sendo digitado ao lado, ao vivo, antes mesmo de salvar.
  */
 export function ResumoDiaPreview({
   nomeEstabelecimento,
+  endereco,
   cnpj,
+  inscricaoEstadual,
 }: {
   nomeEstabelecimento: string
+  endereco: string
   cnpj: string
+  inscricaoEstadual: string
 }) {
+  const totalItens = ITENS_EXEMPLO.reduce((soma, item) => soma + item.preco, 0)
+  const totalCafe = 3 * 3
+  const totalSuco = 2 * 5
+  const totalLanche = 4 * 8
+
   return (
     <div className="flex h-full flex-col items-center overflow-y-auto p-6">
       <div className="w-full max-w-[260px] shrink-0 rounded-sm bg-white p-4 text-zinc-900 shadow-lg">
-        <p className="mb-0.5 text-base font-bold leading-tight">
+        <div className="mb-2.5 grid grid-cols-3 gap-1 rounded border-2 border-zinc-900 p-2 text-center">
+          {[
+            { label: 'P', valor: 1 },
+            { label: 'M', valor: 1 },
+            { label: 'G', valor: 1 },
+            { label: 'Lanche', valor: 4 },
+            { label: 'Café', valor: 3 },
+            { label: 'Suco', valor: 2 },
+          ].map((bloco) => (
+            <div key={bloco.label}>
+              <p className="text-[9px] font-bold">{bloco.label}</p>
+              <p className="text-lg font-bold">{bloco.valor}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-2 text-base font-bold leading-tight">
           {nomeEstabelecimento || 'Restaurante Nosso Quintal'}
         </p>
-        {cnpj && (
-          <p className="text-[10px] text-zinc-500">CNPJ: {cnpj}</p>
+        {endereco && <p className="text-[10px] text-zinc-600">{endereco}</p>}
+        {(cnpj || inscricaoEstadual) && (
+          <div className="flex justify-between text-[10px] text-zinc-600">
+            <span>{cnpj && `CNPJ: ${cnpj}`}</span>
+            <span>{inscricaoEstadual && `I.E.: ${inscricaoEstadual}`}</span>
+          </div>
         )}
-        <p className="text-[10px] text-zinc-500">
-          Impresso em {formatDateTimeBR(AGORA)}
-        </p>
 
-        <p className="mb-2.5 mt-2.5 border-t border-dashed border-zinc-300 pt-2 text-sm font-bold">
-          Empresa Cliente Exemplo
-        </p>
-
-        <div className="mb-2.5 flex justify-between rounded border-2 border-zinc-900 p-2">
-          <div className="text-center">
-            <p className="text-xs font-bold">P</p>
-            <p className="text-2xl font-bold">12</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs font-bold">M</p>
-            <p className="text-2xl font-bold">8</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs font-bold">G</p>
-            <p className="text-2xl font-bold">5</p>
-          </div>
+        <div className="mt-2 border-t border-zinc-900 pt-1.5">
+          <p className="text-[10px] text-zinc-500">
+            Impresso em {formatDateTimeSecondsBR(AGORA)}
+          </p>
+          <p className="mb-2.5 mt-0.5 text-sm font-bold">
+            Empresa Cliente Exemplo
+          </p>
         </div>
 
+        {ITENS_EXEMPLO.map((item, indice) => (
+          <div
+            key={indice}
+            className="mb-2 border-b border-dashed border-zinc-300 pb-1.5"
+          >
+            <div className="flex items-start justify-between">
+              <span className="text-sm font-bold">{item.prato}</span>
+              <span className="text-sm font-bold">
+                {formatCurrencyBRL(item.preco)}
+              </span>
+            </div>
+            <p className="text-[9px] text-zinc-600">Tamanho: {item.tamanho}</p>
+            <p className="text-[10px]">{item.nome}</p>
+          </div>
+        ))}
+
         <div className="flex justify-between text-sm">
-          <span>Café</span>
-          <span>3</span>
+          <span>Lanche (4x)</span>
+          <span>{formatCurrencyBRL(totalLanche)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span>Suco</span>
-          <span>2</span>
+          <span>Café (3x)</span>
+          <span>{formatCurrencyBRL(totalCafe)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span>Lanche</span>
-          <span>4</span>
+          <span>Suco (2x)</span>
+          <span>{formatCurrencyBRL(totalSuco)}</span>
+        </div>
+
+        <div className="mt-2 flex justify-between border-t border-zinc-900 pt-2 text-base font-bold">
+          <span>Total a pagar</span>
+          <span>
+            {formatCurrencyBRL(totalItens + totalCafe + totalSuco + totalLanche)}
+          </span>
         </div>
       </div>
     </div>

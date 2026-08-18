@@ -12,13 +12,21 @@ import { salvarConfiguracaoResumoDiaAction } from '../lib/actions'
 export function ResumoDoDiaTab({
   cnpj,
   setCnpj,
+  inscricaoEstadual,
+  setInscricaoEstadual,
   nomeEstabelecimento,
   setNomeEstabelecimento,
+  endereco,
+  setEndereco,
 }: {
   cnpj: string
   setCnpj: (v: string) => void
+  inscricaoEstadual: string
+  setInscricaoEstadual: (v: string) => void
   nomeEstabelecimento: string
   setNomeEstabelecimento: (v: string) => void
+  endereco: string
+  setEndereco: (v: string) => void
 }) {
   const { execute, isExecuting } = useAction(salvarConfiguracaoResumoDiaAction, {
     onSuccess: () => toast.success('Configuração salva'),
@@ -30,19 +38,30 @@ export function ResumoDoDiaTab({
       <div className="flex flex-col gap-4 rounded-lg bg-card p-4">
         <p className="text-sm text-muted-foreground">
           Aparece no cabeçalho da nota de fechamento do dia, impressa pela aba
-          Pedidos de cada empresa. Café/suco/lanche são lançados na hora, no
-          próprio &quot;Finalizar dia&quot;.
+          Pedidos de cada empresa. Café/suco/lanche e o valor de cada tamanho
+          de marmita são lançados na hora, no próprio &quot;Finalizar
+          dia&quot;.
         </p>
 
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-sm">Nome do estabelecimento</Label>
+          <Input
+            value={nomeEstabelecimento}
+            onChange={(e) => setNomeEstabelecimento(e.target.value)}
+            placeholder="Ex: Restaurante Nosso Quintal"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-sm">Endereço</Label>
+          <Input
+            value={endereco}
+            onChange={(e) => setEndereco(e.target.value)}
+            placeholder="Rua, número, bairro, cidade/UF"
+          />
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm">Nome do estabelecimento</Label>
-            <Input
-              value={nomeEstabelecimento}
-              onChange={(e) => setNomeEstabelecimento(e.target.value)}
-              placeholder="Ex: Restaurante Nosso Quintal"
-            />
-          </div>
           <div className="flex flex-col gap-1.5">
             <Label className="text-sm">CNPJ</Label>
             <Input
@@ -51,12 +70,22 @@ export function ResumoDoDiaTab({
               placeholder="00.000.000/0000-00"
             />
           </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-sm">Inscrição Estadual</Label>
+            <Input
+              value={inscricaoEstadual}
+              onChange={(e) => setInscricaoEstadual(e.target.value)}
+              placeholder="000.000.000.000"
+            />
+          </div>
         </div>
 
         <Button
           className="self-start"
           disabled={isExecuting}
-          onClick={() => execute({ cnpj, nomeEstabelecimento })}
+          onClick={() =>
+            execute({ cnpj, inscricaoEstadual, nomeEstabelecimento, endereco })
+          }
         >
           {isExecuting ? 'Salvando...' : 'Salvar configuração'}
         </Button>

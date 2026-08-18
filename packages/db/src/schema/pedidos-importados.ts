@@ -110,8 +110,11 @@ export const fechamento_dia_empresa = pgTable(
     // P/M/G somados dos pedido_dia_importado reais daquele dia, no momento
     // do fechamento.
     quantidade_p: integer('quantidade_p').notNull().default(0),
+    preco_unitario_p: numeric('preco_unitario_p', PRECO).notNull().default('0'),
     quantidade_m: integer('quantidade_m').notNull().default(0),
+    preco_unitario_m: numeric('preco_unitario_m', PRECO).notNull().default('0'),
     quantidade_g: integer('quantidade_g').notNull().default(0),
+    preco_unitario_g: numeric('preco_unitario_g', PRECO).notNull().default('0'),
     quantidade_cafe: integer('quantidade_cafe').notNull().default(0),
     preco_unitario_cafe: numeric('preco_unitario_cafe', PRECO).notNull().default('0'),
     quantidade_suco: integer('quantidade_suco').notNull().default(0),
@@ -127,6 +130,25 @@ export const fechamento_dia_empresa = pgTable(
     unique().on(t.empresa_id, t.data),
   ]
 )
+
+/**
+ * Snapshot de cada marmita do fechamento — nome/prato/tamanho/preço gravados
+ * na hora, sem FK para `colaborador_pedido`/`pedido_dia_importado`: essas
+ * duas são limpas periodicamente após o fechamento, mas o histórico (e uma
+ * eventual reimpressão) precisa continuar existindo independente disso.
+ */
+export const fechamento_dia_item = pgTable('fechamento_dia_item', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  fechamento_id: text('fechamento_id')
+    .notNull()
+    .references(() => fechamento_dia_empresa.id, { onDelete: 'cascade' }),
+  colaborador_nome: text('colaborador_nome').notNull(),
+  prato: text('prato'),
+  tamanho: tamanhoMarmitaEnum('tamanho').notNull(),
+  preco: numeric('preco', PRECO).notNull().default('0'),
+})
 
 export const colaboradorPedidoRelations = relations(
   colaborador_pedido,
@@ -145,6 +167,23 @@ export const pedidoDiaImportadoRelations = relations(
     colaborador: one(colaborador_pedido, {
       fields: [pedido_dia_importado.colaborador_id],
       references: [colaborador_pedido.id],
+    }),
+  })
+)
+
+export const fechamentoDiaEmpresaRelations = relations(
+  fechamento_dia_empresa,
+  ({ many }) => ({
+    itens: many(fechamento_dia_item),
+  })
+)
+
+export const fechamentoDiaItemRelations = relations(
+  fechamento_dia_item,
+  ({ one }) => ({
+    fechamento: one(fechamento_dia_empresa, {
+      fields: [fechamento_dia_item.fechamento_id],
+      references: [fechamento_dia_empresa.id],
     }),
   })
 )

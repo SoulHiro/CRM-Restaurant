@@ -123,11 +123,21 @@ export interface ContagemTamanhos {
   g: number
 }
 
+export interface ItemFechamento {
+  colaboradorNome: string
+  prato: string | null
+  tamanho: 'P' | 'M' | 'G'
+  preco: number
+}
+
 export interface FechamentoDia {
   data: string
   quantidadeP: number
+  precoUnitarioP: number
   quantidadeM: number
+  precoUnitarioM: number
   quantidadeG: number
+  precoUnitarioG: number
   quantidadeCafe: number
   precoUnitarioCafe: number
   quantidadeSuco: number
@@ -136,6 +146,7 @@ export interface FechamentoDia {
   precoUnitarioLanche: number
   finalizadoPor: string | null
   finalizadoEm: string
+  itens: ItemFechamento[]
 }
 
 export interface EmpresaDetail {

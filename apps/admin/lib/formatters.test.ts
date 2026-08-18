@@ -4,6 +4,7 @@ import {
   formatCurrencyBRL,
   formatDateBR,
   formatDateTimeBR,
+  formatDateTimeSecondsBR,
   formatShortDateBR,
 } from './formatters'
 
@@ -68,5 +69,13 @@ describe('formatShortDateBR', () => {
 describe('formatDateTimeBR', () => {
   it('mostra data e hora no fuso do restaurante', () => {
     expect(formatDateTimeBR('2026-08-10T14:32:00.000Z')).toBe('10/08/2026 11:32')
+  })
+})
+
+describe('formatDateTimeSecondsBR', () => {
+  it('mostra data e hora com segundos no fuso do restaurante', () => {
+    expect(formatDateTimeSecondsBR('2026-08-10T14:32:07.000Z')).toBe(
+      '10/08/2026 11:32:07'
+    )
   })
 })

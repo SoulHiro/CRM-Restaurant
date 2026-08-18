@@ -49,5 +49,7 @@ export interface ImpressoraOption {
 
 export interface ConfiguracaoResumoDia {
   cnpj: string
+  inscricaoEstadual: string
   nomeEstabelecimento: string
+  endereco: string
 }
