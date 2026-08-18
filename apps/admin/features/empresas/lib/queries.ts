@@ -79,6 +79,15 @@ async function mapEmpresa(
     // importado", mas a tela não distingue os dois hoje; tratar como
     // aguardando é o lado seguro (não esconde uma empresa sem pedidos de hoje).
     status: total > 0 && respondidos === total ? 'finalizado' : 'aguardando',
+    endereco: {
+      cep: row.cep ?? '',
+      logradouro: row.logradouro ?? '',
+      numero: row.numero ?? '',
+      complemento: row.complemento ?? undefined,
+      bairro: row.bairro ?? '',
+      cidade: row.cidade ?? '',
+      uf: row.uf ?? '',
+    },
   }
 }
 
@@ -111,9 +120,12 @@ export async function getEmpresaDetail(id: string): Promise<EmpresaDetail> {
 }
 
 /**
- * Um colaborador ativo por linha, com o pedido daquele dia (ou nada, se não
- * respondeu). "Recusou" (`ehRecusa`) é diferente de "sem pedido" — separa
- * quem disse explicitamente que não vai de quem só não importou nada ainda.
+ * Só quem tem pedido de fato pra essa data — colaborador ativo sem pedido
+ * importado hoje simplesmente não aparece (ver `docs/rules` — a tela é pra
+ * "quem pediu hoje", não pra listar todo o cadastro). "Recusou" continua
+ * distinto de "sem pedido": é quem tem pedido, mas marcado como não vai
+ * comer (`recusou` explícito, ver `marcarRecusaAction`, ou texto de recusa
+ * vindo da planilha, `ehRecusa`).
  */
 export async function getPedidosDoDia(
   empresaId: string,
@@ -131,22 +143,24 @@ export async function getPedidosDoDia(
     orderBy: (c, { asc }) => [asc(c.nome)],
   })
 
-  return colaboradores.map((colaborador) => {
-    const pedido = colaborador.pedidos[0] ?? null
-    return {
-      colaboradorId: colaborador.id,
-      nome: colaborador.nome,
-      whatsapp: colaborador.whatsapp,
-      tipo: pedido?.tipo ?? 'marmita',
-      turno: pedido?.turno ?? null,
-      tamanho: pedido?.tamanho ?? null,
-      prato: pedido?.prato ?? null,
-      preco: pedido?.preco != null ? toNumber(pedido.preco) : null,
-      observacao: pedido?.observacao ?? null,
-      respondidoEm: pedido?.respondido_em?.toISOString() ?? null,
-      recusou: ehRecusa(pedido?.prato ?? null),
-    }
-  })
+  return colaboradores
+    .filter((colaborador) => colaborador.pedidos.length > 0)
+    .map((colaborador) => {
+      const pedido = colaborador.pedidos[0]!
+      return {
+        colaboradorId: colaborador.id,
+        nome: colaborador.nome,
+        whatsapp: colaborador.whatsapp,
+        tipo: pedido.tipo,
+        turno: pedido.turno,
+        tamanho: pedido.tamanho,
+        prato: pedido.prato,
+        preco: pedido.preco != null ? toNumber(pedido.preco) : null,
+        observacao: pedido.observacao,
+        respondidoEm: pedido.respondido_em?.toISOString() ?? null,
+        recusou: pedido.recusou || ehRecusa(pedido.prato),
+      }
+    })
 }
 
 /**
@@ -164,6 +178,7 @@ export async function getContagemTamanhos(
       tipo: pedido_dia_importado.tipo,
       tamanho: pedido_dia_importado.tamanho,
       prato: pedido_dia_importado.prato,
+      recusou: pedido_dia_importado.recusou,
     })
     .from(pedido_dia_importado)
     .innerJoin(
@@ -179,7 +194,7 @@ export async function getContagemTamanhos(
 
   const contagem: ContagemTamanhos = { p: 0, m: 0, g: 0, lanche: 0 }
   for (const row of rows) {
-    if (ehRecusa(row.prato)) continue
+    if (row.recusou || ehRecusa(row.prato)) continue
     if (row.tipo === 'lanche') {
       contagem.lanche++
       continue

@@ -13,6 +13,7 @@ export interface EmpresaListItem {
   funcionariosRespondidos: number
   funcionariosTotal: number
   status: EmpresaListStatus
+  endereco: EmpresaEndereco
 }
 
 export interface EmpresaEndereco {

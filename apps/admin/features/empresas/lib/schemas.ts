@@ -216,6 +216,14 @@ export const removerPedidoSchema = z.object({
 
 export type RemoverPedidoInput = z.infer<typeof removerPedidoSchema>
 
+export const marcarRecusaSchema = z.object({
+  colaboradorId: z.string().min(1),
+  data: z.string().min(1),
+  recusou: z.boolean(),
+})
+
+export type MarcarRecusaInput = z.infer<typeof marcarRecusaSchema>
+
 const PRECO_PADRAO_TIPOS = [
   'marmita_p',
   'marmita_m',

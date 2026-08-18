@@ -3,9 +3,23 @@ import { ArrowLeft, Pencil } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
 import { PersonAvatar } from '@repo/ui/components/person-avatar'
+import { maskCnpj } from '@repo/ui/lib/masks'
 
 import type { EmpresaListItem, EmpresaRecordStatus } from '../../lib/types'
 import { AtivoInativoBadge } from '../shared/ativo-inativo-badge'
+
+function formatarEndereco(endereco: EmpresaListItem['endereco']): string {
+  const partes = [
+    endereco.logradouro &&
+      `${endereco.logradouro}${endereco.numero ? `, ${endereco.numero}` : ''}`,
+    endereco.bairro,
+    endereco.cidade && endereco.uf
+      ? `${endereco.cidade} - ${endereco.uf}`
+      : endereco.cidade,
+  ].filter(Boolean)
+
+  return partes.join(' · ')
+}
 
 export function EmpresaHeader({
   empresa,
@@ -36,10 +50,20 @@ export function EmpresaHeader({
               </h1>
               <AtivoInativoBadge active={status === 'ativo'} />
             </div>
-            <p className="text-sm text-sidebar-foreground/70">{empresa.cnpj}</p>
+            <p className="flex items-center gap-1.5 text-sm text-sidebar-foreground/70">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-sidebar-foreground/50">
+                CNPJ
+              </span>
+              {maskCnpj(empresa.cnpj)}
+            </p>
             <p className="text-sm text-sidebar-foreground/70">
               {empresa.email}
             </p>
+            {formatarEndereco(empresa.endereco) && (
+              <p className="text-sm text-sidebar-foreground/70">
+                {formatarEndereco(empresa.endereco)}
+              </p>
+            )}
           </div>
 
           <Button
@@ -52,7 +76,7 @@ export function EmpresaHeader({
           </Button>
         </div>
 
-        <div className="flex flex-col items-end gap-1 self-end">
+        <div className="flex flex-col items-start gap-1 self-end">
           <span className="text-[10px] font-medium uppercase tracking-wide text-sidebar-foreground/50">
             Responsável
           </span>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Printer, Trash2 } from 'lucide-react'
+import { Printer, Trash2, UserX } from 'lucide-react'
 import { useAction } from 'next-safe-action/hooks'
 import { toast } from 'sonner'
 
@@ -19,7 +19,7 @@ import { Badge } from '@repo/ui/components/badge'
 import { Button } from '@repo/ui/components/button'
 import { cn } from '@repo/ui/lib/utils'
 
-import { removerPedidoAction } from '../../../../lib/actions'
+import { marcarRecusaAction, removerPedidoAction } from '../../../../lib/actions'
 import type { PedidoDoDiaItem } from '../../../../lib/types'
 
 const TURNO_LABEL: Record<'almoco' | 'jantar', string> = {
@@ -38,8 +38,6 @@ export function PedidoDiaRow({
   onImprimir: () => void
   onRemovido: () => void
 }) {
-  const semPedido = !pedido.prato && !pedido.recusou
-
   const { execute, isExecuting } = useAction(removerPedidoAction, {
     onSuccess: () => {
       toast.success('Pedido removido')
@@ -48,24 +46,31 @@ export function PedidoDiaRow({
     onError: () => toast.error('Não foi possível remover o pedido'),
   })
 
+  const { execute: marcarRecusa, isExecuting: marcandoRecusa } = useAction(
+    marcarRecusaAction,
+    {
+      onSuccess: ({ input }) => {
+        toast.success(
+          input.recusou ? 'Marcado como "não vai comer hoje"' : 'Pedido reativado'
+        )
+        onRemovido()
+      },
+      onError: () => toast.error('Não foi possível atualizar o pedido'),
+    }
+  )
+
   return (
     <div
       className={cn(
         'flex flex-col gap-2 rounded-lg bg-card p-4 sm:flex-row sm:items-center sm:justify-between',
-        (pedido.recusou || semPedido) && 'opacity-60'
+        pedido.recusou && 'opacity-60'
       )}
     >
       <div className="flex min-w-0 flex-col">
         <span className="truncate font-medium">{pedido.nome}</span>
         <span className="truncate text-sm text-muted-foreground">
-          {pedido.recusou
-            ? 'Não vai retirar hoje'
-            : semPedido
-              ? 'Sem pedido importado para hoje'
-              : pedido.prato}
-          {pedido.tamanho && !semPedido && !pedido.recusou
-            ? ` · ${pedido.tamanho}`
-            : ''}
+          {pedido.recusou ? 'Não vai comer hoje' : pedido.prato}
+          {pedido.tamanho && !pedido.recusou ? ` · ${pedido.tamanho}` : ''}
         </span>
         {pedido.observacao && (
           <span className="truncate text-xs text-muted-foreground">
@@ -83,8 +88,27 @@ export function PedidoDiaRow({
         <Button
           variant="ghost"
           size="icon"
+          aria-label={
+            pedido.recusou
+              ? `Reativar pedido de ${pedido.nome}`
+              : `Marcar ${pedido.nome} como "não vai comer hoje"`
+          }
+          disabled={marcandoRecusa}
+          onClick={() =>
+            marcarRecusa({
+              colaboradorId: pedido.colaboradorId,
+              data,
+              recusou: !pedido.recusou,
+            })
+          }
+        >
+          <UserX className={cn('size-4', pedido.recusou && 'text-destructive')} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           aria-label={`Imprimir comanda de ${pedido.nome}`}
-          disabled={semPedido || pedido.recusou}
+          disabled={pedido.recusou}
           onClick={onImprimir}
         >
           <Printer className="size-4" />
@@ -96,7 +120,7 @@ export function PedidoDiaRow({
               variant="ghost"
               size="icon"
               aria-label={`Remover pedido de ${pedido.nome}`}
-              disabled={semPedido || isExecuting}
+              disabled={isExecuting}
             >
               <Trash2 className="size-4" />
             </Button>

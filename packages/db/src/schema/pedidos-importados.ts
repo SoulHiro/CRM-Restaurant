@@ -89,6 +89,11 @@ export const pedido_dia_importado = pgTable(
     // pra um reajuste no catálogo não mudar o valor de um pedido já feito.
     // Marmita continua com preço decidido no "Finalizar dia" (por tamanho).
     preco: numeric('preco', PRECO),
+    // Controle explícito, via botão na tela — separado do texto de recusa
+    // que já vem em `prato` de algumas planilhas (`ehRecusa`). Os dois
+    // continuam válidos juntos: qualquer um dos dois tira a pessoa da
+    // contagem/impressão.
+    recusou: boolean('recusou').notNull().default(false),
     observacao: text('observacao'),
     // Nome do arquivo importado — sem Vercel Blob (sem token configurado
     // ainda), mesmo padrão já usado em documento_anexo/arquivo_nota_fiscal.

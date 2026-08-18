@@ -68,7 +68,7 @@ export function EmpresaTabs({
       <TabsContent value="dados" className="mt-6">
         <DadosTab
           empresa={empresa}
-          endereco={detail.endereco}
+          endereco={empresa.endereco}
           documentos={detail.documentos}
         />
       </TabsContent>

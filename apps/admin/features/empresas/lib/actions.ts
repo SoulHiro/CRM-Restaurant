@@ -26,6 +26,7 @@ import {
   listarColaboradoresSchema,
   listarFechamentosSchema,
   listarPedidosDoDiaSchema,
+  marcarRecusaSchema,
   obterFechamentoDoDiaSchema,
   obterImpressoraComandaSchema,
   obterPrecosEmpresaSchema,
@@ -398,6 +399,22 @@ export const removerPedidoAction = authActionClient
   .action(async ({ parsedInput }) => {
     await db
       .delete(pedido_dia_importado)
+      .where(
+        and(
+          eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),
+          eq(pedido_dia_importado.data, parsedInput.data)
+        )
+      )
+
+    revalidatePath('/empresas')
+  })
+
+export const marcarRecusaAction = authActionClient
+  .schema(marcarRecusaSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .update(pedido_dia_importado)
+      .set({ recusou: parsedInput.recusou })
       .where(
         and(
           eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),
