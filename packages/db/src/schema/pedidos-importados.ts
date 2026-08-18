@@ -140,6 +140,10 @@ export const fechamento_dia_empresa = pgTable(
     preco_unitario_suco: numeric('preco_unitario_suco', PRECO).notNull().default('0'),
     quantidade_lanche: integer('quantidade_lanche').notNull().default(0),
     preco_unitario_lanche: numeric('preco_unitario_lanche', PRECO).notNull().default('0'),
+    // Soma de tudo (itens + café + suco) no momento do fechamento — gravado
+    // pra alimentar faturamento sem precisar recalcular a partir dos itens
+    // toda vez que a tela de faturamento carrega.
+    valor_total: numeric('valor_total', PRECO).notNull().default('0'),
     finalizado_por: text('finalizado_por'),
     finalizado_em: timestamp('finalizado_em').notNull().defaultNow(),
   },

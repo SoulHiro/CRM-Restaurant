@@ -1,3 +1,9 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useAction } from 'next-safe-action/hooks'
+import { toast } from 'sonner'
+
 import { Button } from '@repo/ui/components/button'
 import {
   Card,
@@ -8,32 +14,59 @@ import {
   CardTitle,
 } from '@repo/ui/components/card'
 import { FieldCell } from '@repo/ui/components/field-cell'
+import { Skeleton } from '@repo/ui/components/skeleton'
 import { StatCard } from '@repo/ui/components/stat-card'
 
 import { formatCurrencyBRL, formatDateBR } from '@/lib/formatters'
+import { listarFaturamentoMensalAction } from '../../../lib/actions'
 import type {
   EmpresaContrato,
   EmpresaFaturamentoMensal,
 } from '../../../lib/types'
 import { AtivoInativoBadge } from '../../shared/ativo-inativo-badge'
+import { DateRangeFilter, type DateRangeValue } from '../../shared/date-range-filter'
 import { FaturamentoBarChart } from '../../shared/faturamento-bar-chart'
 
 export function FaturamentoTab({
-  faturamentoMensal,
+  empresaId,
   contrato,
 }: {
-  faturamentoMensal: EmpresaFaturamentoMensal[]
+  empresaId: string
   contrato?: EmpresaContrato
 }) {
-  const totalPeriodo = faturamentoMensal.reduce(
+  const [faturamentoMensal, setFaturamentoMensal] = useState<
+    EmpresaFaturamentoMensal[] | null
+  >(null)
+  const [intervalo, setIntervalo] = useState<DateRangeValue>({
+    from: null,
+    to: null,
+  })
+
+  const { execute } = useAction(listarFaturamentoMensalAction, {
+    onSuccess: ({ data }) => setFaturamentoMensal(data?.faturamentoMensal ?? []),
+    onError: () => toast.error('Não foi possível carregar o faturamento'),
+  })
+
+  useEffect(() => {
+    execute({ empresaId, from: intervalo.from, to: intervalo.to })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [empresaId, intervalo.from, intervalo.to])
+
+  const totalPeriodo = (faturamentoMensal ?? []).reduce(
     (soma, item) => soma + item.valor,
     0
   )
   const ticketMedio =
-    faturamentoMensal.length > 0 ? totalPeriodo / faturamentoMensal.length : 0
+    faturamentoMensal && faturamentoMensal.length > 0
+      ? totalPeriodo / faturamentoMensal.length
+      : 0
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex justify-end">
+        <DateRangeFilter value={intervalo} onChange={setIntervalo} />
+      </div>
+
       <div className="grid grid-cols-3 gap-6">
         <StatCard
           label="Faturado no período"
@@ -50,12 +83,15 @@ export function FaturamentoTab({
         <CardHeader>
           <CardTitle className="text-base">Faturamento mensal</CardTitle>
           <CardDescription>
-            Valor faturado com essa empresa, mês a mês. Não representa lucro —
-            não há dados de custo associados no sistema ainda.
+            Valor faturado com essa empresa, mês a mês — soma dos fechamentos
+            do dia (marmitas, lanches, café e suco). Não representa lucro, só
+            faturamento bruto.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {faturamentoMensal.length === 0 ? (
+          {!faturamentoMensal ? (
+            <Skeleton className="h-[280px] w-full" />
+          ) : faturamentoMensal.length === 0 ? (
             <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
               Sem histórico de faturamento ainda.
             </div>

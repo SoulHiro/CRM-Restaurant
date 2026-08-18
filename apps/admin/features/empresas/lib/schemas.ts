@@ -211,6 +211,16 @@ export const listarFechamentosSchema = z.object({
 
 export type ListarFechamentosInput = z.infer<typeof listarFechamentosSchema>
 
+export const listarFaturamentoMensalSchema = z.object({
+  empresaId: z.string().min(1),
+  from: z.string().nullable().optional(),
+  to: z.string().nullable().optional(),
+})
+
+export type ListarFaturamentoMensalInput = z.infer<
+  typeof listarFaturamentoMensalSchema
+>
+
 export const removerPedidoSchema = z.object({
   colaboradorId: z.string().min(1),
   data: z.string().min(1),

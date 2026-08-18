@@ -64,10 +64,7 @@ export function EmpresaTabs({
         <PausasTab empresaId={empresa.id} pausas={detail.pausas} />
       </TabsContent>
       <TabsContent value="faturamento" className="mt-6">
-        <FaturamentoTab
-          faturamentoMensal={detail.faturamentoMensal}
-          contrato={detail.contrato}
-        />
+        <FaturamentoTab empresaId={empresa.id} contrato={detail.contrato} />
       </TabsContent>
       <TabsContent value="dados" className="mt-6">
         <DadosTab

@@ -149,6 +149,7 @@ export interface FechamentoDia {
   quantidadeSuco: number
   precoUnitarioSuco: number
   quantidadeLanche: number
+  valorTotal: number
   finalizadoPor: string | null
   finalizadoEm: string
   itens: ItemFechamento[]

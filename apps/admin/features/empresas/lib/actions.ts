@@ -24,6 +24,7 @@ import {
   finalizarDiaSchema,
   importarPedidosSchema,
   listarColaboradoresSchema,
+  listarFaturamentoMensalSchema,
   listarFechamentosSchema,
   listarPedidosDoDiaSchema,
   marcarRecusaSchema,
@@ -38,6 +39,7 @@ import {
 } from './schemas'
 import {
   getContagemTamanhos,
+  getFaturamentoMensal,
   getFechamentoDoDia,
   getImpressoraComanda,
   getPedidosDoDia,
@@ -306,6 +308,24 @@ export const finalizarDiaAction = authActionClient
       G: parsedInput.precoUnitarioG,
     }
 
+    const itensMarmita = pedidos.filter(
+      (p): p is typeof p & { tamanho: 'P' | 'M' | 'G' } =>
+        p.tipo === 'marmita' && p.tamanho != null && !p.recusou
+    )
+    const itensLanche = pedidos.filter((p) => p.tipo === 'lanche' && !p.recusou)
+
+    const totalMarmitas = itensMarmita.reduce(
+      (soma, item) => soma + precoPorTamanho[item.tamanho],
+      0
+    )
+    const totalLanches = itensLanche.reduce(
+      (soma, item) => soma + (item.preco ?? 0),
+      0
+    )
+    const totalCafe = parsedInput.quantidadeCafe * parsedInput.precoUnitarioCafe
+    const totalSuco = parsedInput.quantidadeSuco * parsedInput.precoUnitarioSuco
+    const valorTotal = totalMarmitas + totalLanches + totalCafe + totalSuco
+
     const [criado] = await db
       .insert(fechamento_dia_empresa)
       .values({
@@ -322,17 +342,12 @@ export const finalizarDiaAction = authActionClient
         quantidade_suco: parsedInput.quantidadeSuco,
         preco_unitario_suco: toMoneyString(parsedInput.precoUnitarioSuco),
         quantidade_lanche: contagem.lanche,
+        valor_total: toMoneyString(valorTotal),
         finalizado_por: ctx.user.name,
       })
       .returning({ id: fechamento_dia_empresa.id })
 
     if (!criado) throw new ActionError('Não foi possível finalizar o dia')
-
-    const itensMarmita = pedidos.filter(
-      (p): p is typeof p & { tamanho: 'P' | 'M' | 'G' } =>
-        p.tipo === 'marmita' && p.tamanho != null && !p.recusou
-    )
-    const itensLanche = pedidos.filter((p) => p.tipo === 'lanche' && !p.recusou)
 
     const linhas = [
       ...itensMarmita.map((item) => ({
@@ -395,6 +410,16 @@ export const listarFechamentosAction = authActionClient
       to: parsedInput.to,
     })
     return { fechamentos }
+  })
+
+export const listarFaturamentoMensalAction = authActionClient
+  .schema(listarFaturamentoMensalSchema)
+  .action(async ({ parsedInput }) => {
+    const faturamentoMensal = await getFaturamentoMensal(
+      parsedInput.empresaId,
+      { from: parsedInput.from, to: parsedInput.to }
+    )
+    return { faturamentoMensal }
   })
 
 export const removerPedidoAction = authActionClient

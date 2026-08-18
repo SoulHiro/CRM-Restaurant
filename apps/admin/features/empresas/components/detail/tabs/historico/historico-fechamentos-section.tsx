@@ -21,7 +21,7 @@ import {
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
-import { formatDateBR } from '@/lib/formatters'
+import { formatCurrencyBRL, formatDateBR } from '@/lib/formatters'
 import { obterConfiguracaoResumoDiaAction } from '@/features/configuracoes/lib/actions'
 import { listarFechamentosAction } from '../../../../lib/actions'
 import type { FechamentoDia, ItemFechamento } from '../../../../lib/types'
@@ -145,6 +145,9 @@ export function HistoricoFechamentosSection({
                 {' · '}
                 Lanche {f.quantidadeLanche} · Café {f.quantidadeCafe} · Suco{' '}
                 {f.quantidadeSuco}
+              </span>
+              <span className="font-medium">
+                {formatCurrencyBRL(f.valorTotal)}
               </span>
               <Button
                 variant="outline"

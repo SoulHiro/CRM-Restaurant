@@ -17,6 +17,7 @@ import { ehRecusa } from './importacao-helpers'
 import type {
   ContagemTamanhos,
   EmpresaDetail,
+  EmpresaFaturamentoMensal,
   EmpresaListItem,
   FechamentoDia,
   ItemFechamento,
@@ -236,6 +237,7 @@ function mapFechamento(
     quantidadeSuco: row.quantidade_suco,
     precoUnitarioSuco: toNumber(row.preco_unitario_suco),
     quantidadeLanche: row.quantidade_lanche,
+    valorTotal: toNumber(row.valor_total),
     finalizadoPor: row.finalizado_por,
     finalizadoEm: row.finalizado_em.toISOString(),
     itens: (row.itens ?? []).map(mapItemFechamento),
@@ -277,6 +279,61 @@ export async function listarFechamentosDaEmpresa(
   })
 
   return rows.map(mapFechamento)
+}
+
+const MES_LABEL = [
+  'Jan',
+  'Fev',
+  'Mar',
+  'Abr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Set',
+  'Out',
+  'Nov',
+  'Dez',
+]
+
+/**
+ * Soma `valor_total` por mês, últimos 12 meses com fechamento — o
+ * `valor_total` já vem gravado no fechamento (ver `finalizarDiaAction`), não
+ * precisa somar item por item de novo aqui.
+ */
+export async function getFaturamentoMensal(
+  empresaId: string,
+  intervalo?: { from?: string | null; to?: string | null }
+): Promise<EmpresaFaturamentoMensal[]> {
+  const rows = await db.query.fechamento_dia_empresa.findMany({
+    where: (f, { and: andOp, eq: eqOp, gte, lte }) =>
+      andOp(
+        eqOp(f.empresa_id, empresaId),
+        intervalo?.from ? gte(f.data, intervalo.from) : undefined,
+        intervalo?.to ? lte(f.data, intervalo.to) : undefined
+      ),
+    columns: { data: true, valor_total: true },
+    orderBy: (f, { asc }) => [asc(f.data)],
+  })
+
+  const porMes = new Map<string, number>()
+  for (const row of rows) {
+    const [ano, mes] = row.data.split('-')
+    const chave = `${ano}-${mes}`
+    porMes.set(chave, (porMes.get(chave) ?? 0) + toNumber(row.valor_total))
+  }
+
+  return Array.from(porMes, ([chave, valor]) => {
+    const [, mes] = chave.split('-')
+    return {
+      chave,
+      mes: MES_LABEL[Number(mes) - 1]!,
+      valor,
+    }
+  })
+    .sort((a, b) => a.chave.localeCompare(b.chave))
+    .slice(-12)
+    .map(({ mes, valor }) => ({ mes, valor }))
 }
 
 /**
