@@ -7,7 +7,7 @@ const LARGURA_BOBINA = 80 * MM_TO_PT
 
 const PADDING_PAGINA = 14
 const ALTURA_CABECALHO = 235
-const ALTURA_POR_ITEM = 42
+const ALTURA_POR_ITEM = 30
 const ALTURA_RODAPE = 110
 const ALTURA_MINIMA = 300
 
@@ -44,9 +44,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   itemBloco: {
-    marginBottom: 8,
-    paddingBottom: 6,
-    borderBottom: '0.5pt dashed #999',
+    marginBottom: 3,
   },
   itemLinhaTopo: {
     flexDirection: 'row',

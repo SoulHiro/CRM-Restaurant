@@ -53,6 +53,15 @@ export function FinalizarDiaDrawer({
   const [concluido, setConcluido] = useState(false)
   const [reimprimindo, setReimprimindo] = useState(false)
 
+  // Duas vias idênticas, uma de cada vez — nunca sequencial/automático, pra
+  // conferir o papel de uma via antes de mandar a próxima. Só depois das
+  // duas é que a tela de "concluído" aparece.
+  const [dadosImpressao, setDadosImpressao] = useState<ResumoDiaDados | null>(
+    null
+  )
+  const [viasImpressas, setViasImpressas] = useState(0)
+  const [imprimindoVia, setImprimindoVia] = useState(false)
+
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState('')
   const [endereco, setEndereco] = useState('')
   const [cnpj, setCnpj] = useState('')
@@ -119,6 +128,8 @@ export function FinalizarDiaDrawer({
     if (!open) return
     setCarregando(true)
     setConcluido(false)
+    setDadosImpressao(null)
+    setViasImpressas(0)
 
     // `execute()` do next-safe-action não devolve promise de verdade — só
     // `executeAsync()` espera a resposta chegar. E `Promise.allSettled` (não
@@ -187,10 +198,10 @@ export function FinalizarDiaDrawer({
   )
 
   const { execute, isExecuting } = useAction(finalizarDiaAction, {
-    onSuccess: async () => {
-      toast.success('Dia finalizado')
-      await imprimir(construirDadosDoFormulario())
-      setConcluido(true)
+    onSuccess: () => {
+      toast.success('Dia finalizado — agora é só imprimir as duas vias')
+      setDadosImpressao(construirDadosDoFormulario())
+      setViasImpressas(0)
       onFinalizado()
     },
     onError: ({ error }) => {
@@ -261,7 +272,7 @@ export function FinalizarDiaDrawer({
     }
   }
 
-  async function imprimir(dados: ResumoDiaDados) {
+  async function imprimir(dados: ResumoDiaDados): Promise<boolean> {
     // Não confia só no estado carregado quando o drawer abriu — busca de
     // novo, na hora, se por algum motivo ainda estiver vazio. É o que
     // garante que a impressão funciona sempre que existe impressora
@@ -277,7 +288,7 @@ export function FinalizarDiaDrawer({
       toast.error(
         'Nenhuma impressora configurada — o fechamento foi salvo, mas não impresso.'
       )
-      return
+      return false
     }
 
     try {
@@ -291,10 +302,12 @@ export function FinalizarDiaDrawer({
       const blob = await pdf(<ResumoDiaPDF dados={dados} />).toBlob()
 
       await imprimirDocumentoUnico(identificador, blob)
+      return true
     } catch {
       toast.error(
         'Fechamento salvo, mas não foi possível imprimir. Confira o QZ Tray.'
       )
+      return false
     }
   }
 
@@ -305,6 +318,25 @@ export function FinalizarDiaDrawer({
       await imprimir(construirDadosDoHistorico(fechamento))
     } finally {
       setReimprimindo(false)
+    }
+  }
+
+  /**
+   * Uma via de cada vez, nunca as duas em sequência automática — o usuário
+   * confere o papel da primeira via antes de mandar a segunda. Só depois de
+   * ambas impressas o dia é considerado concluído nessa tela.
+   */
+  async function imprimirProximaVia() {
+    if (!dadosImpressao) return
+    setImprimindoVia(true)
+    try {
+      const sucesso = await imprimir(dadosImpressao)
+      if (!sucesso) return
+      const total = viasImpressas + 1
+      setViasImpressas(total)
+      if (total >= 2) setConcluido(true)
+    } finally {
+      setImprimindoVia(false)
     }
   }
 
@@ -335,9 +367,25 @@ export function FinalizarDiaDrawer({
             <CheckCircle2 className="size-10 text-sidebar" />
             <p className="font-medium">Dia finalizado</p>
             <p className="text-sm text-muted-foreground">
-              A nota foi enviada pra impressão.
+              As duas vias foram enviadas pra impressão.
             </p>
             <Button onClick={() => setOpen(false)}>Fechar</Button>
+          </div>
+        ) : dadosImpressao ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-12 text-center">
+            <p className="font-medium">Dia finalizado — falta imprimir</p>
+            <p className="text-sm text-muted-foreground">
+              {viasImpressas === 0
+                ? 'Imprima a nossa via primeiro. As duas vias têm o mesmo conteúdo.'
+                : 'Nossa via impressa. Agora imprima a via da empresa.'}
+            </p>
+            <Button disabled={imprimindoVia} onClick={imprimirProximaVia}>
+              {imprimindoVia
+                ? 'Imprimindo...'
+                : viasImpressas === 0
+                  ? 'Imprimir nossa via'
+                  : 'Imprimir via da empresa'}
+            </Button>
           </div>
         ) : fechamento ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-12 text-center">
