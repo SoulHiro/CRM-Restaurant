@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { and, count, eq } from 'drizzle-orm'
+import { and, count, eq, max } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { dataISO, hojeISO } from '@/lib/formatters'
@@ -15,6 +15,7 @@ import {
 import { toNumber } from '@/lib/numeric'
 import { ehRecusa } from './importacao-helpers'
 import type {
+  ColaboradorEmpresaItem,
   ContagemTamanhos,
   EmpresaDetail,
   EmpresaFaturamentoMensal,
@@ -401,4 +402,50 @@ export async function getPrecosEmpresa(
       ]
     })
   ) as PrecosPadraoEmpresa
+}
+
+/**
+ * "Funcionários" real dessa empresa é `colaborador_pedido` — já é criado
+ * automaticamente por toda importação/adição manual de pedido, então não
+ * existe uma lista separada pra "sincronizar": todo pedido já pertence a um
+ * colaborador real. `ativo` é o único controle manual que falta expor numa
+ * tela (a coluna já existe, só não tinha UI).
+ */
+export async function getColaboradoresEmpresa(
+  empresaId: string
+): Promise<ColaboradorEmpresaItem[]> {
+  const colaboradores = await db.query.colaborador_pedido.findMany({
+    where: (c, { eq: eqOp }) => eqOp(c.empresa_id, empresaId),
+    orderBy: (c, { asc }) => [asc(c.nome)],
+  })
+
+  const contagens = await db
+    .select({
+      colaboradorId: pedido_dia_importado.colaborador_id,
+      total: count(),
+      ultimo: max(pedido_dia_importado.data),
+    })
+    .from(pedido_dia_importado)
+    .innerJoin(
+      colaborador_pedido,
+      eq(pedido_dia_importado.colaborador_id, colaborador_pedido.id)
+    )
+    .where(eq(colaborador_pedido.empresa_id, empresaId))
+    .groupBy(pedido_dia_importado.colaborador_id)
+
+  const porColaborador = new Map(
+    contagens.map((linha) => [linha.colaboradorId, linha])
+  )
+
+  return colaboradores.map((colaborador) => {
+    const info = porColaborador.get(colaborador.id)
+    return {
+      id: colaborador.id,
+      nome: colaborador.nome,
+      whatsapp: colaborador.whatsapp,
+      ativo: colaborador.ativo,
+      totalPedidos: info?.total ?? 0,
+      ultimoPedidoEm: info?.ultimo ?? null,
+    }
+  })
 }

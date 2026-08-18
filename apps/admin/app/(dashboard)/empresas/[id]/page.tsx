@@ -10,10 +10,8 @@ import {
 
 export default async function EmpresaDetailPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { id } = await params
   const empresa = await getEmpresaById(id)
@@ -30,16 +28,11 @@ export default async function EmpresaDetailPage({
   // sobrepõe o campo mock só nesse ponto, sem mexer em getEmpresaDetail
   // (o resto de EmpresaDetail continua mock).
   const detail = { ...detailMock, faturamentoMensal }
-  const resolvedSearchParams = await searchParams
 
   return (
     <div className="flex flex-col gap-8 p-6">
       <EmpresaHeader empresa={empresa} status={detail.status} />
-      <EmpresaTabs
-        empresa={empresa}
-        detail={detail}
-        searchParams={resolvedSearchParams}
-      />
+      <EmpresaTabs empresa={empresa} detail={detail} />
     </div>
   )
 }

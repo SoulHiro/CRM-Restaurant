@@ -76,6 +76,21 @@ export interface EmpresaFuncionario {
   historicoSemanas: EmpresaSemanaPedidos[]
 }
 
+/**
+ * "Funcionário" real — `colaborador_pedido`, sem CPF/setor/turno formais
+ * (a planilha não fornece). Distinto de `EmpresaFuncionario` (mock, domínio
+ * estruturado que ainda não existe de verdade).
+ */
+export interface ColaboradorEmpresaItem {
+  id: string
+  nome: string
+  whatsapp: string | null
+  ativo: boolean
+  totalPedidos: number
+  /** ISO (dia de calendário) da última vez que fez um pedido, se houver. */
+  ultimoPedidoEm: string | null
+}
+
 export interface EmpresaRespostaSemanal {
   dia: string
   responderam: number

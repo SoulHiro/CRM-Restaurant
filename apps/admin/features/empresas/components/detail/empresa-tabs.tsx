@@ -18,11 +18,9 @@ import { ValoresTab } from './tabs/valores/valores-tab'
 export function EmpresaTabs({
   empresa,
   detail,
-  searchParams,
 }: {
   empresa: EmpresaListItem
   detail: EmpresaDetail
-  searchParams: Record<string, string | string[] | undefined>
 }) {
   return (
     <Tabs defaultValue="visao-geral">
@@ -41,11 +39,7 @@ export function EmpresaTabs({
         <OverviewTab detail={detail} />
       </TabsContent>
       <TabsContent value="funcionarios" className="mt-6">
-        <FuncionariosTab
-          empresaId={empresa.id}
-          funcionarios={detail.funcionarios}
-          searchParams={searchParams}
-        />
+        <FuncionariosTab empresaId={empresa.id} />
       </TabsContent>
       <TabsContent value="pedidos" className="mt-6">
         <PedidosTab empresaId={empresa.id} empresaNome={empresa.nome} />

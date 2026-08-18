@@ -17,12 +17,13 @@ import {
 } from '@repo/db'
 import { and, eq } from 'drizzle-orm'
 import {
+  atualizarColaboradorAtivoSchema,
   createEmpresaSchema,
-  createFuncionarioSchema,
   createPausaSchema,
   deletePausaSchema,
   finalizarDiaSchema,
   importarPedidosSchema,
+  listarColaboradoresEmpresaSchema,
   listarColaboradoresSchema,
   listarFaturamentoMensalSchema,
   listarFechamentosSchema,
@@ -34,10 +35,9 @@ import {
   reabrirDiaSchema,
   removerPedidoSchema,
   salvarPrecosEmpresaSchema,
-  updateFuncionarioSchema,
-  updateFuncionarioStatusSchema,
 } from './schemas'
 import {
+  getColaboradoresEmpresa,
   getContagemTamanhos,
   getFaturamentoMensal,
   getFechamentoDoDia,
@@ -84,34 +84,22 @@ export const createEmpresaAction = authActionClient
     return { empresaId: criada.id }
   })
 
-export const createFuncionarioAction = actionClient
-  .schema(createFuncionarioSchema)
+export const listarColaboradoresEmpresaAction = authActionClient
+  .schema(listarColaboradoresEmpresaSchema)
   .action(async ({ parsedInput }) => {
-    // TODO(db): substituir por insert real em funcionario/funcionario_empresa,
-    // vinculando via setor → turno → empresa quando as migrations estiverem prontas.
-    void parsedInput
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return { funcionarioId: crypto.randomUUID() }
+    const colaboradores = await getColaboradoresEmpresa(parsedInput.empresaId)
+    return { colaboradores }
   })
 
-export const updateFuncionarioAction = actionClient
-  .schema(updateFuncionarioSchema)
+export const atualizarColaboradorAtivoAction = authActionClient
+  .schema(atualizarColaboradorAtivoSchema)
   .action(async ({ parsedInput }) => {
-    // TODO(db): substituir por `await db.update(funcionario)...` quando as
-    // migrations estiverem prontas.
-    void parsedInput
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return { funcionarioId: parsedInput.id }
-  })
+    await db
+      .update(colaborador_pedido)
+      .set({ ativo: parsedInput.ativo })
+      .where(eq(colaborador_pedido.id, parsedInput.colaboradorId))
 
-export const updateFuncionarioStatusAction = actionClient
-  .schema(updateFuncionarioStatusSchema)
-  .action(async ({ parsedInput }) => {
-    // TODO(db): substituir por update do vínculo funcionario_empresa quando
-    // as migrations estiverem prontas.
-    void parsedInput
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return { funcionarioId: parsedInput.id }
+    revalidatePath('/empresas')
   })
 
 export const createPausaAction = actionClient
