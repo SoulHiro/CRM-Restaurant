@@ -13,6 +13,7 @@ import { HistoricoTab } from './tabs/historico/historico-tab'
 import { OverviewTab } from './tabs/overview/overview-tab'
 import { PausasTab } from './tabs/pausas/pausas-tab'
 import { PedidosTab } from './tabs/pedidos/pedidos-tab'
+import { ValoresTab } from './tabs/valores/valores-tab'
 
 export function EmpresaTabs({
   empresa,
@@ -29,6 +30,7 @@ export function EmpresaTabs({
         <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
         <TabsTrigger value="funcionarios">Funcionários</TabsTrigger>
         <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
+        <TabsTrigger value="valores">Valores</TabsTrigger>
         <TabsTrigger value="historico">Histórico</TabsTrigger>
         <TabsTrigger value="pausas">Pausas</TabsTrigger>
         <TabsTrigger value="faturamento">Faturamento</TabsTrigger>
@@ -47,6 +49,9 @@ export function EmpresaTabs({
       </TabsContent>
       <TabsContent value="pedidos" className="mt-6">
         <PedidosTab empresaId={empresa.id} empresaNome={empresa.nome} />
+      </TabsContent>
+      <TabsContent value="valores" className="mt-6">
+        <ValoresTab empresaId={empresa.id} />
       </TabsContent>
       <TabsContent value="historico" className="mt-6">
         <HistoricoTab funcionarios={detail.funcionarios} />

@@ -28,6 +28,14 @@ export const tamanhoMarmitaEnum = pgEnum('pedido_importado_tamanho', [
   'G',
 ])
 
+// Marmita vem da planilha (ou manual, com tamanho); lanche é sempre lançado
+// manualmente, um por pessoa — precisa de nome pra imprimir individualmente
+// na nota, diferente de café/suco que só somam quantidade.
+export const pedidoTipoEnum = pgEnum('pedido_importado_tipo', [
+  'marmita',
+  'lanche',
+])
+
 /**
  * Ferramenta leve de importação de planilha (Google Forms), separada de
  * `funcionario`/`turno`/`cardapio`/`pedido` de propósito: aqueles exigem CPF
@@ -70,11 +78,17 @@ export const pedido_dia_importado = pgTable(
       .notNull()
       .references(() => colaborador_pedido.id, { onDelete: 'cascade' }),
     data: date('data').notNull(),
+    tipo: pedidoTipoEnum('tipo').notNull().default('marmita'),
     turno: turnoRefeicaoEnum('turno'),
     tamanho: tamanhoMarmitaEnum('tamanho'),
     // Texto livre, exatamente como veio da planilha — este domínio não tenta
-    // casar com um catálogo de cardápio estruturado.
+    // casar com um catálogo de cardápio estruturado. Pra lanche, é o nome do
+    // lanche (ex: "Lanche misto quente"), não um prato.
     prato: text('prato'),
+    // Só lanche usa: preço travado no momento em que a pessoa foi lançada,
+    // pra um reajuste no catálogo não mudar o valor de um pedido já feito.
+    // Marmita continua com preço decidido no "Finalizar dia" (por tamanho).
+    preco: numeric('preco', PRECO),
     observacao: text('observacao'),
     // Nome do arquivo importado — sem Vercel Blob (sem token configurado
     // ainda), mesmo padrão já usado em documento_anexo/arquivo_nota_fiscal.
@@ -145,10 +159,55 @@ export const fechamento_dia_item = pgTable('fechamento_dia_item', {
     .notNull()
     .references(() => fechamento_dia_empresa.id, { onDelete: 'cascade' }),
   colaborador_nome: text('colaborador_nome').notNull(),
+  tipo: pedidoTipoEnum('tipo').notNull().default('marmita'),
   prato: text('prato'),
-  tamanho: tamanhoMarmitaEnum('tamanho').notNull(),
+  // Nulo para lanche — só marmita tem tamanho.
+  tamanho: tamanhoMarmitaEnum('tamanho'),
   preco: numeric('preco', PRECO).notNull().default('0'),
 })
+
+export const precoPadraoTipoEnum = pgEnum('preco_padrao_tipo', [
+  'marmita_p',
+  'marmita_m',
+  'marmita_g',
+  'cafe',
+  'suco',
+  'lanche',
+  'garrafa_cafe_adicional',
+])
+
+/**
+ * Valores padrão por empresa (marmita P/M/G, café, suco, lanche, garrafa de
+ * café adicional) — pré-preenchem "Finalizar dia" e "Adicionar pedido
+ * manual" (lanche), pra não digitar tudo de novo toda vez. `nome` é o texto
+ * exibido (ex: "Café da manhã"), não o `tipo`. `garrafa_cafe_adicional` não
+ * entra na nota de fechamento do dia — é só um valor cadastrado à parte.
+ */
+export const empresa_preco_padrao = pgTable(
+  'empresa_preco_padrao',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    empresa_id: text('empresa_id')
+      .notNull()
+      .references(() => empresa.id, { onDelete: 'cascade' }),
+    tipo: precoPadraoTipoEnum('tipo').notNull(),
+    nome: text('nome').notNull(),
+    preco: numeric('preco', PRECO).notNull().default('0'),
+  },
+  (t) => [unique().on(t.empresa_id, t.tipo)]
+)
+
+export const empresaPrecoPadraoRelations = relations(
+  empresa_preco_padrao,
+  ({ one }) => ({
+    empresa: one(empresa, {
+      fields: [empresa_preco_padrao.empresa_id],
+      references: [empresa.id],
+    }),
+  })
+)
 
 export const colaboradorPedidoRelations = relations(
   colaborador_pedido,

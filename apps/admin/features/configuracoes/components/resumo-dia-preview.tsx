@@ -6,6 +6,7 @@ const ITENS_EXEMPLO = [
   { prato: 'Frango grelhado', tamanho: 'G', nome: 'Maria Silva', preco: 22 },
   { prato: 'Carne de panela', tamanho: 'M', nome: 'João Souza', preco: 18 },
   { prato: 'Salada completa', tamanho: 'P', nome: 'Ana Costa', preco: 14 },
+  { prato: 'Lanche misto quente', tamanho: null, nome: 'Pedro Lima', preco: 12 },
 ]
 
 /**
@@ -27,7 +28,6 @@ export function ResumoDiaPreview({
   const totalItens = ITENS_EXEMPLO.reduce((soma, item) => soma + item.preco, 0)
   const totalCafe = 3 * 3
   const totalSuco = 2 * 5
-  const totalLanche = 4 * 8
 
   return (
     <div className="flex h-full flex-col items-center overflow-y-auto p-6">
@@ -37,7 +37,7 @@ export function ResumoDiaPreview({
             { label: 'P', valor: 1 },
             { label: 'M', valor: 1 },
             { label: 'G', valor: 1 },
-            { label: 'Lanche', valor: 4 },
+            { label: 'Lanche', valor: 1 },
             { label: 'Café', valor: 3 },
             { label: 'Suco', valor: 2 },
           ].map((bloco) => (
@@ -74,34 +74,32 @@ export function ResumoDiaPreview({
             className="mb-2 border-b border-dashed border-zinc-300 pb-1.5"
           >
             <div className="flex items-start justify-between">
-              <span className="text-sm font-bold">{item.prato}</span>
-              <span className="text-sm font-bold">
+              <span className="text-[10px] font-bold">{item.prato}</span>
+              <span className="text-[10px] font-bold">
                 {formatCurrencyBRL(item.preco)}
               </span>
             </div>
-            <p className="text-[9px] text-zinc-600">Tamanho: {item.tamanho}</p>
+            {item.tamanho && (
+              <p className="text-[10px] text-zinc-600">
+                Tamanho: {item.tamanho}
+              </p>
+            )}
             <p className="text-[10px]">{item.nome}</p>
           </div>
         ))}
 
-        <div className="flex justify-between text-sm">
-          <span>Lanche (4x)</span>
-          <span>{formatCurrencyBRL(totalLanche)}</span>
-        </div>
-        <div className="flex justify-between text-sm">
+        <div className="flex justify-between text-[10px]">
           <span>Café (3x)</span>
           <span>{formatCurrencyBRL(totalCafe)}</span>
         </div>
-        <div className="flex justify-between text-sm">
+        <div className="flex justify-between text-[10px]">
           <span>Suco (2x)</span>
           <span>{formatCurrencyBRL(totalSuco)}</span>
         </div>
 
-        <div className="mt-2 flex justify-between border-t border-zinc-900 pt-2 text-base font-bold">
+        <div className="mt-2 flex justify-between border-t border-zinc-900 pt-2 text-[10px] font-bold">
           <span>Total a pagar</span>
-          <span>
-            {formatCurrencyBRL(totalItens + totalCafe + totalSuco + totalLanche)}
-          </span>
+          <span>{formatCurrencyBRL(totalItens + totalCafe + totalSuco)}</span>
         </div>
       </div>
     </div>

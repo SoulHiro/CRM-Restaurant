@@ -108,9 +108,12 @@ export interface PedidoDoDiaItem {
   colaboradorId: string
   nome: string
   whatsapp: string | null
+  tipo: 'marmita' | 'lanche'
   turno: 'almoco' | 'jantar' | null
   tamanho: 'P' | 'M' | 'G' | null
   prato: string | null
+  /** Só lanche — preço travado no momento em que foi lançado. */
+  preco: number | null
   observacao: string | null
   /** ISO — quando o funcionário respondeu no formulário, não quando importamos. */
   respondidoEm: string | null
@@ -121,12 +124,14 @@ export interface ContagemTamanhos {
   p: number
   m: number
   g: number
+  lanche: number
 }
 
 export interface ItemFechamento {
   colaboradorNome: string
+  tipo: 'marmita' | 'lanche'
   prato: string | null
-  tamanho: 'P' | 'M' | 'G'
+  tamanho: 'P' | 'M' | 'G' | null
   preco: number
 }
 
@@ -143,11 +148,26 @@ export interface FechamentoDia {
   quantidadeSuco: number
   precoUnitarioSuco: number
   quantidadeLanche: number
-  precoUnitarioLanche: number
   finalizadoPor: string | null
   finalizadoEm: string
   itens: ItemFechamento[]
 }
+
+export type PrecoPadraoTipo =
+  | 'marmita_p'
+  | 'marmita_m'
+  | 'marmita_g'
+  | 'cafe'
+  | 'suco'
+  | 'lanche'
+  | 'garrafa_cafe_adicional'
+
+export interface PrecoPadraoItem {
+  nome: string
+  preco: number
+}
+
+export type PrecosPadraoEmpresa = Record<PrecoPadraoTipo, PrecoPadraoItem>
 
 export interface EmpresaDetail {
   status: EmpresaRecordStatus

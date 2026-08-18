@@ -21,6 +21,8 @@ import type {
   FechamentoDia,
   ItemFechamento,
   PedidoDoDiaItem,
+  PrecoPadraoTipo,
+  PrecosPadraoEmpresa,
 } from './types'
 import { EMPTY_DETAIL, mockEmpresaDetails } from './mock-data/empresa-details'
 
@@ -135,9 +137,11 @@ export async function getPedidosDoDia(
       colaboradorId: colaborador.id,
       nome: colaborador.nome,
       whatsapp: colaborador.whatsapp,
+      tipo: pedido?.tipo ?? 'marmita',
       turno: pedido?.turno ?? null,
       tamanho: pedido?.tamanho ?? null,
       prato: pedido?.prato ?? null,
+      preco: pedido?.preco != null ? toNumber(pedido.preco) : null,
       observacao: pedido?.observacao ?? null,
       respondidoEm: pedido?.respondido_em?.toISOString() ?? null,
       recusou: ehRecusa(pedido?.prato ?? null),
@@ -146,9 +150,10 @@ export async function getPedidosDoDia(
 }
 
 /**
- * Soma P/M/G dos pedidos reais daquele dia — quem recusou (`ehRecusa`) não
- * entra na conta, é diferente de "vai comer". Usado no fechamento do dia,
- * sempre recalculado no servidor: nunca confia em contagem vinda do cliente.
+ * Soma P/M/G/lanche dos pedidos reais daquele dia — quem recusou
+ * (`ehRecusa`) não entra na conta, é diferente de "vai comer". Usado no
+ * fechamento do dia, sempre recalculado no servidor: nunca confia em
+ * contagem vinda do cliente.
  */
 export async function getContagemTamanhos(
   empresaId: string,
@@ -156,6 +161,7 @@ export async function getContagemTamanhos(
 ): Promise<ContagemTamanhos> {
   const rows = await db
     .select({
+      tipo: pedido_dia_importado.tipo,
       tamanho: pedido_dia_importado.tamanho,
       prato: pedido_dia_importado.prato,
     })
@@ -171,9 +177,13 @@ export async function getContagemTamanhos(
       )
     )
 
-  const contagem: ContagemTamanhos = { p: 0, m: 0, g: 0 }
+  const contagem: ContagemTamanhos = { p: 0, m: 0, g: 0, lanche: 0 }
   for (const row of rows) {
-    if (!row.tamanho || ehRecusa(row.prato)) continue
+    if (ehRecusa(row.prato)) continue
+    if (row.tipo === 'lanche') {
+      contagem.lanche++
+      continue
+    }
     if (row.tamanho === 'P') contagem.p++
     else if (row.tamanho === 'M') contagem.m++
     else if (row.tamanho === 'G') contagem.g++
@@ -186,6 +196,7 @@ function mapItemFechamento(
 ): ItemFechamento {
   return {
     colaboradorNome: row.colaborador_nome,
+    tipo: row.tipo,
     prato: row.prato,
     tamanho: row.tamanho,
     preco: toNumber(row.preco),
@@ -210,7 +221,6 @@ function mapFechamento(
     quantidadeSuco: row.quantidade_suco,
     precoUnitarioSuco: toNumber(row.preco_unitario_suco),
     quantidadeLanche: row.quantidade_lanche,
-    precoUnitarioLanche: toNumber(row.preco_unitario_lanche),
     finalizadoPor: row.finalizado_por,
     finalizadoEm: row.finalizado_em.toISOString(),
     itens: (row.itens ?? []).map(mapItemFechamento),
@@ -274,4 +284,42 @@ export async function getImpressoraComanda(): Promise<{
   return row
     ? { id: row.id, nome: row.nome, identificadorQz: row.identificador_qz }
     : null
+}
+
+const NOME_PADRAO_POR_TIPO: Record<PrecoPadraoTipo, string> = {
+  marmita_p: 'Marmita P',
+  marmita_m: 'Marmita M',
+  marmita_g: 'Marmita G',
+  cafe: 'Café',
+  suco: 'Suco',
+  lanche: 'Lanche',
+  garrafa_cafe_adicional: 'Garrafa de café adicional',
+}
+
+/**
+ * Valores padrão da empresa (marmita P/M/G, café, suco, lanche, garrafa de
+ * café adicional) — sempre devolve as 7 chaves, com nome/preço zerados pros
+ * tipos ainda não configurados, pra quem usa não precisar tratar ausência.
+ */
+export async function getPrecosEmpresa(
+  empresaId: string
+): Promise<PrecosPadraoEmpresa> {
+  const rows = await db.query.empresa_preco_padrao.findMany({
+    where: (p, { eq: eqOp }) => eqOp(p.empresa_id, empresaId),
+  })
+
+  const porTipo = new Map(rows.map((row) => [row.tipo, row]))
+
+  return Object.fromEntries(
+    (Object.keys(NOME_PADRAO_POR_TIPO) as PrecoPadraoTipo[]).map((tipo) => {
+      const row = porTipo.get(tipo)
+      return [
+        tipo,
+        {
+          nome: row?.nome ?? NOME_PADRAO_POR_TIPO[tipo],
+          preco: row ? toNumber(row.preco) : 0,
+        },
+      ]
+    })
+  ) as PrecosPadraoEmpresa
 }

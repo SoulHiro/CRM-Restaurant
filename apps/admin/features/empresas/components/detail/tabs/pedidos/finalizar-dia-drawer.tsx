@@ -24,6 +24,7 @@ import {
   finalizarDiaAction,
   obterFechamentoDoDiaAction,
   obterImpressoraComandaAction,
+  obterPrecosEmpresaAction,
   reabrirDiaAction,
 } from '../../../../lib/actions'
 import type {
@@ -67,11 +68,16 @@ export function FinalizarDiaDrawer({
   const [precoCafe, setPrecoCafe] = useState('0')
   const [quantidadeSuco, setQuantidadeSuco] = useState('0')
   const [precoSuco, setPrecoSuco] = useState('0')
-  const [quantidadeLanche, setQuantidadeLanche] = useState('0')
-  const [precoLanche, setPrecoLanche] = useState('0')
 
-  const pedidosValidos = useMemo(
-    () => pedidos.filter((p) => p.tamanho != null && !p.recusou),
+  const pedidosMarmita = useMemo(
+    () =>
+      pedidos.filter(
+        (p) => p.tipo === 'marmita' && p.tamanho != null && !p.recusou
+      ),
+    [pedidos]
+  )
+  const pedidosLanche = useMemo(
+    () => pedidos.filter((p) => p.tipo === 'lanche' && !p.recusou),
     [pedidos]
   )
 
@@ -79,13 +85,13 @@ export function FinalizarDiaDrawer({
     let p = 0
     let m = 0
     let g = 0
-    for (const pedido of pedidosValidos) {
+    for (const pedido of pedidosMarmita) {
       if (pedido.tamanho === 'P') p++
       else if (pedido.tamanho === 'M') m++
       else if (pedido.tamanho === 'G') g++
     }
-    return { p, m, g }
-  }, [pedidosValidos])
+    return { p, m, g, lanche: pedidosLanche.length }
+  }, [pedidosMarmita, pedidosLanche])
 
   const { executeAsync: buscarFechamento } = useAction(
     obterFechamentoDoDiaAction,
@@ -105,6 +111,9 @@ export function FinalizarDiaDrawer({
       onError: () => toast.error('Não foi possível checar a impressora'),
     }
   )
+  const { executeAsync: buscarPrecos } = useAction(obterPrecosEmpresaAction, {
+    onError: () => toast.error('Não foi possível carregar os valores da empresa'),
+  })
 
   useEffect(() => {
     if (!open) return
@@ -113,35 +122,55 @@ export function FinalizarDiaDrawer({
 
     // `execute()` do next-safe-action não devolve promise de verdade — só
     // `executeAsync()` espera a resposta chegar. E `Promise.allSettled` (não
-    // `Promise.all`) importa aqui: as três buscas são independentes — uma
-    // falhar não pode impedir as outras duas de aplicar o resultado delas.
+    // `Promise.all`) importa aqui: as buscas são independentes — uma falhar
+    // não pode impedir as outras de aplicar o resultado delas.
     Promise.allSettled([
       buscarFechamento({ empresaId, data }),
       buscarConfigResumo({}),
       buscarImpressora({}),
+      buscarPrecos({ empresaId }),
     ])
-      .then(([resultadoFechamento, resultadoConfig, resultadoImpressora]) => {
-        if (resultadoFechamento.status === 'fulfilled') {
-          setFechamento(resultadoFechamento.value?.data?.fechamento ?? null)
-        }
+      .then(
+        ([
+          resultadoFechamento,
+          resultadoConfig,
+          resultadoImpressora,
+          resultadoPrecos,
+        ]) => {
+          if (resultadoFechamento.status === 'fulfilled') {
+            setFechamento(resultadoFechamento.value?.data?.fechamento ?? null)
+          }
 
-        if (
-          resultadoConfig.status === 'fulfilled' &&
-          resultadoConfig.value?.data
-        ) {
-          setNomeEstabelecimento(resultadoConfig.value.data.nomeEstabelecimento)
-          setEndereco(resultadoConfig.value.data.endereco)
-          setCnpj(resultadoConfig.value.data.cnpj)
-          setInscricaoEstadual(resultadoConfig.value.data.inscricaoEstadual)
-        }
+          if (
+            resultadoConfig.status === 'fulfilled' &&
+            resultadoConfig.value?.data
+          ) {
+            setNomeEstabelecimento(resultadoConfig.value.data.nomeEstabelecimento)
+            setEndereco(resultadoConfig.value.data.endereco)
+            setCnpj(resultadoConfig.value.data.cnpj)
+            setInscricaoEstadual(resultadoConfig.value.data.inscricaoEstadual)
+          }
 
-        if (resultadoImpressora.status === 'fulfilled') {
-          setIdentificadorImpressora(
-            resultadoImpressora.value?.data?.impressora?.identificadorQz ??
-              null
-          )
+          if (resultadoImpressora.status === 'fulfilled') {
+            setIdentificadorImpressora(
+              resultadoImpressora.value?.data?.impressora?.identificadorQz ??
+                null
+            )
+          }
+
+          if (
+            resultadoPrecos.status === 'fulfilled' &&
+            resultadoPrecos.value?.data
+          ) {
+            const precos = resultadoPrecos.value.data.precos
+            setPrecoP(String(precos.marmita_p.preco))
+            setPrecoM(String(precos.marmita_m.preco))
+            setPrecoG(String(precos.marmita_g.preco))
+            setPrecoCafe(String(precos.cafe.preco))
+            setPrecoSuco(String(precos.suco.preco))
+          }
         }
-      })
+      )
       .finally(() => setCarregando(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, empresaId, data])
@@ -170,8 +199,9 @@ export function FinalizarDiaDrawer({
   })
 
   function construirDadosDoFormulario(): ResumoDiaDados {
-    const itens: ItemResumoDia[] = pedidosValidos.map((pedido) => ({
+    const itensMarmita: ItemResumoDia[] = pedidosMarmita.map((pedido) => ({
       colaboradorNome: pedido.nome,
+      tipo: 'marmita',
       prato: pedido.prato,
       tamanho: pedido.tamanho as 'P' | 'M' | 'G',
       preco:
@@ -182,6 +212,14 @@ export function FinalizarDiaDrawer({
             : Number(precoG) || 0,
     }))
 
+    const itensLanche: ItemResumoDia[] = pedidosLanche.map((pedido) => ({
+      colaboradorNome: pedido.nome,
+      tipo: 'lanche',
+      prato: pedido.prato,
+      tamanho: null,
+      preco: pedido.preco ?? 0,
+    }))
+
     return {
       nomeEstabelecimento: nomeEstabelecimento || 'Nosso Quintal',
       endereco,
@@ -189,13 +227,11 @@ export function FinalizarDiaDrawer({
       inscricaoEstadual,
       empresaClienteNome: empresaNome,
       impressoEm: new Date().toISOString(),
-      itens,
+      itens: [...itensMarmita, ...itensLanche],
       quantidadeCafe: Number(quantidadeCafe) || 0,
       precoUnitarioCafe: Number(precoCafe) || 0,
       quantidadeSuco: Number(quantidadeSuco) || 0,
       precoUnitarioSuco: Number(precoSuco) || 0,
-      quantidadeLanche: Number(quantidadeLanche) || 0,
-      precoUnitarioLanche: Number(precoLanche) || 0,
     }
   }
 
@@ -203,6 +239,7 @@ export function FinalizarDiaDrawer({
     const itens: ItemResumoDia[] = registro.itens.map(
       (item: ItemFechamento) => ({
         colaboradorNome: item.colaboradorNome,
+        tipo: item.tipo,
         prato: item.prato,
         tamanho: item.tamanho,
         preco: item.preco,
@@ -221,8 +258,6 @@ export function FinalizarDiaDrawer({
       precoUnitarioCafe: registro.precoUnitarioCafe,
       quantidadeSuco: registro.quantidadeSuco,
       precoUnitarioSuco: registro.precoUnitarioSuco,
-      quantidadeLanche: registro.quantidadeLanche,
-      precoUnitarioLanche: registro.precoUnitarioLanche,
     }
   }
 
@@ -345,6 +380,10 @@ export function FinalizarDiaDrawer({
                   <p className="text-xs text-muted-foreground">G</p>
                   <p className="text-2xl font-bold">{contagem.g}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Lanche</p>
+                  <p className="text-2xl font-bold">{contagem.lanche}</p>
+                </div>
               </div>
 
               {[
@@ -380,13 +419,6 @@ export function FinalizarDiaDrawer({
                   setQtd: setQuantidadeSuco,
                   preco: precoSuco,
                   setPreco: setPrecoSuco,
-                },
-                {
-                  label: 'Lanche',
-                  qtd: quantidadeLanche,
-                  setQtd: setQuantidadeLanche,
-                  preco: precoLanche,
-                  setPreco: setPrecoLanche,
                 },
               ].map((item) => (
                 <div key={item.label} className="grid grid-cols-2 gap-4">
@@ -435,8 +467,6 @@ export function FinalizarDiaDrawer({
                     precoUnitarioCafe: Number(precoCafe) || 0,
                     quantidadeSuco: Number(quantidadeSuco) || 0,
                     precoUnitarioSuco: Number(precoSuco) || 0,
-                    quantidadeLanche: Number(quantidadeLanche) || 0,
-                    precoUnitarioLanche: Number(precoLanche) || 0,
                   })
                 }
               >

@@ -154,9 +154,11 @@ const pedidoImportadoItemSchema = z.object({
   colaboradorId: z.string().nullable(),
   whatsapp: z.string().nullable(),
   data: z.string().min(1),
+  tipo: z.enum(['marmita', 'lanche']).default('marmita'),
   turno: z.enum(['almoco', 'jantar']).nullable(),
   tamanho: z.enum(['P', 'M', 'G']).nullable(),
   prato: z.string().nullable(),
+  preco: z.number().min(0).nullable(),
   observacao: z.string().nullable(),
   respondidoEm: z.string().nullable(),
 })
@@ -181,8 +183,6 @@ export const finalizarDiaSchema = z.object({
   precoUnitarioCafe: z.number().min(0),
   quantidadeSuco: z.number().int().min(0),
   precoUnitarioSuco: z.number().min(0),
-  quantidadeLanche: z.number().int().min(0),
-  precoUnitarioLanche: z.number().min(0),
 })
 
 export type FinalizarDiaInput = z.infer<typeof finalizarDiaSchema>
@@ -215,3 +215,32 @@ export const removerPedidoSchema = z.object({
 })
 
 export type RemoverPedidoInput = z.infer<typeof removerPedidoSchema>
+
+const PRECO_PADRAO_TIPOS = [
+  'marmita_p',
+  'marmita_m',
+  'marmita_g',
+  'cafe',
+  'suco',
+  'lanche',
+  'garrafa_cafe_adicional',
+] as const
+
+export const obterPrecosEmpresaSchema = z.object({
+  empresaId: z.string().min(1),
+})
+
+export type ObterPrecosEmpresaInput = z.infer<typeof obterPrecosEmpresaSchema>
+
+export const salvarPrecosEmpresaSchema = z.object({
+  empresaId: z.string().min(1),
+  itens: z.array(
+    z.object({
+      tipo: z.enum(PRECO_PADRAO_TIPOS),
+      nome: z.string().min(1),
+      preco: z.number().min(0),
+    })
+  ),
+})
+
+export type SalvarPrecosEmpresaInput = z.infer<typeof salvarPrecosEmpresaSchema>

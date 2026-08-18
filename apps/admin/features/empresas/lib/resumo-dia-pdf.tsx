@@ -7,8 +7,8 @@ const LARGURA_BOBINA = 80 * MM_TO_PT
 
 const PADDING_PAGINA = 14
 const ALTURA_CABECALHO = 235
-const ALTURA_POR_ITEM = 46
-const ALTURA_RODAPE = 130
+const ALTURA_POR_ITEM = 42
+const ALTURA_RODAPE = 110
 const ALTURA_MINIMA = 300
 
 const styles = StyleSheet.create({
@@ -53,20 +53,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  itemPrato: { fontSize: 11, fontWeight: 700, flex: 1, marginRight: 6 },
-  itemPreco: { fontSize: 11, fontWeight: 700 },
-  itemTamanho: { fontSize: 9, color: '#333', marginTop: 1 },
-  itemNome: { fontSize: 9.5, marginTop: 1 },
+  itemPrato: { fontSize: 10, fontWeight: 700, flex: 1, marginRight: 6 },
+  itemPreco: { fontSize: 10, fontWeight: 700 },
+  itemTamanho: { fontSize: 10, color: '#333', marginTop: 1 },
+  itemNome: { fontSize: 10, marginTop: 1 },
   totalLinha: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    fontSize: 10.5,
+    fontSize: 10,
     marginBottom: 4,
   },
   totalPagarLinha: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: 700,
     marginTop: 8,
     paddingTop: 8,
@@ -74,12 +74,20 @@ const styles = StyleSheet.create({
   },
 })
 
-const ORDEM_TAMANHO: Record<'G' | 'M' | 'P', number> = { G: 0, M: 1, P: 2 }
+function ordemItem(item: ItemResumoDia): number {
+  if (item.tipo === 'marmita') {
+    if (item.tamanho === 'G') return 0
+    if (item.tamanho === 'M') return 1
+    return 2
+  }
+  return 3
+}
 
 export interface ItemResumoDia {
   colaboradorNome: string
+  tipo: 'marmita' | 'lanche'
   prato: string | null
-  tamanho: 'P' | 'M' | 'G'
+  tamanho: 'P' | 'M' | 'G' | null
   preco: number
 }
 
@@ -95,12 +103,16 @@ export interface ResumoDiaDados {
   precoUnitarioCafe: number
   quantidadeSuco: number
   precoUnitarioSuco: number
-  quantidadeLanche: number
-  precoUnitarioLanche: number
 }
 
 function contarTamanho(itens: ItemResumoDia[], tamanho: 'P' | 'M' | 'G') {
-  return itens.filter((item) => item.tamanho === tamanho).length
+  return itens.filter(
+    (item) => item.tipo === 'marmita' && item.tamanho === tamanho
+  ).length
+}
+
+function contarLanches(itens: ItemResumoDia[]) {
+  return itens.filter((item) => item.tipo === 'lanche').length
 }
 
 /**
@@ -115,17 +127,21 @@ function calcularAltura(quantidadeItens: number): number {
   return Math.max(ALTURA_MINIMA, altura)
 }
 
-/** Nota de fechamento do dia — 80mm, itemizada, uma marmita por bloco. */
+/**
+ * Nota de fechamento do dia — 80mm, itemizada, uma marmita/lanche por
+ * bloco. Ordem: marmitas G, depois M, depois P, depois lanches (cada um com
+ * o nome de quem pediu) — café e suco não têm nome de pessoa, entram como
+ * linha de total no fim.
+ */
 export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
   const itensOrdenados = [...dados.itens].sort(
-    (a, b) => ORDEM_TAMANHO[a.tamanho] - ORDEM_TAMANHO[b.tamanho]
+    (a, b) => ordemItem(a) - ordemItem(b)
   )
 
   const totalCafe = dados.quantidadeCafe * dados.precoUnitarioCafe
   const totalSuco = dados.quantidadeSuco * dados.precoUnitarioSuco
-  const totalLanche = dados.quantidadeLanche * dados.precoUnitarioLanche
   const totalItens = dados.itens.reduce((soma, item) => soma + item.preco, 0)
-  const totalAPagar = totalItens + totalCafe + totalSuco + totalLanche
+  const totalAPagar = totalItens + totalCafe + totalSuco
 
   return (
     <Document>
@@ -155,7 +171,9 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
           </View>
           <View style={styles.quantidadeBloco}>
             <Text style={styles.quantidadeLabel}>Lanche</Text>
-            <Text style={styles.quantidadeValor}>{dados.quantidadeLanche}</Text>
+            <Text style={styles.quantidadeValor}>
+              {contarLanches(dados.itens)}
+            </Text>
           </View>
           <View style={styles.quantidadeBloco}>
             <Text style={styles.quantidadeLabel}>Café</Text>
@@ -193,17 +211,13 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
               <Text style={styles.itemPrato}>{item.prato ?? '—'}</Text>
               <Text style={styles.itemPreco}>{formatCurrencyBRL(item.preco)}</Text>
             </View>
-            <Text style={styles.itemTamanho}>Tamanho: {item.tamanho}</Text>
+            {item.tamanho && (
+              <Text style={styles.itemTamanho}>Tamanho: {item.tamanho}</Text>
+            )}
             <Text style={styles.itemNome}>{item.colaboradorNome}</Text>
           </View>
         ))}
 
-        {dados.quantidadeLanche > 0 && (
-          <View style={styles.totalLinha}>
-            <Text>Lanche ({dados.quantidadeLanche}x)</Text>
-            <Text>{formatCurrencyBRL(totalLanche)}</Text>
-          </View>
-        )}
         {dados.quantidadeCafe > 0 && (
           <View style={styles.totalLinha}>
             <Text>Café ({dados.quantidadeCafe}x)</Text>

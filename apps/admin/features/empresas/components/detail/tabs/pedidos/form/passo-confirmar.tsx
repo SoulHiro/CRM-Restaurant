@@ -52,9 +52,11 @@ export function PassoConfirmar({
           colaboradorId: pessoa.colaboradorId,
           whatsapp: pessoa.whatsapp,
           data: dia.data,
+          tipo: 'marmita' as const,
           turno: dia.turno,
           tamanho: dia.tamanho,
           prato: dia.prato,
+          preco: null,
           observacao: dia.observacao,
           respondidoEm: dia.carimbo?.toISOString() ?? null,
         }))

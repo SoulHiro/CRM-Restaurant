@@ -10,6 +10,7 @@ import { onlyDigits } from '@repo/ui/lib/masks'
 import {
   colaborador_pedido,
   empresa,
+  empresa_preco_padrao,
   fechamento_dia_empresa,
   fechamento_dia_item,
   pedido_dia_importado,
@@ -27,8 +28,10 @@ import {
   listarPedidosDoDiaSchema,
   obterFechamentoDoDiaSchema,
   obterImpressoraComandaSchema,
+  obterPrecosEmpresaSchema,
   reabrirDiaSchema,
   removerPedidoSchema,
+  salvarPrecosEmpresaSchema,
   updateFuncionarioSchema,
   updateFuncionarioStatusSchema,
 } from './schemas'
@@ -37,6 +40,7 @@ import {
   getFechamentoDoDia,
   getImpressoraComanda,
   getPedidosDoDia,
+  getPrecosEmpresa,
   listarFechamentosDaEmpresa,
 } from './queries'
 import { toMoneyString } from '@/lib/numeric'
@@ -218,9 +222,11 @@ export const importarPedidosAction = authActionClient
           .values({
             colaborador_id: colaboradorId,
             data: item.data,
+            tipo: item.tipo,
             turno: item.turno,
             tamanho: item.tamanho,
             prato: item.prato,
+            preco: item.preco != null ? toMoneyString(item.preco) : null,
             observacao: item.observacao,
             arquivo_origem: parsedInput.arquivoOrigem,
             respondido_em: item.respondidoEm ? new Date(item.respondidoEm) : null,
@@ -231,9 +237,11 @@ export const importarPedidosAction = authActionClient
               pedido_dia_importado.data,
             ],
             set: {
+              tipo: item.tipo,
               turno: item.turno,
               tamanho: item.tamanho,
               prato: item.prato,
+              preco: item.preco != null ? toMoneyString(item.preco) : null,
               observacao: item.observacao,
               arquivo_origem: parsedInput.arquivoOrigem,
               respondido_em: item.respondidoEm
@@ -266,12 +274,14 @@ export const obterFechamentoDoDiaAction = authActionClient
   })
 
 /**
- * P/M/G nunca vêm do cliente — são recalculados aqui, na hora, a partir dos
- * pedidos reais daquele dia. Preço por tamanho e de café/suco/lanche (sem
- * fonte de dado própria ainda) são o que o usuário de fato informa. Cada
- * marmita vira uma linha em `fechamento_dia_item` — nome, prato e tamanho
- * gravados como snapshot, para o histórico e uma eventual reimpressão
- * sobreviverem à limpeza de `pedido_dia_importado`/`colaborador_pedido`.
+ * P/M/G/lanche nunca vêm do cliente — são recalculados aqui, na hora, a
+ * partir dos pedidos reais daquele dia. Preço por tamanho de marmita e de
+ * café/suco são o que o usuário informa no "Finalizar dia"; lanche já traz
+ * o próprio preço travado desde quando foi lançado manualmente (ver
+ * `pedido_dia_importado.preco`). Cada marmita e cada lanche viram uma linha
+ * em `fechamento_dia_item` — nome, prato/lanche e tamanho gravados como
+ * snapshot, para o histórico e uma eventual reimpressão sobreviverem à
+ * limpeza de `pedido_dia_importado`/`colaborador_pedido`.
  */
 export const finalizarDiaAction = authActionClient
   .schema(finalizarDiaSchema)
@@ -310,29 +320,40 @@ export const finalizarDiaAction = authActionClient
         preco_unitario_cafe: toMoneyString(parsedInput.precoUnitarioCafe),
         quantidade_suco: parsedInput.quantidadeSuco,
         preco_unitario_suco: toMoneyString(parsedInput.precoUnitarioSuco),
-        quantidade_lanche: parsedInput.quantidadeLanche,
-        preco_unitario_lanche: toMoneyString(parsedInput.precoUnitarioLanche),
+        quantidade_lanche: contagem.lanche,
         finalizado_por: ctx.user.name,
       })
       .returning({ id: fechamento_dia_empresa.id })
 
     if (!criado) throw new ActionError('Não foi possível finalizar o dia')
 
-    const itens = pedidos.filter(
+    const itensMarmita = pedidos.filter(
       (p): p is typeof p & { tamanho: 'P' | 'M' | 'G' } =>
-        p.tamanho != null && !p.recusou
+        p.tipo === 'marmita' && p.tamanho != null && !p.recusou
     )
+    const itensLanche = pedidos.filter((p) => p.tipo === 'lanche' && !p.recusou)
 
-    if (itens.length > 0) {
-      await db.insert(fechamento_dia_item).values(
-        itens.map((item) => ({
-          fechamento_id: criado.id,
-          colaborador_nome: item.nome,
-          prato: item.prato,
-          tamanho: item.tamanho,
-          preco: toMoneyString(precoPorTamanho[item.tamanho]),
-        }))
-      )
+    const linhas = [
+      ...itensMarmita.map((item) => ({
+        fechamento_id: criado.id,
+        colaborador_nome: item.nome,
+        tipo: 'marmita' as const,
+        prato: item.prato,
+        tamanho: item.tamanho,
+        preco: toMoneyString(precoPorTamanho[item.tamanho]),
+      })),
+      ...itensLanche.map((item) => ({
+        fechamento_id: criado.id,
+        colaborador_nome: item.nome,
+        tipo: 'lanche' as const,
+        prato: item.prato,
+        tamanho: null,
+        preco: toMoneyString(item.preco ?? 0),
+      })),
+    ]
+
+    if (linhas.length > 0) {
+      await db.insert(fechamento_dia_item).values(linhas)
     }
 
     revalidatePath(`/empresas/${parsedInput.empresaId}`)
@@ -385,4 +406,36 @@ export const removerPedidoAction = authActionClient
       )
 
     revalidatePath('/empresas')
+  })
+
+export const obterPrecosEmpresaAction = authActionClient
+  .schema(obterPrecosEmpresaSchema)
+  .action(async ({ parsedInput }) => {
+    const precos = await getPrecosEmpresa(parsedInput.empresaId)
+    return { precos }
+  })
+
+export const salvarPrecosEmpresaAction = authActionClient
+  .schema(salvarPrecosEmpresaSchema)
+  .action(async ({ parsedInput }) => {
+    const statements: Statement[] = parsedInput.itens.map((item) =>
+      db
+        .insert(empresa_preco_padrao)
+        .values({
+          empresa_id: parsedInput.empresaId,
+          tipo: item.tipo,
+          nome: item.nome.trim(),
+          preco: toMoneyString(item.preco),
+        })
+        .onConflictDoUpdate({
+          target: [empresa_preco_padrao.empresa_id, empresa_preco_padrao.tipo],
+          set: { nome: item.nome.trim(), preco: toMoneyString(item.preco) },
+        })
+    )
+
+    await executarLote(statements)
+
+    revalidatePath(`/empresas/${parsedInput.empresaId}`)
+
+    return { itens: parsedInput.itens }
   })
