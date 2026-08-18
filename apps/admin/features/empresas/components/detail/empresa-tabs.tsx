@@ -5,7 +5,11 @@ import {
   TabsTrigger,
 } from '@repo/ui/components/tabs'
 
-import type { EmpresaDetail, EmpresaListItem } from '../../lib/types'
+import type {
+  EmpresaDetail,
+  EmpresaListItem,
+  VisaoGeralOperacional,
+} from '../../lib/types'
 import { DadosTab } from './tabs/dados-tab'
 import { FaturamentoTab } from './tabs/faturamento-tab'
 import { FuncionariosTab } from './tabs/funcionarios/funcionarios-tab'
@@ -18,9 +22,11 @@ import { ValoresTab } from './tabs/valores/valores-tab'
 export function EmpresaTabs({
   empresa,
   detail,
+  operacional,
 }: {
   empresa: EmpresaListItem
   detail: EmpresaDetail
+  operacional: VisaoGeralOperacional
 }) {
   return (
     <Tabs defaultValue="visao-geral">
@@ -36,7 +42,7 @@ export function EmpresaTabs({
       </TabsList>
 
       <TabsContent value="visao-geral" className="mt-6">
-        <OverviewTab detail={detail} />
+        <OverviewTab detail={detail} operacional={operacional} />
       </TabsContent>
       <TabsContent value="funcionarios" className="mt-6">
         <FuncionariosTab empresaId={empresa.id} />

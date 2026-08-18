@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { and, count, eq, max } from 'drizzle-orm'
+import { and, count, eq, inArray, max } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { dataISO, hojeISO } from '@/lib/formatters'
@@ -20,11 +20,13 @@ import type {
   EmpresaDetail,
   EmpresaFaturamentoMensal,
   EmpresaListItem,
+  EmpresaRespostaSemanal,
   FechamentoDia,
   ItemFechamento,
   PedidoDoDiaItem,
   PrecoPadraoTipo,
   PrecosPadraoEmpresa,
+  VisaoGeralOperacional,
 } from './types'
 import { EMPTY_DETAIL, mockEmpresaDetails } from './mock-data/empresa-details'
 
@@ -448,4 +450,115 @@ export async function getColaboradoresEmpresa(
       ultimoPedidoEm: info?.ultimo ?? null,
     }
   })
+}
+
+const DIA_SEMANA_LABEL = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+/** Dia de calendário puro (string), sem conversão de fuso — não é instante. */
+function diaSemanaLabel(dataCalendario: string): string {
+  return DIA_SEMANA_LABEL[new Date(`${dataCalendario}T00:00:00Z`).getUTCDay()]!
+}
+
+/** `quantidade` dias terminando em `ateISO` (inclusive), mais antigo primeiro. */
+function ultimosDias(quantidade: number, ateISO: string): string[] {
+  const base = new Date(`${ateISO}T00:00:00Z`)
+  return Array.from({ length: quantidade }, (_, i) => {
+    const dia = new Date(base)
+    dia.setUTCDate(dia.getUTCDate() - (quantidade - 1 - i))
+    return dia.toISOString().slice(0, 10)
+  })
+}
+
+/**
+ * Visão geral real dos últimos 7 dias — quem respondeu (fez pedido) por
+ * dia, taxa de resposta, quem ainda não pediu hoje. O comparativo de taxa
+ * de resposta usa os 7 dias anteriores a esses; funcionários ativos não
+ * tem comparativo real (não existe histórico de "quem estava ativo há uma
+ * semana").
+ */
+export async function getVisaoGeralOperacional(
+  empresaId: string
+): Promise<VisaoGeralOperacional> {
+  const hoje = hojeISO()
+  const diasAtuais = ultimosDias(7, hoje)
+  const diaAnteriorAoInicio = ultimosDias(2, diasAtuais[0]!)[0]!
+  const diasAnteriores = ultimosDias(7, diaAnteriorAoInicio)
+
+  const ativos = await db.query.colaborador_pedido.findMany({
+    where: (c, { and: andOp, eq: eqOp }) =>
+      andOp(eqOp(c.empresa_id, empresaId), eqOp(c.ativo, true)),
+    columns: { id: true, nome: true },
+  })
+  const idsAtivos = new Set(ativos.map((c) => c.id))
+  const funcionariosAtivos = ativos.length
+
+  const todosDias = [...diasAnteriores, ...diasAtuais]
+  const rows = await db
+    .select({
+      data: pedido_dia_importado.data,
+      colaboradorId: pedido_dia_importado.colaborador_id,
+    })
+    .from(pedido_dia_importado)
+    .innerJoin(
+      colaborador_pedido,
+      eq(pedido_dia_importado.colaborador_id, colaborador_pedido.id)
+    )
+    .where(
+      and(
+        eq(colaborador_pedido.empresa_id, empresaId),
+        inArray(pedido_dia_importado.data, todosDias)
+      )
+    )
+
+  const respondentesPorDia = new Map<string, Set<string>>()
+  for (const row of rows) {
+    if (!idsAtivos.has(row.colaboradorId)) continue
+    if (!respondentesPorDia.has(row.data)) {
+      respondentesPorDia.set(row.data, new Set())
+    }
+    respondentesPorDia.get(row.data)!.add(row.colaboradorId)
+  }
+
+  function contarDia(dia: string): number {
+    return respondentesPorDia.get(dia)?.size ?? 0
+  }
+
+  const respostasSemanais: EmpresaRespostaSemanal[] = diasAtuais.map((dia) => {
+    const responderam = contarDia(dia)
+    return {
+      dia: diaSemanaLabel(dia),
+      responderam,
+      pendentes: Math.max(0, funcionariosAtivos - responderam),
+    }
+  })
+
+  function taxaDoIntervalo(dias: string[]): number | null {
+    if (funcionariosAtivos === 0) return null
+    const totalPossivel = dias.length * funcionariosAtivos
+    const totalResponderam = dias.reduce(
+      (soma, dia) => soma + contarDia(dia),
+      0
+    )
+    return Math.round((totalResponderam / totalPossivel) * 100)
+  }
+
+  const taxaRespostaNumero = taxaDoIntervalo(diasAtuais)
+  const taxaAnterior = taxaDoIntervalo(diasAnteriores)
+  const deltaTaxaResposta =
+    taxaRespostaNumero != null && taxaAnterior != null
+      ? taxaRespostaNumero - taxaAnterior
+      : null
+
+  const respondentesHoje = respondentesPorDia.get(hoje) ?? new Set<string>()
+  const naoResponderam = ativos
+    .filter((c) => !respondentesHoje.has(c.id))
+    .map((c) => ({ id: c.id, nome: c.nome }))
+
+  return {
+    funcionariosAtivos,
+    respostasSemanais,
+    naoResponderam,
+    taxaRespostaNumero,
+    deltaTaxaResposta,
+  }
 }

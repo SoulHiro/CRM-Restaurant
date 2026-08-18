@@ -97,6 +97,20 @@ export interface EmpresaRespostaSemanal {
   pendentes: number
 }
 
+/**
+ * Visão geral operacional real — derivada de `colaborador_pedido`/
+ * `pedido_dia_importado`, últimos 7 dias. Sem `funcionariosAtivos` da
+ * semana passada pra comparar (não existe histórico de quem estava ativo
+ * quando), só a taxa de resposta tem comparativo real.
+ */
+export interface VisaoGeralOperacional {
+  funcionariosAtivos: number
+  respostasSemanais: EmpresaRespostaSemanal[]
+  naoResponderam: { id: string; nome: string }[]
+  taxaRespostaNumero: number | null
+  deltaTaxaResposta: number | null
+}
+
 export interface EmpresaSatisfacaoCategoria {
   categoria: string
   media: number

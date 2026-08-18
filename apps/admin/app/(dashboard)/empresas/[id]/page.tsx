@@ -6,6 +6,7 @@ import {
   getEmpresaById,
   getEmpresaDetail,
   getFaturamentoMensal,
+  getVisaoGeralOperacional,
 } from '@/features/empresas/lib/queries'
 
 export default async function EmpresaDetailPage({
@@ -20,9 +21,10 @@ export default async function EmpresaDetailPage({
     notFound()
   }
 
-  const [detailMock, faturamentoMensal] = await Promise.all([
+  const [detailMock, faturamentoMensal, operacional] = await Promise.all([
     getEmpresaDetail(id),
     getFaturamentoMensal(id),
+    getVisaoGeralOperacional(id),
   ])
   // Faturamento já é real (soma de fechamento_dia_empresa.valor_total) —
   // sobrepõe o campo mock só nesse ponto, sem mexer em getEmpresaDetail
@@ -32,7 +34,7 @@ export default async function EmpresaDetailPage({
   return (
     <div className="flex flex-col gap-8 p-6">
       <EmpresaHeader empresa={empresa} status={detail.status} />
-      <EmpresaTabs empresa={empresa} detail={detail} />
+      <EmpresaTabs empresa={empresa} detail={detail} operacional={operacional} />
     </div>
   )
 }

@@ -11,13 +11,11 @@ import {
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { PersonAvatar } from '@repo/ui/components/person-avatar'
 
-import type { EmpresaFuncionario } from '../../../../lib/types'
-
 export function FuncionariosPendentesCard({
   naoResponderam,
   totalFuncionarios,
 }: {
-  naoResponderam: EmpresaFuncionario[]
+  naoResponderam: { id: string; nome: string }[]
   totalFuncionarios: number
 }) {
   return (
@@ -46,14 +44,9 @@ export function FuncionariosPendentesCard({
                     className="size-8"
                     fallbackClassName="text-xs font-medium"
                   />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">
-                      {funcionario.nome}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {funcionario.setor}
-                    </span>
-                  </div>
+                  <span className="text-sm font-medium">
+                    {funcionario.nome}
+                  </span>
                 </div>
                 <Button type="button" variant="outline" size="sm">
                   <Bell className="size-3.5" />
