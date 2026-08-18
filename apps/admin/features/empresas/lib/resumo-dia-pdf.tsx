@@ -3,16 +3,31 @@ import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import { formatCurrencyBRL, formatDateTimeSecondsBR } from '@/lib/formatters'
 
 const MM_TO_PT = 2.834645669
-const LARGURA_BOBINA = 80 * MM_TO_PT
-// Altura fixa, não calculada pelo conteúdo — uma página customizada gigante
-// (o que "altura por item × quantidade de itens" produzia pra pedidos
-// grandes, quase 1m pra 83 pedidos) faz o driver da impressora encolher a
-// página inteira pra caber num espaço menor ("scale to fit"), diminuindo
-// também a largura e o texto. Com altura fixa e moderada, o react-pdf pagina
-// sozinho o que não couber — o continua vem na página seguinte da mesma
-// bobina, sem repetir o cabeçalho.
+export const LARGURA_BOBINA_MM = 80
+const LARGURA_BOBINA = LARGURA_BOBINA_MM * MM_TO_PT
+
 const PADDING_PAGINA = 14
-const ALTURA_MAXIMA = 250 * MM_TO_PT
+
+// A nota nunca pode paginar — um resumo de fechamento é uma via só,
+// contínua; paginar arriscaria a impressora cortar o papel no meio (o
+// driver trata cada "página" de um documento como um fim de folha, e corta
+// se estiver configurado pra isso, igual acontece entre comandas). Por isso
+// a altura é sempre calculada pelo conteúdo — nunca um teto fixo que a nota
+// possa ultrapassar. O que causou o texto minúsculo/encolhido num pedido
+// grande não foi o tamanho em si, foi o driver não saber, de antemão, que
+// medida física esperar: `imprimir()` no drawer usa esses mesmos números
+// pra avisar o QZ Tray do tamanho exato via `qz.configs.create(..., {
+// size, units: 'mm' })`, em vez de deixar o driver inferir do PDF.
+const ALTURA_CABECALHO_MM = 83
+const ALTURA_POR_ITEM_MM = 11
+const ALTURA_RODAPE_MM = 40
+const ALTURA_MINIMA_MM = 110
+
+export function calcularAlturaResumoDiaMM(quantidadeItens: number): number {
+  const altura =
+    ALTURA_CABECALHO_MM + quantidadeItens * ALTURA_POR_ITEM_MM + ALTURA_RODAPE_MM
+  return Math.max(ALTURA_MINIMA_MM, altura)
+}
 
 const styles = StyleSheet.create({
   page: { padding: PADDING_PAGINA, fontFamily: 'Helvetica', fontSize: 10 },
@@ -135,7 +150,10 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
   return (
     <Document>
       <Page
-        size={[LARGURA_BOBINA, ALTURA_MAXIMA]}
+        size={[
+          LARGURA_BOBINA,
+          calcularAlturaResumoDiaMM(itensOrdenados.length) * MM_TO_PT,
+        ]}
         orientation="portrait"
         style={styles.page}
       >

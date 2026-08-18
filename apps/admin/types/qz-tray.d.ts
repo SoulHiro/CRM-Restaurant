@@ -28,10 +28,15 @@ declare module 'qz-tray' {
     setSignatureAlgorithm(algorithm: 'SHA1' | 'SHA256' | 'SHA512'): void
   }
 
+  interface QzConfigOptions {
+    size?: { width: number; height: number }
+    units?: 'in' | 'mm' | 'cm'
+  }
+
   interface Qz {
     websocket: QzWebsocket
     configs: {
-      create(printer: string): QzConfig
+      create(printer: string, options?: QzConfigOptions): QzConfig
     }
     printers: {
       find(): Promise<string[]>

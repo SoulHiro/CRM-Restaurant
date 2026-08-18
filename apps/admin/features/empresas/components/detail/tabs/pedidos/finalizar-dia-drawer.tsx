@@ -269,16 +269,26 @@ export function FinalizarDiaDrawer({
     }
 
     try {
-      const [{ pdf }, { ResumoDiaPDF }, { imprimirDocumentoUnico }] =
-        await Promise.all([
-          import('@react-pdf/renderer'),
-          import('../../../../lib/resumo-dia-pdf'),
-          import('@/lib/qz-print'),
-        ])
+      const [
+        { pdf },
+        { ResumoDiaPDF, LARGURA_BOBINA_MM, calcularAlturaResumoDiaMM },
+        { imprimirDocumentoUnico },
+      ] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('../../../../lib/resumo-dia-pdf'),
+        import('@/lib/qz-print'),
+      ])
 
       const blob = await pdf(<ResumoDiaPDF dados={dados} />).toBlob()
 
-      await imprimirDocumentoUnico(identificador, blob)
+      // Avisa o QZ Tray o tamanho físico exato da nota — sem isso, o driver
+      // decide sozinho a partir do PDF e, pra uma altura fora do comum
+      // (nota grande, itemizada), alguns drivers encolhem a página inteira
+      // pra caber numa medida que já conhecem, em vez de usar a que veio.
+      await imprimirDocumentoUnico(identificador, blob, {
+        largura: LARGURA_BOBINA_MM,
+        altura: calcularAlturaResumoDiaMM(dados.itens.length),
+      })
       return true
     } catch {
       toast.error(

@@ -69,15 +69,35 @@ async function blobParaBase64(blob: Blob): Promise<string> {
  * PDF (resumo do dia) o laço roda uma vez só — mesmo caminho, sem código
  * duplicado entre os dois usos.
  */
+interface TamanhoMM {
+  largura: number
+  altura: number
+}
+
 async function imprimirSequencialmente(
   identificadorImpressora: string,
   pdfBlobs: Blob[],
-  onProgresso?: (indice: number, total: number) => void
+  onProgresso?: (indice: number, total: number) => void,
+  tamanhoMM?: TamanhoMM
 ): Promise<void> {
   if (pdfBlobs.length === 0) return
 
   const qz = await conectar()
-  const config = qz.configs.create(identificadorImpressora)
+  // Sem `size`, o driver decide a medida física a partir do PDF por conta
+  // própria — pra uma página customizada fora do comum (uma nota de
+  // fechamento itemizada pode ter qualquer altura), alguns drivers encolhem
+  // a página inteira (largura incluída) pra caber numa medida que já
+  // conhecem, em vez de simplesmente usar a que veio. Informar `size`
+  // explicitamente evita essa adivinhação.
+  const config = qz.configs.create(
+    identificadorImpressora,
+    tamanhoMM
+      ? {
+          size: { width: tamanhoMM.largura, height: tamanhoMM.altura },
+          units: 'mm',
+        }
+      : undefined
+  )
 
   for (let i = 0; i < pdfBlobs.length; i++) {
     const base64 = await blobParaBase64(pdfBlobs[i]!)
@@ -91,9 +111,15 @@ async function imprimirSequencialmente(
 /** Um documento só — nota de fechamento do dia, por exemplo. */
 export async function imprimirDocumentoUnico(
   identificadorImpressora: string,
-  pdfBlob: Blob
+  pdfBlob: Blob,
+  tamanhoMM?: TamanhoMM
 ): Promise<void> {
-  await imprimirSequencialmente(identificadorImpressora, [pdfBlob])
+  await imprimirSequencialmente(
+    identificadorImpressora,
+    [pdfBlob],
+    undefined,
+    tamanhoMM
+  )
 }
 
 /** Vários documentos, um trabalho de impressão por vez — comandas, por exemplo. */
