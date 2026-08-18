@@ -4,12 +4,15 @@ import { formatCurrencyBRL, formatDateTimeSecondsBR } from '@/lib/formatters'
 
 const MM_TO_PT = 2.834645669
 const LARGURA_BOBINA = 80 * MM_TO_PT
-
+// Altura fixa, não calculada pelo conteúdo — uma página customizada gigante
+// (o que "altura por item × quantidade de itens" produzia pra pedidos
+// grandes, quase 1m pra 83 pedidos) faz o driver da impressora encolher a
+// página inteira pra caber num espaço menor ("scale to fit"), diminuindo
+// também a largura e o texto. Com altura fixa e moderada, o react-pdf pagina
+// sozinho o que não couber — o continua vem na página seguinte da mesma
+// bobina, sem repetir o cabeçalho.
 const PADDING_PAGINA = 14
-const ALTURA_CABECALHO = 235
-const ALTURA_POR_ITEM = 30
-const ALTURA_RODAPE = 110
-const ALTURA_MINIMA = 300
+const ALTURA_MAXIMA = 250 * MM_TO_PT
 
 const styles = StyleSheet.create({
   page: { padding: PADDING_PAGINA, fontFamily: 'Helvetica', fontSize: 10 },
@@ -114,18 +117,6 @@ function contarLanches(itens: ItemResumoDia[]) {
 }
 
 /**
- * Altura calculada pelo conteúdo, não fixa — numa bobina térmica a "altura
- * da página" é o comprimento real de papel impresso. Uma altura fixa grande
- * demais imprimiria papel em branco antes do corte; uma pequena demais
- * cortaria o pedido.
- */
-function calcularAltura(quantidadeItens: number): number {
-  const altura =
-    ALTURA_CABECALHO + quantidadeItens * ALTURA_POR_ITEM + ALTURA_RODAPE
-  return Math.max(ALTURA_MINIMA, altura)
-}
-
-/**
  * Nota de fechamento do dia — 80mm, itemizada, uma marmita/lanche por
  * bloco. Ordem: marmitas G, depois M, depois P, depois lanches (cada um com
  * o nome de quem pediu) — café e suco não têm nome de pessoa, entram como
@@ -144,7 +135,7 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
   return (
     <Document>
       <Page
-        size={[LARGURA_BOBINA, calcularAltura(itensOrdenados.length)]}
+        size={[LARGURA_BOBINA, ALTURA_MAXIMA]}
         orientation="portrait"
         style={styles.page}
       >
@@ -204,7 +195,7 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
         </View>
 
         {itensOrdenados.map((item, indice) => (
-          <View key={indice} style={styles.itemBloco}>
+          <View key={indice} style={styles.itemBloco} wrap={false}>
             <View style={styles.itemLinhaTopo}>
               <Text style={styles.itemPrato}>{item.prato ?? '—'}</Text>
               <Text style={styles.itemPreco}>{formatCurrencyBRL(item.preco)}</Text>
