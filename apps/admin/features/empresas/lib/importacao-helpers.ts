@@ -50,7 +50,7 @@ export interface PedidoDiaBruto {
   whatsapp: string | null
 }
 
-export function normalizar(texto: string): string {
+function normalizar(texto: string): string {
   return texto
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '') // remove acentos
@@ -71,7 +71,7 @@ function textoDaCelula(valor: LinhaBruta[number]): string {
  * jogo quando a planilha não tiver a coluna formatada como data — o caminho
  * normal já chega como `Date` via `cellDates: true` no parse do xlsx.
  */
-export function serialExcelParaData(serial: number): Date {
+function serialExcelParaData(serial: number): Date {
   return new Date(Date.UTC(1899, 11, 30) + serial * 86_400_000)
 }
 
@@ -276,7 +276,7 @@ export interface SugestaoCorrespondencia {
   tipo: SugestaoTipo
 }
 
-export function distanciaLevenshtein(a: string, b: string): number {
+function distanciaLevenshtein(a: string, b: string): number {
   const linhas = a.length + 1
   const colunas = b.length + 1
   const matriz: number[][] = Array.from({ length: linhas }, (_, i) => [

@@ -18,7 +18,6 @@ import {
   type ComandaEntrada,
 } from '../../../../hooks/use-imprimir-comandas'
 import { AdicionarPedidoManualDrawer } from './form/adicionar-pedido-manual-drawer'
-import { CompararConferenciaDrawer } from './form/comparar-conferencia-drawer'
 import { ImportarPlanilhaDrawer } from './form/importar-planilha-drawer'
 import { FinalizarDiaDrawer } from './finalizar-dia-drawer'
 import { PedidoDiaRow } from './pedido-dia-row'
@@ -113,7 +112,6 @@ export function PedidosTab({
             onAdicionado={() => execute({ empresaId, data })}
           />
           <ImportarPlanilhaDrawer empresaId={empresaId} />
-          <CompararConferenciaDrawer data={data} pedidos={pedidos ?? []} />
           <FinalizarDiaDrawer
             empresaId={empresaId}
             empresaNome={empresaNome}
