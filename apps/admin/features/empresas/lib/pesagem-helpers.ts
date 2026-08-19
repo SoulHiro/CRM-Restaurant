@@ -52,25 +52,41 @@ export type GrupoPesagem = 'individual' | 'grupoA' | 'grupoB'
  * 1º turno/administrativo/2º turno, `separado` (o toggle "marmita
  * separada", ex-nomes em vermelho) tira a pessoa do lote pelo mesmo motivo:
  * vira comanda avulsa. Qualquer outro turno (almoço/jantar de fluxo padrão,
- * ou pedido sem turno) não entra em nenhum dos três grupos.
+ * ou pedido sem turno) não entra em nenhum dos grupos.
+ *
+ * `individualA`/`individualB` existem à parte de `grupoA`/`grupoB` porque
+ * cada papel de pesagem lista os dois: o bloco em lote E os pedidos
+ * individuais que pertencem àquele mesmo papel (1º turno/administrativo
+ * separados no Papel A; 3º turno inteiro + 2º turno separado no Papel B) —
+ * ver `PesagemDadosPapel.pedidosIndividuais`. `individual` continua sendo
+ * a união dos dois, pra quem só precisa saber "isso é comanda avulsa ou
+ * não" (ex: filtrar o que "Imprimir todos" imprime).
  */
 export function agruparParaPesagem(
   pedidos: readonly PedidoDoDiaItem[],
   colaboradoresSeparados: ReadonlySet<string>
 ): {
   individual: PedidoDoDiaItem[]
+  individualA: PedidoDoDiaItem[]
+  individualB: PedidoDoDiaItem[]
   grupoA: PedidoDoDiaItem[]
   grupoB: PedidoDoDiaItem[]
 } {
-  const individual: PedidoDoDiaItem[] = []
+  const individualA: PedidoDoDiaItem[] = []
+  const individualB: PedidoDoDiaItem[] = []
   const grupoA: PedidoDoDiaItem[] = []
   const grupoB: PedidoDoDiaItem[] = []
 
   for (const pedido of pedidos) {
     const separado = colaboradoresSeparados.has(pedido.colaboradorId)
 
-    if (pedido.turno === '3_turno' || separado) {
-      individual.push(pedido)
+    if (pedido.turno === '3_turno') {
+      individualB.push(pedido)
+      continue
+    }
+    if (separado) {
+      if (pedido.turno === '2_turno') individualB.push(pedido)
+      else individualA.push(pedido)
       continue
     }
     if (pedido.turno === '1_turno' || pedido.turno === 'administrativo') {
@@ -82,7 +98,13 @@ export function agruparParaPesagem(
     }
   }
 
-  return { individual, grupoA, grupoB }
+  return {
+    individual: [...individualA, ...individualB],
+    individualA,
+    individualB,
+    grupoA,
+    grupoB,
+  }
 }
 
 /** Só quem não recusou conta como "vai comer" pro headcount do lote. */

@@ -118,6 +118,29 @@ describe('agruparParaPesagem', () => {
     expect(grupoA).toEqual([])
     expect(grupoB).toEqual([])
   })
+
+  it('separa os individuais por papel: 1º/administrativo separados vão no Papel A, 3º turno e 2º separado vão no Papel B', () => {
+    const pedidos = [
+      pedido({ colaboradorId: 'vermelho1', turno: '1_turno' }),
+      pedido({ colaboradorId: 'vermelhoAdmin', turno: 'administrativo' }),
+      pedido({ colaboradorId: 'terceiro', turno: '3_turno' }),
+      pedido({ colaboradorId: 'vermelho2', turno: '2_turno' }),
+    ]
+
+    const { individualA, individualB } = agruparParaPesagem(
+      pedidos,
+      new Set(['vermelho1', 'vermelhoAdmin', 'terceiro', 'vermelho2'])
+    )
+
+    expect(individualA.map((p) => p.colaboradorId).sort()).toEqual([
+      'vermelho1',
+      'vermelhoAdmin',
+    ])
+    expect(individualB.map((p) => p.colaboradorId).sort()).toEqual([
+      'terceiro',
+      'vermelho2',
+    ])
+  })
 })
 
 describe('montarResumoPesagemGrupo', () => {

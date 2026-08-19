@@ -147,6 +147,16 @@ export function PedidosTab({
     }
   }
 
+  function paraPedidoIndividual(pedido: PedidoDoDiaItem) {
+    return { nome: pedido.nome, prato: pedido.prato, tamanho: pedido.tamanho }
+  }
+
+  /**
+   * Marca como impresso só quem está no bloco em lote (`grupoA`/`grupoB`) —
+   * quem aparece na lista de "Pedidos individuais" do papel ainda precisa
+   * da própria comanda impressa à parte (`imprimirEMarcar`); listar aqui é
+   * só informativo pra cozinha, não substitui a comanda dessa pessoa.
+   */
   async function imprimirPesagemEMarcar() {
     const enderecoFormatado = formatarEndereco(empresaEndereco)
     const impressoEm = new Date().toISOString()
@@ -154,7 +164,7 @@ export function PedidosTab({
     const papeis: PesagemDadosPapel[] = []
     const colaboradorIds: string[] = []
 
-    if (gruposPesagem.grupoA.length > 0) {
+    if (gruposPesagem.grupoA.length > 0 || gruposPesagem.individualA.length > 0) {
       const resumo = montarResumoPesagemGrupo(gruposPesagem.grupoA)
       papeis.push({
         tituloGrupo: '1º Turno + Administrativo',
@@ -163,11 +173,14 @@ export function PedidosTab({
         data,
         impressoEm,
         ...resumo,
+        pedidosIndividuais: gruposPesagem.individualA
+          .filter((p) => !p.recusou)
+          .map(paraPedidoIndividual),
       })
       colaboradorIds.push(...gruposPesagem.grupoA.map((p) => p.colaboradorId))
     }
 
-    if (gruposPesagem.grupoB.length > 0) {
+    if (gruposPesagem.grupoB.length > 0 || gruposPesagem.individualB.length > 0) {
       const resumo = montarResumoPesagemGrupo(gruposPesagem.grupoB)
       papeis.push({
         tituloGrupo: '2º Turno',
@@ -176,6 +189,9 @@ export function PedidosTab({
         data,
         impressoEm,
         ...resumo,
+        pedidosIndividuais: gruposPesagem.individualB
+          .filter((p) => !p.recusou)
+          .map(paraPedidoIndividual),
       })
       colaboradorIds.push(...gruposPesagem.grupoB.map((p) => p.colaboradorId))
     }
@@ -186,7 +202,7 @@ export function PedidosTab({
     }
 
     const sucesso = await imprimirPesagem(papeis)
-    if (sucesso) {
+    if (sucesso && colaboradorIds.length > 0) {
       await marcarImpressos({ colaboradorIds, data })
       execute({ empresaId, data })
     }
@@ -238,7 +254,9 @@ export function PedidosTab({
               disabled={
                 imprimindoPesagem ||
                 (gruposPesagem.grupoA.length === 0 &&
-                  gruposPesagem.grupoB.length === 0)
+                  gruposPesagem.grupoB.length === 0 &&
+                  gruposPesagem.individualA.length === 0 &&
+                  gruposPesagem.individualB.length === 0)
               }
               onClick={imprimirPesagemEMarcar}
             >

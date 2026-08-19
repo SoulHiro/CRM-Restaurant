@@ -47,7 +47,21 @@ const styles = StyleSheet.create({
   colQuantidade: { width: 90, fontSize: 10.5, textAlign: 'right' },
   colCabecalho: { fontSize: 9, fontWeight: 700, color: '#444' },
   rodape: { marginTop: 20, fontSize: 8.5, color: '#888' },
+  secaoTitulo: {
+    fontSize: 11,
+    fontWeight: 700,
+    marginTop: 20,
+    marginBottom: 6,
+  },
+  colNome: { flex: 1, fontSize: 10.5 },
+  colPratoIndividual: { flex: 1, fontSize: 10.5, color: '#444' },
 })
+
+export interface PesagemPedidoIndividual {
+  nome: string
+  prato: string | null
+  tamanho: string | null
+}
 
 export interface PesagemDadosPapel {
   tituloGrupo: string
@@ -58,6 +72,13 @@ export interface PesagemDadosPapel {
   arrozGramas: number
   feijaoGramas: number
   itens: ContagemPrato[]
+  /**
+   * Pedidos avulsos que pertencem a esse mesmo papel (3º turno inteiro, e
+   * quem foi marcado como "separado" dentro de 1º turno/administrativo/2º
+   * turno) — aparecem aqui pra a cozinha ver tudo junto, mas continuam
+   * imprimíveis como comanda individual à parte (ver `pedidos-tab.tsx`).
+   */
+  pedidosIndividuais: PesagemPedidoIndividual[]
   impressoEm: string
 }
 
@@ -114,6 +135,31 @@ export function PesagemPDF({ dados }: { dados: PesagemDadosPapel }) {
             </View>
           ))}
         </View>
+
+        {dados.pedidosIndividuais.length > 0 && (
+          <View wrap={false}>
+            <Text style={styles.secaoTitulo}>
+              Pedidos individuais ({dados.pedidosIndividuais.length})
+            </Text>
+            <View style={styles.tabela}>
+              <View style={styles.linhaCabecalho}>
+                <Text style={[styles.colNome, styles.colCabecalho]}>NOME</Text>
+                <Text style={[styles.colPratoIndividual, styles.colCabecalho]}>
+                  PRATO
+                </Text>
+              </View>
+              {dados.pedidosIndividuais.map((pedido, indice) => (
+                <View key={indice} style={styles.linhaItem}>
+                  <Text style={styles.colNome}>{pedido.nome}</Text>
+                  <Text style={styles.colPratoIndividual}>
+                    {pedido.prato ?? '—'}
+                    {pedido.tamanho ? ` · ${pedido.tamanho}` : ''}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         <Text style={styles.rodape}>
           Gerado em {formatDateTimeSecondsBR(dados.impressoEm)}
