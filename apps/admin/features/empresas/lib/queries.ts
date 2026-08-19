@@ -48,7 +48,8 @@ async function mapEmpresa(
     .where(
       and(
         eq(colaborador_pedido.empresa_id, row.id),
-        eq(colaborador_pedido.ativo, true)
+        eq(colaborador_pedido.ativo, true),
+        eq(colaborador_pedido.tipo, 'funcionario')
       )
     )
 
@@ -62,6 +63,7 @@ async function mapEmpresa(
     .where(
       and(
         eq(colaborador_pedido.empresa_id, row.id),
+        eq(colaborador_pedido.tipo, 'funcionario'),
         eq(pedido_dia_importado.data, hoje)
       )
     )
@@ -417,7 +419,8 @@ export async function getColaboradoresEmpresa(
   empresaId: string
 ): Promise<ColaboradorEmpresaItem[]> {
   const colaboradores = await db.query.colaborador_pedido.findMany({
-    where: (c, { eq: eqOp }) => eqOp(c.empresa_id, empresaId),
+    where: (c, { and: andOp, eq: eqOp }) =>
+      andOp(eqOp(c.empresa_id, empresaId), eqOp(c.tipo, 'funcionario')),
     orderBy: (c, { asc }) => [asc(c.nome)],
   })
 
@@ -486,7 +489,11 @@ export async function getVisaoGeralOperacional(
 
   const ativos = await db.query.colaborador_pedido.findMany({
     where: (c, { and: andOp, eq: eqOp }) =>
-      andOp(eqOp(c.empresa_id, empresaId), eqOp(c.ativo, true)),
+      andOp(
+        eqOp(c.empresa_id, empresaId),
+        eqOp(c.ativo, true),
+        eqOp(c.tipo, 'funcionario')
+      ),
     columns: { id: true, nome: true },
   })
   const idsAtivos = new Set(ativos.map((c) => c.id))

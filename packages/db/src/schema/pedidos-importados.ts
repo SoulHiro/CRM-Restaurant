@@ -36,6 +36,15 @@ export const pedidoTipoEnum = pgEnum('pedido_importado_tipo', [
   'lanche',
 ])
 
+// Visitante: lançado manualmente pra alguém que não é funcionário da
+// empresa-cliente (ex: um convidado que comeu no dia). Entra e conta
+// normalmente em pedidos/impressão/fechamento — só é filtrado das telas que
+// tratam de "funcionário" de verdade (aba Funcionários, Visão geral).
+export const colaboradorTipoEnum = pgEnum('colaborador_pedido_tipo', [
+  'funcionario',
+  'visitante',
+])
+
 /**
  * Ferramenta leve de importação de planilha (Google Forms), separada de
  * `funcionario`/`turno`/`cardapio`/`pedido` de propósito: aqueles exigem CPF
@@ -57,6 +66,7 @@ export const colaborador_pedido = pgTable(
     // Nunca deletado — só marcado inativo se sumir de uma importação futura,
     // para preservar o histórico de pedidos já importados.
     ativo: boolean('ativo').notNull().default(true),
+    tipo: colaboradorTipoEnum('tipo').notNull().default('funcionario'),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [index('colaborador_pedido_empresa_nome_idx').on(t.empresa_id, t.nome)]

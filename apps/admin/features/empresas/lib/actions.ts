@@ -172,7 +172,7 @@ export const importarPedidosAction = authActionClient
 
     const idPorColaboradorNovo = new Map<
       string,
-      { id: string; whatsapp: string | null }
+      { id: string; whatsapp: string | null; tipo: 'funcionario' | 'visitante' }
     >()
 
     for (const item of parsedInput.itens) {
@@ -181,6 +181,7 @@ export const importarPedidosAction = authActionClient
         idPorColaboradorNovo.set(item.nome, {
           id: createId(),
           whatsapp: item.whatsapp,
+          tipo: item.colaboradorTipo,
         })
       }
     }
@@ -194,6 +195,7 @@ export const importarPedidosAction = authActionClient
           empresa_id: parsedInput.empresaId,
           nome,
           whatsapp: info.whatsapp,
+          tipo: info.tipo,
         })
       )
     }

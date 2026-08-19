@@ -131,6 +131,9 @@ const pedidoImportadoItemSchema = z.object({
   nome: z.string().min(1),
   colaboradorId: z.string().nullable(),
   whatsapp: z.string().nullable(),
+  // Só importa pra colaborador novo (colaboradorId nulo) — ignorado se o
+  // colaborador já existe, o tipo dele não muda por causa de um pedido novo.
+  colaboradorTipo: z.enum(['funcionario', 'visitante']).default('funcionario'),
   data: z.string().min(1),
   tipo: z.enum(['marmita', 'lanche']).default('marmita'),
   turno: z.enum(['almoco', 'jantar']).nullable(),

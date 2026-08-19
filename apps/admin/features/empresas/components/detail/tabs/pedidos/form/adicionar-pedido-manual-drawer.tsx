@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
+import { Checkbox } from '@repo/ui/components/checkbox'
 import {
   Drawer,
   DrawerContent,
@@ -52,6 +53,7 @@ export function AdicionarPedidoManualDrawer({
   >([])
   const [colaboradorId, setColaboradorId] = useState(NOVO)
   const [nomeNovo, setNomeNovo] = useState('')
+  const [visitante, setVisitante] = useState(false)
   const [tipo, setTipo] = useState<TipoPedido>('marmita')
   const [turno, setTurno] = useState(SEM_TURNO)
   const [tamanho, setTamanho] = useState(SEM_TAMANHO)
@@ -83,6 +85,7 @@ export function AdicionarPedidoManualDrawer({
   function limpar() {
     setColaboradorId(NOVO)
     setNomeNovo('')
+    setVisitante(false)
     setTipo('marmita')
     setTurno(SEM_TURNO)
     setTamanho(SEM_TAMANHO)
@@ -118,6 +121,7 @@ export function AdicionarPedidoManualDrawer({
         {
           nome: nomeSelecionado,
           colaboradorId: colaboradorId === NOVO ? null : colaboradorId,
+          colaboradorTipo: visitante ? 'visitante' : 'funcionario',
           whatsapp: null,
           data,
           tipo,
@@ -200,14 +204,24 @@ export function AdicionarPedidoManualDrawer({
           </div>
 
           {colaboradorId === NOVO && (
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-sm">Nome</Label>
-              <Input
-                value={nomeNovo}
-                onChange={(e) => setNomeNovo(e.target.value)}
-                placeholder="Nome completo"
-              />
-            </div>
+            <>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-sm">Nome</Label>
+                <Input
+                  value={nomeNovo}
+                  onChange={(e) => setNomeNovo(e.target.value)}
+                  placeholder="Nome completo"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={visitante}
+                  onCheckedChange={(v) => setVisitante(v === true)}
+                />
+                Visitante (não é funcionário da empresa)
+              </label>
+            </>
           )}
 
           {tipo === 'marmita' && (
