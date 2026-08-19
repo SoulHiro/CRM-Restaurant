@@ -93,6 +93,11 @@ const NAV_ITEMS = [
 
 const CONFIG_NAV_ITEMS: NavItem[] = [
   { title: 'Impressão', url: '/configuracoes/impressao', icon: Printer },
+  {
+    title: 'Dados da empresa',
+    url: '/configuracoes/dados-empresa',
+    icon: Building2,
+  },
 ]
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {

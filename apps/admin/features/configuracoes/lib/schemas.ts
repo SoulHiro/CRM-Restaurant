@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { TODOS_CAMPOS_COMANDA } from './types'
+import { TODOS_CAMPOS_COMANDA, TODOS_CAMPOS_RESUMO } from './types'
 
 export const obterConfiguracaoComandaSchema = z.object({})
 
@@ -33,8 +33,20 @@ export const salvarConfiguracaoResumoDiaSchema = z.object({
   inscricaoEstadual: z.string().optional(),
   nomeEstabelecimento: z.string().optional(),
   endereco: z.string().optional(),
+  logoUrl: z.string().optional(),
+  corMarca: z.string().optional(),
 })
 
 export type SalvarConfiguracaoResumoDiaInput = z.infer<
   typeof salvarConfiguracaoResumoDiaSchema
 >
+
+export const obterConfiguracaoLayoutResumoSchema = z.object({})
+
+export const salvarLayoutResumoSchema = z.object({
+  campos: z
+    .array(z.enum(TODOS_CAMPOS_RESUMO as [string, ...string[]]))
+    .max(TODOS_CAMPOS_RESUMO.length),
+})
+
+export type SalvarLayoutResumoInput = z.infer<typeof salvarLayoutResumoSchema>

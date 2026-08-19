@@ -52,4 +52,32 @@ export interface ConfiguracaoResumoDia {
   inscricaoEstadual: string
   nomeEstabelecimento: string
   endereco: string
+  logoUrl: string
+  corMarca: string
+}
+
+export type CampoResumoKey = 'nome' | 'endereco' | 'cnpj_ie'
+
+export const CAMPO_RESUMO_LABEL: Record<CampoResumoKey, string> = {
+  nome: 'Nome do estabelecimento',
+  endereco: 'Endereço',
+  cnpj_ie: 'CNPJ e Inscrição Estadual',
+}
+
+/** Todas as chaves válidas, na ordem em que aparecem na lista de configuração. */
+export const TODOS_CAMPOS_RESUMO: CampoResumoKey[] = [
+  'nome',
+  'endereco',
+  'cnpj_ie',
+]
+
+/** Todos ligados por padrão — é o layout que já existia antes de ser configurável. */
+export const CAMPOS_RESUMO_PADRAO: CampoResumoKey[] = [
+  'nome',
+  'endereco',
+  'cnpj_ie',
+]
+
+export interface ConfiguracaoLayoutResumo {
+  campos: CampoResumoKey[]
 }

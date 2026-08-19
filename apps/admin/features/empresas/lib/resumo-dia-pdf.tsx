@@ -1,6 +1,7 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
 import { formatCurrencyBRL, formatDateTimeSecondsBR } from '@/lib/formatters'
+import type { CampoResumoKey } from '@/features/configuracoes/lib/types'
 
 const MM_TO_PT = 2.834645669
 export const LARGURA_BOBINA_MM = 80
@@ -112,6 +113,8 @@ export interface ResumoDiaDados {
   endereco: string
   cnpj: string
   inscricaoEstadual: string
+  /** Quais linhas do cabeçalho aparecem e em que ordem — ver Configurações → Impressão. */
+  camposCabecalho: CampoResumoKey[]
   empresaClienteNome: string
   impressoEm: string
   itens: ItemResumoDia[]
@@ -192,18 +195,39 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
           </View>
         </View>
 
-        <Text style={styles.estabelecimento}>{dados.nomeEstabelecimento}</Text>
-        {dados.endereco && (
-          <Text style={styles.metaLinha}>{dados.endereco}</Text>
-        )}
-        {(dados.cnpj || dados.inscricaoEstadual) && (
-          <View style={styles.cnpjIeLinha}>
-            <Text>{dados.cnpj ? `CNPJ: ${dados.cnpj}` : ''}</Text>
-            <Text>
-              {dados.inscricaoEstadual ? `I.E.: ${dados.inscricaoEstadual}` : ''}
-            </Text>
-          </View>
-        )}
+        {dados.camposCabecalho.map((campo) => {
+          if (campo === 'nome') {
+            return (
+              <Text key={campo} style={styles.estabelecimento}>
+                {dados.nomeEstabelecimento}
+              </Text>
+            )
+          }
+          if (campo === 'endereco') {
+            return (
+              dados.endereco && (
+                <Text key={campo} style={styles.metaLinha}>
+                  {dados.endereco}
+                </Text>
+              )
+            )
+          }
+          if (campo === 'cnpj_ie') {
+            return (
+              (dados.cnpj || dados.inscricaoEstadual) && (
+                <View key={campo} style={styles.cnpjIeLinha}>
+                  <Text>{dados.cnpj ? `CNPJ: ${dados.cnpj}` : ''}</Text>
+                  <Text>
+                    {dados.inscricaoEstadual
+                      ? `I.E.: ${dados.inscricaoEstadual}`
+                      : ''}
+                  </Text>
+                </View>
+              )
+            )
+          }
+          return null
+        })}
 
         <View style={styles.divisoria}>
           <Text style={styles.metaLinha}>

@@ -1,4 +1,5 @@
 import { formatCurrencyBRL, formatDateTimeSecondsBR } from '@/lib/formatters'
+import type { CampoResumoKey } from '../lib/types'
 
 const AGORA = new Date().toISOString()
 
@@ -19,11 +20,13 @@ export function ResumoDiaPreview({
   endereco,
   cnpj,
   inscricaoEstadual,
+  campos,
 }: {
   nomeEstabelecimento: string
   endereco: string
   cnpj: string
   inscricaoEstadual: string
+  campos: CampoResumoKey[]
 }) {
   const totalItens = ITENS_EXEMPLO.reduce((soma, item) => soma + item.preco, 0)
   const totalCafe = 3 * 3
@@ -48,16 +51,43 @@ export function ResumoDiaPreview({
           ))}
         </div>
 
-        <p className="mt-2 text-base font-bold leading-tight">
-          {nomeEstabelecimento || 'Restaurante Nosso Quintal'}
-        </p>
-        {endereco && <p className="text-[10px] text-zinc-600">{endereco}</p>}
-        {(cnpj || inscricaoEstadual) && (
-          <div className="flex justify-between text-[10px] text-zinc-600">
-            <span>{cnpj && `CNPJ: ${cnpj}`}</span>
-            <span>{inscricaoEstadual && `I.E.: ${inscricaoEstadual}`}</span>
-          </div>
-        )}
+        {campos.map((campo) => {
+          switch (campo) {
+            case 'nome':
+              return (
+                <p
+                  key={campo}
+                  className="mt-2 text-base font-bold leading-tight"
+                >
+                  {nomeEstabelecimento || 'Restaurante Nosso Quintal'}
+                </p>
+              )
+            case 'endereco':
+              return (
+                endereco && (
+                  <p key={campo} className="text-[10px] text-zinc-600">
+                    {endereco}
+                  </p>
+                )
+              )
+            case 'cnpj_ie':
+              return (
+                (cnpj || inscricaoEstadual) && (
+                  <div
+                    key={campo}
+                    className="flex justify-between text-[10px] text-zinc-600"
+                  >
+                    <span>{cnpj && `CNPJ: ${cnpj}`}</span>
+                    <span>
+                      {inscricaoEstadual && `I.E.: ${inscricaoEstadual}`}
+                    </span>
+                  </div>
+                )
+              )
+            default:
+              return null
+          }
+        })}
 
         <div className="mt-2 border-t border-zinc-900 pt-1.5">
           <p className="text-[10px] text-zinc-500">

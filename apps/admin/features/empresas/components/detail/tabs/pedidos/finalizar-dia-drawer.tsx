@@ -19,7 +19,11 @@ import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 
 import { formatDateBR } from '@/lib/formatters'
-import { obterConfiguracaoResumoDiaAction } from '@/features/configuracoes/lib/actions'
+import { obterConfiguracaoLayoutResumoAction, obterConfiguracaoResumoDiaAction } from '@/features/configuracoes/lib/actions'
+import {
+  CAMPOS_RESUMO_PADRAO,
+  type CampoResumoKey,
+} from '@/features/configuracoes/lib/types'
 import {
   finalizarDiaAction,
   obterFechamentoDoDiaAction,
@@ -66,6 +70,8 @@ export function FinalizarDiaDrawer({
   const [endereco, setEndereco] = useState('')
   const [cnpj, setCnpj] = useState('')
   const [inscricaoEstadual, setInscricaoEstadual] = useState('')
+  const [camposCabecalho, setCamposCabecalho] =
+    useState<CampoResumoKey[]>(CAMPOS_RESUMO_PADRAO)
   const [identificadorImpressora, setIdentificadorImpressora] = useState<
     string | null
   >(null)
@@ -114,6 +120,12 @@ export function FinalizarDiaDrawer({
       onError: () => toast.error('Não foi possível carregar a configuração'),
     }
   )
+  const { executeAsync: buscarLayoutResumo } = useAction(
+    obterConfiguracaoLayoutResumoAction,
+    {
+      onError: () => toast.error('Não foi possível carregar o layout da nota'),
+    }
+  )
   const { executeAsync: buscarImpressora } = useAction(
     obterImpressoraComandaAction,
     {
@@ -138,6 +150,7 @@ export function FinalizarDiaDrawer({
     Promise.allSettled([
       buscarFechamento({ empresaId, data }),
       buscarConfigResumo({}),
+      buscarLayoutResumo({}),
       buscarImpressora({}),
       buscarPrecos({ empresaId }),
     ])
@@ -145,6 +158,7 @@ export function FinalizarDiaDrawer({
         ([
           resultadoFechamento,
           resultadoConfig,
+          resultadoLayout,
           resultadoImpressora,
           resultadoPrecos,
         ]) => {
@@ -160,6 +174,13 @@ export function FinalizarDiaDrawer({
             setEndereco(resultadoConfig.value.data.endereco)
             setCnpj(resultadoConfig.value.data.cnpj)
             setInscricaoEstadual(resultadoConfig.value.data.inscricaoEstadual)
+          }
+
+          if (
+            resultadoLayout.status === 'fulfilled' &&
+            resultadoLayout.value?.data
+          ) {
+            setCamposCabecalho(resultadoLayout.value.data.campos)
           }
 
           if (resultadoImpressora.status === 'fulfilled') {
@@ -239,6 +260,7 @@ export function FinalizarDiaDrawer({
       endereco,
       cnpj,
       inscricaoEstadual,
+      camposCabecalho,
       empresaClienteNome: empresaNome,
       impressoEm: new Date().toISOString(),
       itens,

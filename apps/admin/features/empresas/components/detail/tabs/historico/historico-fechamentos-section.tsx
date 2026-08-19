@@ -22,7 +22,11 @@ import { EmptyState } from '@repo/ui/components/empty-state'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { formatCurrencyBRL, formatDateBR } from '@/lib/formatters'
-import { obterConfiguracaoResumoDiaAction } from '@/features/configuracoes/lib/actions'
+import {
+  obterConfiguracaoLayoutResumoAction,
+  obterConfiguracaoResumoDiaAction,
+} from '@/features/configuracoes/lib/actions'
+import { CAMPOS_RESUMO_PADRAO } from '@/features/configuracoes/lib/types'
 import { listarFechamentosAction } from '../../../../lib/actions'
 import type { FechamentoDia, ItemFechamento } from '../../../../lib/types'
 import type {
@@ -63,6 +67,9 @@ export function HistoricoFechamentosSection({
   const { executeAsync: buscarConfig } = useAction(
     obterConfiguracaoResumoDiaAction
   )
+  const { executeAsync: buscarLayout } = useAction(
+    obterConfiguracaoLayoutResumoAction
+  )
 
   /**
    * Preview de verdade — gera o mesmo PDF que sai na impressora
@@ -73,11 +80,13 @@ export function HistoricoFechamentosSection({
   async function abrirPreview(fechamento: FechamentoDia) {
     setGerandoPreview(fechamento.data)
     try {
-      const [{ pdf }, { ResumoDiaPDF }, resultadoConfig] = await Promise.all([
-        import('@react-pdf/renderer'),
-        import('../../../../lib/resumo-dia-pdf'),
-        buscarConfig({}),
-      ])
+      const [{ pdf }, { ResumoDiaPDF }, resultadoConfig, resultadoLayout] =
+        await Promise.all([
+          import('@react-pdf/renderer'),
+          import('../../../../lib/resumo-dia-pdf'),
+          buscarConfig({}),
+          buscarLayout({}),
+        ])
 
       const config = resultadoConfig?.data
       const itens: ItemResumoDia[] = fechamento.itens.map(
@@ -95,6 +104,7 @@ export function HistoricoFechamentosSection({
         endereco: config?.endereco ?? '',
         cnpj: config?.cnpj ?? '',
         inscricaoEstadual: config?.inscricaoEstadual ?? '',
+        camposCabecalho: resultadoLayout?.data?.campos ?? CAMPOS_RESUMO_PADRAO,
         empresaClienteNome: empresaNome,
         impressoEm: fechamento.finalizadoEm,
         itens,

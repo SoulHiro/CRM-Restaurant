@@ -8,6 +8,7 @@ import { configuracaoComanda, configuracaoResumoDia, impressora } from '@repo/db
 
 import {
   getConfiguracaoComanda,
+  getConfiguracaoLayoutResumo,
   getConfiguracaoResumoDia,
   listarImpressorasComanda,
 } from './queries'
@@ -15,9 +16,11 @@ import {
   criarImpressoraSchema,
   listarImpressorasComandaSchema,
   obterConfiguracaoComandaSchema,
+  obterConfiguracaoLayoutResumoSchema,
   obterConfiguracaoResumoDiaSchema,
   salvarConfiguracaoComandaSchema,
   salvarConfiguracaoResumoDiaSchema,
+  salvarLayoutResumoSchema,
 } from './schemas'
 
 export const obterConfiguracaoComandaAction = authActionClient
@@ -91,6 +94,8 @@ export const salvarConfiguracaoResumoDiaAction = authActionClient
         inscricao_estadual: parsedInput.inscricaoEstadual?.trim() || null,
         nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
         endereco: parsedInput.endereco?.trim() || null,
+        logo_url: parsedInput.logoUrl?.trim() || null,
+        cor_marca: parsedInput.corMarca?.trim() || null,
       })
       .onConflictDoUpdate({
         target: configuracaoResumoDia.id,
@@ -99,10 +104,39 @@ export const salvarConfiguracaoResumoDiaAction = authActionClient
           inscricao_estadual: parsedInput.inscricaoEstadual?.trim() || null,
           nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
           endereco: parsedInput.endereco?.trim() || null,
+          logo_url: parsedInput.logoUrl?.trim() || null,
+          cor_marca: parsedInput.corMarca?.trim() || null,
+          updated_at: new Date(),
+        },
+      })
+
+    revalidatePath('/configuracoes')
+    return parsedInput
+  })
+
+export const obterConfiguracaoLayoutResumoAction = authActionClient
+  .schema(obterConfiguracaoLayoutResumoSchema)
+  .action(async () => {
+    return getConfiguracaoLayoutResumo()
+  })
+
+export const salvarLayoutResumoAction = authActionClient
+  .schema(salvarLayoutResumoSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .insert(configuracaoResumoDia)
+      .values({
+        id: 'default',
+        layout_campos: parsedInput.campos,
+      })
+      .onConflictDoUpdate({
+        target: configuracaoResumoDia.id,
+        set: {
+          layout_campos: parsedInput.campos,
           updated_at: new Date(),
         },
       })
 
     revalidatePath('/configuracoes/impressao')
-    return parsedInput
+    return { campos: parsedInput.campos }
   })

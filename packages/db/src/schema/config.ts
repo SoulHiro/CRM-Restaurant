@@ -47,5 +47,14 @@ export const configuracaoResumoDia = pgTable('configuracao_resumo_dia', {
   inscricao_estadual: text('inscricao_estadual'),
   nome_estabelecimento: text('nome_estabelecimento'),
   endereco: text('endereco'),
+  // URL de imagem já hospedada — sem upload de arquivo configurado ainda
+  // (sem token do Vercel Blob), mesmo padrão de "cola o link" já usado em
+  // outros lugares do app enquanto isso não existe.
+  logo_url: text('logo_url'),
+  cor_marca: text('cor_marca'),
+  // Ordem/visibilidade das linhas do cabeçalho da nota de fechamento do dia
+  // (nome, endereço, CNPJ+IE) — mesma ideia de `configuracaoComanda.campos`,
+  // só que pro resumo do dia em vez da comanda.
+  layout_campos: jsonb('layout_campos').$type<string[]>(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 })
