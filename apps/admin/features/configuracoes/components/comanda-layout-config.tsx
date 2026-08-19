@@ -16,7 +16,6 @@ import {
   type CampoResumoKey,
   type ConfiguracaoComanda,
   type ConfiguracaoLayoutResumo,
-  type ConfiguracaoResumoDia,
   type ImpressoraOption,
 } from '../lib/types'
 import { ComandaPreview } from './comanda-preview'
@@ -40,12 +39,10 @@ function ordemInicialResumo(ativos: CampoResumoKey[]): CampoResumoKey[] {
 export function ComandaLayoutConfig({
   configuracaoInicial,
   impressorasIniciais,
-  configuracaoResumoDiaInicial,
   layoutResumoInicial,
 }: {
   configuracaoInicial: ConfiguracaoComanda
   impressorasIniciais: ImpressoraOption[]
-  configuracaoResumoDiaInicial: ConfiguracaoResumoDia
   layoutResumoInicial: ConfiguracaoLayoutResumo
 }) {
   const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('pedidos')
@@ -62,12 +59,6 @@ export function ComandaLayoutConfig({
   const [impressoras, setImpressoras] = useState<ImpressoraOption[]>(
     impressorasIniciais
   )
-
-  // Dados da empresa (nome/cnpj/IE/endereço) só leitura aqui — edição
-  // aconteceu em Configurações → Dados da empresa, essa tela é só o layout
-  // (quais linhas aparecem e em que ordem).
-  const { cnpj, inscricaoEstadual, nomeEstabelecimento, endereco } =
-    configuracaoResumoDiaInicial
 
   const [ordemResumo, setOrdemResumo] = useState<CampoResumoKey[]>(() =>
     ordemInicialResumo(layoutResumoInicial.campos)
@@ -106,13 +97,7 @@ export function ComandaLayoutConfig({
   return (
     <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-[2fr_3fr]">
       {abaAtiva === 'resumo' ? (
-        <ResumoDiaPreview
-          nomeEstabelecimento={nomeEstabelecimento}
-          endereco={endereco}
-          cnpj={cnpj}
-          inscricaoEstadual={inscricaoEstadual}
-          campos={camposResumo}
-        />
+        <ResumoDiaPreview campos={camposResumo} />
       ) : (
         <ComandaPreview campos={campos} />
       )}

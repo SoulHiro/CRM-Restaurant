@@ -36,17 +36,15 @@ export const configuracaoComanda = pgTable('configuracao_comanda', {
 })
 
 /**
- * Singleton — mesma ideia de `configuracaoComanda`. Só os dados do nosso
- * próprio estabelecimento (aparecem no cabeçalho da nota de fechamento do
- * dia) — café/suco/lanche não têm preço padrão global, são digitados na
+ * Singleton — mesma ideia de `configuracaoComanda`. Nome/endereço/CNPJ/IE do
+ * restaurante NÃO moram aqui — são fixos, vivem em `NEXT_PUBLIC_RESTAURANTE_*`
+ * (ver `apps/admin/lib/dados-restaurante.ts`); as colunas correspondentes
+ * ainda existem fisicamente no Neon, sem uso, para evitar um DROP COLUMN
+ * destrutivo. Café/suco/lanche não têm preço padrão global, são digitados na
  * hora, direto no drawer "Finalizar dia" de cada empresa.
  */
 export const configuracaoResumoDia = pgTable('configuracao_resumo_dia', {
   id: text('id').primaryKey().default('default'),
-  cnpj: text('cnpj'),
-  inscricao_estadual: text('inscricao_estadual'),
-  nome_estabelecimento: text('nome_estabelecimento'),
-  endereco: text('endereco'),
   // URL de imagem já hospedada — sem upload de arquivo configurado ainda
   // (sem token do Vercel Blob), mesmo padrão de "cola o link" já usado em
   // outros lugares do app enquanto isso não existe.

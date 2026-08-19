@@ -47,11 +47,12 @@ export interface ImpressoraOption {
   nome: string
 }
 
+/**
+ * Nome/endereço/CNPJ/IE não moram mais aqui — são fatos fixos, vivem em
+ * `NEXT_PUBLIC_RESTAURANTE_*` (ver `lib/dados-restaurante.ts`). Só o que
+ * pode mudar com alguma frequência (logo, cor de marca) continua no banco.
+ */
 export interface ConfiguracaoResumoDia {
-  cnpj: string
-  inscricaoEstadual: string
-  nomeEstabelecimento: string
-  endereco: string
   logoUrl: string
   corMarca: string
 }

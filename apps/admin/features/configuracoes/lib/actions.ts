@@ -90,20 +90,12 @@ export const salvarConfiguracaoResumoDiaAction = authActionClient
       .insert(configuracaoResumoDia)
       .values({
         id: 'default',
-        cnpj: parsedInput.cnpj?.trim() || null,
-        inscricao_estadual: parsedInput.inscricaoEstadual?.trim() || null,
-        nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
-        endereco: parsedInput.endereco?.trim() || null,
         logo_url: parsedInput.logoUrl?.trim() || null,
         cor_marca: parsedInput.corMarca?.trim() || null,
       })
       .onConflictDoUpdate({
         target: configuracaoResumoDia.id,
         set: {
-          cnpj: parsedInput.cnpj?.trim() || null,
-          inscricao_estadual: parsedInput.inscricaoEstadual?.trim() || null,
-          nome_estabelecimento: parsedInput.nomeEstabelecimento?.trim() || null,
-          endereco: parsedInput.endereco?.trim() || null,
           logo_url: parsedInput.logoUrl?.trim() || null,
           cor_marca: parsedInput.corMarca?.trim() || null,
           updated_at: new Date(),

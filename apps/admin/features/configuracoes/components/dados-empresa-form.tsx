@@ -17,14 +17,6 @@ export function DadosEmpresaForm({
 }: {
   configuracaoInicial: ConfiguracaoResumoDia
 }) {
-  const [nomeEstabelecimento, setNomeEstabelecimento] = useState(
-    configuracaoInicial.nomeEstabelecimento
-  )
-  const [endereco, setEndereco] = useState(configuracaoInicial.endereco)
-  const [cnpj, setCnpj] = useState(configuracaoInicial.cnpj)
-  const [inscricaoEstadual, setInscricaoEstadual] = useState(
-    configuracaoInicial.inscricaoEstadual
-  )
   const [logoUrl, setLogoUrl] = useState(configuracaoInicial.logoUrl)
   const [corMarca, setCorMarca] = useState(
     configuracaoInicial.corMarca || '#000000'
@@ -37,55 +29,12 @@ export function DadosEmpresaForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card className="border-0">
-        <CardHeader>
-          <CardTitle className="text-base">Cadastro</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
-            Esses dados aparecem no cabeçalho da nota de fechamento do dia
-            (impressa pela aba Pedidos de cada empresa) e em outros lugares do
-            sistema que precisem identificar o restaurante.
-          </p>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm">Nome do estabelecimento</Label>
-            <Input
-              value={nomeEstabelecimento}
-              onChange={(e) => setNomeEstabelecimento(e.target.value)}
-              placeholder="Ex: Restaurante Nosso Quintal"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm">Endereço</Label>
-            <Input
-              value={endereco}
-              onChange={(e) => setEndereco(e.target.value)}
-              placeholder="Rua, número, bairro, cidade/UF"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-sm">CNPJ</Label>
-              <Input
-                value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
-                placeholder="00.000.000/0000-00"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-sm">Inscrição Estadual</Label>
-              <Input
-                value={inscricaoEstadual}
-                onChange={(e) => setInscricaoEstadual(e.target.value)}
-                placeholder="000.000.000.000"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <p className="text-sm text-muted-foreground">
+        Nome, endereço, CNPJ e Inscrição Estadual são fixos e ficam
+        configurados direto no ambiente do sistema (não mudam no dia a dia).
+        Aqui você só edita o que pode mudar com alguma frequência: logo e cor
+        de marca.
+      </p>
 
       <Card className="border-0">
         <CardHeader>
@@ -137,16 +86,7 @@ export function DadosEmpresaForm({
       <Button
         className="self-start"
         disabled={isExecuting}
-        onClick={() =>
-          execute({
-            nomeEstabelecimento,
-            endereco,
-            cnpj,
-            inscricaoEstadual,
-            logoUrl,
-            corMarca,
-          })
-        }
+        onClick={() => execute({ logoUrl, corMarca })}
       >
         {isExecuting ? 'Salvando...' : 'Salvar dados da empresa'}
       </Button>

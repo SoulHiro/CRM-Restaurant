@@ -19,7 +19,7 @@ import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 
 import { formatDateBR } from '@/lib/formatters'
-import { obterConfiguracaoLayoutResumoAction, obterConfiguracaoResumoDiaAction } from '@/features/configuracoes/lib/actions'
+import { obterConfiguracaoLayoutResumoAction } from '@/features/configuracoes/lib/actions'
 import {
   CAMPOS_RESUMO_PADRAO,
   type CampoResumoKey,
@@ -66,10 +66,6 @@ export function FinalizarDiaDrawer({
   const [viasImpressas, setViasImpressas] = useState(0)
   const [imprimindoVia, setImprimindoVia] = useState(false)
 
-  const [nomeEstabelecimento, setNomeEstabelecimento] = useState('')
-  const [endereco, setEndereco] = useState('')
-  const [cnpj, setCnpj] = useState('')
-  const [inscricaoEstadual, setInscricaoEstadual] = useState('')
   const [camposCabecalho, setCamposCabecalho] =
     useState<CampoResumoKey[]>(CAMPOS_RESUMO_PADRAO)
   const [identificadorImpressora, setIdentificadorImpressora] = useState<
@@ -114,12 +110,6 @@ export function FinalizarDiaDrawer({
       onError: () => toast.error('Não foi possível checar o fechamento do dia'),
     }
   )
-  const { executeAsync: buscarConfigResumo } = useAction(
-    obterConfiguracaoResumoDiaAction,
-    {
-      onError: () => toast.error('Não foi possível carregar a configuração'),
-    }
-  )
   const { executeAsync: buscarLayoutResumo } = useAction(
     obterConfiguracaoLayoutResumoAction,
     {
@@ -149,7 +139,6 @@ export function FinalizarDiaDrawer({
     // não pode impedir as outras de aplicar o resultado delas.
     Promise.allSettled([
       buscarFechamento({ empresaId, data }),
-      buscarConfigResumo({}),
       buscarLayoutResumo({}),
       buscarImpressora({}),
       buscarPrecos({ empresaId }),
@@ -157,23 +146,12 @@ export function FinalizarDiaDrawer({
       .then(
         ([
           resultadoFechamento,
-          resultadoConfig,
           resultadoLayout,
           resultadoImpressora,
           resultadoPrecos,
         ]) => {
           if (resultadoFechamento.status === 'fulfilled') {
             setFechamento(resultadoFechamento.value?.data?.fechamento ?? null)
-          }
-
-          if (
-            resultadoConfig.status === 'fulfilled' &&
-            resultadoConfig.value?.data
-          ) {
-            setNomeEstabelecimento(resultadoConfig.value.data.nomeEstabelecimento)
-            setEndereco(resultadoConfig.value.data.endereco)
-            setCnpj(resultadoConfig.value.data.cnpj)
-            setInscricaoEstadual(resultadoConfig.value.data.inscricaoEstadual)
           }
 
           if (
@@ -256,10 +234,6 @@ export function FinalizarDiaDrawer({
     )
 
     return {
-      nomeEstabelecimento: nomeEstabelecimento || 'Nosso Quintal',
-      endereco,
-      cnpj,
-      inscricaoEstadual,
       camposCabecalho,
       empresaClienteNome: empresaNome,
       impressoEm: new Date().toISOString(),

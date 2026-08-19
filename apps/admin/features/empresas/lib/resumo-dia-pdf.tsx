@@ -1,6 +1,12 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
 import { formatCurrencyBRL, formatDateTimeSecondsBR } from '@/lib/formatters'
+import {
+  CNPJ_RESTAURANTE,
+  ENDERECO_RESTAURANTE,
+  IE_RESTAURANTE,
+  NOME_RESTAURANTE,
+} from '@/lib/dados-restaurante'
 import type { CampoResumoKey } from '@/features/configuracoes/lib/types'
 
 const MM_TO_PT = 2.834645669
@@ -109,10 +115,6 @@ export interface ItemResumoDia {
 }
 
 export interface ResumoDiaDados {
-  nomeEstabelecimento: string
-  endereco: string
-  cnpj: string
-  inscricaoEstadual: string
   /** Quais linhas do cabeçalho aparecem e em que ordem — ver Configurações → Impressão. */
   camposCabecalho: CampoResumoKey[]
   empresaClienteNome: string
@@ -199,29 +201,27 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
           if (campo === 'nome') {
             return (
               <Text key={campo} style={styles.estabelecimento}>
-                {dados.nomeEstabelecimento}
+                {NOME_RESTAURANTE}
               </Text>
             )
           }
           if (campo === 'endereco') {
             return (
-              dados.endereco && (
+              ENDERECO_RESTAURANTE && (
                 <Text key={campo} style={styles.metaLinha}>
-                  {dados.endereco}
+                  {ENDERECO_RESTAURANTE}
                 </Text>
               )
             )
           }
           if (campo === 'cnpj_ie') {
             return (
-              (dados.cnpj || dados.inscricaoEstadual) && (
+              (CNPJ_RESTAURANTE || IE_RESTAURANTE) && (
                 <View key={campo} style={styles.cnpjIeLinha}>
-                  <Text>{dados.cnpj ? `CNPJ: ${dados.cnpj}` : ''}</Text>
                   <Text>
-                    {dados.inscricaoEstadual
-                      ? `I.E.: ${dados.inscricaoEstadual}`
-                      : ''}
+                    {CNPJ_RESTAURANTE ? `CNPJ: ${CNPJ_RESTAURANTE}` : ''}
                   </Text>
+                  <Text>{IE_RESTAURANTE ? `I.E.: ${IE_RESTAURANTE}` : ''}</Text>
                 </View>
               )
             )

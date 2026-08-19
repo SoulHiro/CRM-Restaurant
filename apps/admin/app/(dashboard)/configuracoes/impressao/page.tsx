@@ -2,20 +2,13 @@ import { ComandaLayoutConfig } from '@/features/configuracoes/components/comanda
 import {
   getConfiguracaoComanda,
   getConfiguracaoLayoutResumo,
-  getConfiguracaoResumoDia,
   listarImpressorasComanda,
 } from '@/features/configuracoes/lib/queries'
 
 export default async function ImpressaoConfiguracoesPage() {
-  const [
-    configuracaoComanda,
-    impressoras,
-    configuracaoResumoDia,
-    layoutResumo,
-  ] = await Promise.all([
+  const [configuracaoComanda, impressoras, layoutResumo] = await Promise.all([
     getConfiguracaoComanda(),
     listarImpressorasComanda(),
-    getConfiguracaoResumoDia(),
     getConfiguracaoLayoutResumo(),
   ])
 
@@ -24,7 +17,6 @@ export default async function ImpressaoConfiguracoesPage() {
       <ComandaLayoutConfig
         configuracaoInicial={configuracaoComanda}
         impressorasIniciais={impressoras}
-        configuracaoResumoDiaInicial={configuracaoResumoDia}
         layoutResumoInicial={layoutResumo}
       />
     </div>

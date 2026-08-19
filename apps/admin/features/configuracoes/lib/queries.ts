@@ -58,10 +58,6 @@ export async function getConfiguracaoResumoDia(): Promise<ConfiguracaoResumoDia>
   })
 
   return {
-    cnpj: row?.cnpj ?? '',
-    inscricaoEstadual: row?.inscricao_estadual ?? '',
-    nomeEstabelecimento: row?.nome_estabelecimento ?? '',
-    endereco: row?.endereco ?? '',
     logoUrl: row?.logo_url ?? '',
     corMarca: row?.cor_marca ?? '',
   }

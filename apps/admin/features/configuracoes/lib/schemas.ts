@@ -29,10 +29,6 @@ export type SalvarConfiguracaoComandaInput = z.infer<
 export const obterConfiguracaoResumoDiaSchema = z.object({})
 
 export const salvarConfiguracaoResumoDiaSchema = z.object({
-  cnpj: z.string().optional(),
-  inscricaoEstadual: z.string().optional(),
-  nomeEstabelecimento: z.string().optional(),
-  endereco: z.string().optional(),
   logoUrl: z.string().optional(),
   corMarca: z.string().optional(),
 })

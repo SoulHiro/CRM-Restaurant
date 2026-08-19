@@ -22,12 +22,12 @@ import { EmptyState } from '@repo/ui/components/empty-state'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { formatCurrencyBRL, formatDateBR } from '@/lib/formatters'
-import {
-  obterConfiguracaoLayoutResumoAction,
-  obterConfiguracaoResumoDiaAction,
-} from '@/features/configuracoes/lib/actions'
+import { obterConfiguracaoLayoutResumoAction } from '@/features/configuracoes/lib/actions'
 import { CAMPOS_RESUMO_PADRAO } from '@/features/configuracoes/lib/types'
-import { listarFechamentosAction } from '../../../../lib/actions'
+import {
+  listarFechamentosAction,
+  obterFechamentoDoDiaAction,
+} from '../../../../lib/actions'
 import type { FechamentoDia, ItemFechamento } from '../../../../lib/types'
 import type {
   ItemResumoDia,
@@ -64,32 +64,40 @@ export function HistoricoFechamentosSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [empresaId, intervalo.from, intervalo.to])
 
-  const { executeAsync: buscarConfig } = useAction(
-    obterConfiguracaoResumoDiaAction
-  )
   const { executeAsync: buscarLayout } = useAction(
     obterConfiguracaoLayoutResumoAction
+  )
+  const { executeAsync: buscarFechamentoCompleto } = useAction(
+    obterFechamentoDoDiaAction
   )
 
   /**
    * Preview de verdade — gera o mesmo PDF que sai na impressora
    * (`ResumoDiaPDF`) e mostra num `<iframe>`, não uma aproximação em HTML.
    * O único jeito de garantir que o preview é exatamente o que vai pro
-   * papel.
+   * papel. Busca o fechamento de novo, com os itens — a lista usada pela
+   * tela (`listarFechamentosDaEmpresa`) não traz itens de propósito (não
+   * precisa disso pra listar 60 linhas), então `fechamento.itens` aqui
+   * sempre viria vazio, o que zerava P/M/G e o total no preview.
    */
   async function abrirPreview(fechamento: FechamentoDia) {
     setGerandoPreview(fechamento.data)
     try {
-      const [{ pdf }, { ResumoDiaPDF }, resultadoConfig, resultadoLayout] =
+      const [{ pdf }, { ResumoDiaPDF }, resultadoLayout, resultadoFechamento] =
         await Promise.all([
           import('@react-pdf/renderer'),
           import('../../../../lib/resumo-dia-pdf'),
-          buscarConfig({}),
           buscarLayout({}),
+          buscarFechamentoCompleto({ empresaId, data: fechamento.data }),
         ])
 
-      const config = resultadoConfig?.data
-      const itens: ItemResumoDia[] = fechamento.itens.map(
+      const fechamentoCompleto = resultadoFechamento?.data?.fechamento
+      if (!fechamentoCompleto) {
+        toast.error('Não foi possível carregar os itens desse fechamento')
+        return
+      }
+
+      const itens: ItemResumoDia[] = fechamentoCompleto.itens.map(
         (item: ItemFechamento) => ({
           colaboradorNome: item.colaboradorNome,
           tipo: item.tipo,
@@ -100,18 +108,14 @@ export function HistoricoFechamentosSection({
       )
 
       const dados: ResumoDiaDados = {
-        nomeEstabelecimento: config?.nomeEstabelecimento || 'Nosso Quintal',
-        endereco: config?.endereco ?? '',
-        cnpj: config?.cnpj ?? '',
-        inscricaoEstadual: config?.inscricaoEstadual ?? '',
         camposCabecalho: resultadoLayout?.data?.campos ?? CAMPOS_RESUMO_PADRAO,
         empresaClienteNome: empresaNome,
-        impressoEm: fechamento.finalizadoEm,
+        impressoEm: fechamentoCompleto.finalizadoEm,
         itens,
-        quantidadeCafe: fechamento.quantidadeCafe,
-        precoUnitarioCafe: fechamento.precoUnitarioCafe,
-        quantidadeSuco: fechamento.quantidadeSuco,
-        precoUnitarioSuco: fechamento.precoUnitarioSuco,
+        quantidadeCafe: fechamentoCompleto.quantidadeCafe,
+        precoUnitarioCafe: fechamentoCompleto.precoUnitarioCafe,
+        quantidadeSuco: fechamentoCompleto.quantidadeSuco,
+        precoUnitarioSuco: fechamentoCompleto.precoUnitarioSuco,
       }
 
       const blob = await pdf(<ResumoDiaPDF dados={dados} />).toBlob()

@@ -1,4 +1,10 @@
 import { formatCurrencyBRL, formatDateTimeSecondsBR } from '@/lib/formatters'
+import {
+  CNPJ_RESTAURANTE,
+  ENDERECO_RESTAURANTE,
+  IE_RESTAURANTE,
+  NOME_RESTAURANTE,
+} from '@/lib/dados-restaurante'
 import type { CampoResumoKey } from '../lib/types'
 
 const AGORA = new Date().toISOString()
@@ -12,22 +18,11 @@ const ITENS_EXEMPLO = [
 
 /**
  * Espelho em HTML do que `ResumoDiaPDF` gera — mesma ideia do
- * `ComandaPreview`, sem PDF/iframe. Nome, endereço, CNPJ e I.E. refletem o
- * que está sendo digitado ao lado, ao vivo, antes mesmo de salvar.
+ * `ComandaPreview`, sem PDF/iframe. Nome, endereço, CNPJ e I.E. são fixos
+ * (`NEXT_PUBLIC_RESTAURANTE_*`) — só a ordem/visibilidade das linhas é
+ * configurável aqui.
  */
-export function ResumoDiaPreview({
-  nomeEstabelecimento,
-  endereco,
-  cnpj,
-  inscricaoEstadual,
-  campos,
-}: {
-  nomeEstabelecimento: string
-  endereco: string
-  cnpj: string
-  inscricaoEstadual: string
-  campos: CampoResumoKey[]
-}) {
+export function ResumoDiaPreview({ campos }: { campos: CampoResumoKey[] }) {
   const totalItens = ITENS_EXEMPLO.reduce((soma, item) => soma + item.preco, 0)
   const totalCafe = 3 * 3
   const totalSuco = 2 * 5
@@ -59,28 +54,26 @@ export function ResumoDiaPreview({
                   key={campo}
                   className="mt-2 text-base font-bold leading-tight"
                 >
-                  {nomeEstabelecimento || 'Restaurante Nosso Quintal'}
+                  {NOME_RESTAURANTE}
                 </p>
               )
             case 'endereco':
               return (
-                endereco && (
+                ENDERECO_RESTAURANTE && (
                   <p key={campo} className="text-[10px] text-zinc-600">
-                    {endereco}
+                    {ENDERECO_RESTAURANTE}
                   </p>
                 )
               )
             case 'cnpj_ie':
               return (
-                (cnpj || inscricaoEstadual) && (
+                (CNPJ_RESTAURANTE || IE_RESTAURANTE) && (
                   <div
                     key={campo}
                     className="flex justify-between text-[10px] text-zinc-600"
                   >
-                    <span>{cnpj && `CNPJ: ${cnpj}`}</span>
-                    <span>
-                      {inscricaoEstadual && `I.E.: ${inscricaoEstadual}`}
-                    </span>
+                    <span>{CNPJ_RESTAURANTE && `CNPJ: ${CNPJ_RESTAURANTE}`}</span>
+                    <span>{IE_RESTAURANTE && `I.E.: ${IE_RESTAURANTE}`}</span>
                   </div>
                 )
               )

@@ -12,7 +12,11 @@
         "NEXT_PUBLIC_BETTER_AUTH_URL",
         "CPF_ENCRYPTION_KEY",
         "QZ_SIGNING_PRIVATE_KEY",
-        "QZ_SIGNING_CERTIFICATE"
+        "QZ_SIGNING_CERTIFICATE",
+        "NEXT_PUBLIC_RESTAURANTE_NOME",
+        "NEXT_PUBLIC_RESTAURANTE_ENDERECO",
+        "NEXT_PUBLIC_RESTAURANTE_CNPJ",
+        "NEXT_PUBLIC_RESTAURANTE_IE"
       ],
       "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"]
     },
