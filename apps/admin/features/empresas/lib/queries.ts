@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { unstable_cache } from 'next/cache'
+
 import { and, count, eq, inArray, max } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
@@ -13,6 +15,14 @@ import {
 } from '@repo/db'
 
 import { toNumber } from '@/lib/numeric'
+import {
+  TAG_CONFIGURACAO_IMPRESSAO,
+  TAG_EMPRESAS_LISTA,
+  tagEmpresa,
+  tagEmpresaFechamentos,
+  tagEmpresaPedidos,
+  tagEmpresaPrecos,
+} from './cache-tags'
 import { ehRecusa } from './importacao-helpers'
 import type {
   ColaboradorEmpresaItem,
@@ -97,22 +107,44 @@ async function mapEmpresa(
   }
 }
 
-export async function getEmpresas(): Promise<EmpresaListItem[]> {
-  const rows = await db.query.empresa.findMany({
-    orderBy: (e, { asc }) => [asc(e.nome)],
-  })
+/**
+ * `revalidate: 300` é rede de segurança pro contador "hoje" (`mapEmpresa`
+ * usa `hojeISO()` por dentro) — sem isso, um cache que sobrevive à virada da
+ * meia-noite sem nenhuma escrita nova ficaria preso no dia anterior. As tags
+ * cobrem o caso comum (invalidação na escrita); o tempo cobre a passagem do
+ * tempo em si, que não é uma escrita.
+ */
+export const getEmpresas = unstable_cache(
+  async (): Promise<EmpresaListItem[]> => {
+    const rows = await db.query.empresa.findMany({
+      orderBy: (e, { asc }) => [asc(e.nome)],
+    })
 
-  return Promise.all(rows.map(mapEmpresa))
-}
+    return Promise.all(rows.map(mapEmpresa))
+  },
+  ['empresas-lista'],
+  { tags: [TAG_EMPRESAS_LISTA], revalidate: 300 }
+)
 
-export async function getEmpresaById(
-  id: string
-): Promise<EmpresaListItem | null> {
-  const row = await db.query.empresa.findFirst({
-    where: eq(empresa.id, id),
-  })
+/**
+ * `unstable_cache` só aceita uma lista de tags fixa por wrapper — pra marcar
+ * com a tag *daquela* empresa (`tagEmpresa(id)`), o wrapper precisa nascer
+ * de novo a cada chamada, com o id já embutido nas `keyParts` e nas tags.
+ * Isso não perde o cache entre chamadas: a store de cache do Next é
+ * indexada por `keyParts`+argumentos, não pela identidade do wrapper.
+ */
+export function getEmpresaById(id: string): Promise<EmpresaListItem | null> {
+  return unstable_cache(
+    async (): Promise<EmpresaListItem | null> => {
+      const row = await db.query.empresa.findFirst({
+        where: eq(empresa.id, id),
+      })
 
-  return row ? mapEmpresa(row) : null
+      return row ? mapEmpresa(row) : null
+    },
+    ['empresa-por-id', id],
+    { tags: [tagEmpresa(id), TAG_EMPRESAS_LISTA], revalidate: 300 }
+  )()
 }
 
 /**
@@ -133,40 +165,46 @@ export async function getEmpresaDetail(id: string): Promise<EmpresaDetail> {
  * comer (`recusou` explícito, ver `marcarRecusaAction`, ou texto de recusa
  * vindo da planilha, `ehRecusa`).
  */
-export async function getPedidosDoDia(
+export function getPedidosDoDia(
   empresaId: string,
   data: string
 ): Promise<PedidoDoDiaItem[]> {
-  const colaboradores = await db.query.colaborador_pedido.findMany({
-    where: (c, { and: andOp, eq: eqOp }) =>
-      andOp(eqOp(c.empresa_id, empresaId), eqOp(c.ativo, true)),
-    with: {
-      pedidos: {
-        where: (p, { eq: eqOp }) => eqOp(p.data, data),
-        limit: 1,
-      },
-    },
-    orderBy: (c, { asc }) => [asc(c.nome)],
-  })
+  return unstable_cache(
+    async (): Promise<PedidoDoDiaItem[]> => {
+      const colaboradores = await db.query.colaborador_pedido.findMany({
+        where: (c, { and: andOp, eq: eqOp }) =>
+          andOp(eqOp(c.empresa_id, empresaId), eqOp(c.ativo, true)),
+        with: {
+          pedidos: {
+            where: (p, { eq: eqOp }) => eqOp(p.data, data),
+            limit: 1,
+          },
+        },
+        orderBy: (c, { asc }) => [asc(c.nome)],
+      })
 
-  return colaboradores
-    .filter((colaborador) => colaborador.pedidos.length > 0)
-    .map((colaborador) => {
-      const pedido = colaborador.pedidos[0]!
-      return {
-        colaboradorId: colaborador.id,
-        nome: colaborador.nome,
-        whatsapp: colaborador.whatsapp,
-        tipo: pedido.tipo,
-        turno: pedido.turno,
-        tamanho: pedido.tamanho,
-        prato: pedido.prato,
-        preco: pedido.preco != null ? toNumber(pedido.preco) : null,
-        observacao: pedido.observacao,
-        respondidoEm: pedido.respondido_em?.toISOString() ?? null,
-        recusou: pedido.recusou || ehRecusa(pedido.prato),
-      }
-    })
+      return colaboradores
+        .filter((colaborador) => colaborador.pedidos.length > 0)
+        .map((colaborador) => {
+          const pedido = colaborador.pedidos[0]!
+          return {
+            colaboradorId: colaborador.id,
+            nome: colaborador.nome,
+            whatsapp: colaborador.whatsapp,
+            tipo: pedido.tipo,
+            turno: pedido.turno,
+            tamanho: pedido.tamanho,
+            prato: pedido.prato,
+            preco: pedido.preco != null ? toNumber(pedido.preco) : null,
+            observacao: pedido.observacao,
+            respondidoEm: pedido.respondido_em?.toISOString() ?? null,
+            recusou: pedido.recusou || ehRecusa(pedido.prato),
+          }
+        })
+    },
+    ['pedidos-do-dia', empresaId, data],
+    { tags: [tagEmpresaPedidos(empresaId)] }
+  )()
 }
 
 /**
@@ -175,41 +213,47 @@ export async function getPedidosDoDia(
  * fechamento do dia, sempre recalculado no servidor: nunca confia em
  * contagem vinda do cliente.
  */
-export async function getContagemTamanhos(
+export function getContagemTamanhos(
   empresaId: string,
   data: string
 ): Promise<ContagemTamanhos> {
-  const rows = await db
-    .select({
-      tipo: pedido_dia_importado.tipo,
-      tamanho: pedido_dia_importado.tamanho,
-      prato: pedido_dia_importado.prato,
-      recusou: pedido_dia_importado.recusou,
-    })
-    .from(pedido_dia_importado)
-    .innerJoin(
-      colaborador_pedido,
-      eq(pedido_dia_importado.colaborador_id, colaborador_pedido.id)
-    )
-    .where(
-      and(
-        eq(colaborador_pedido.empresa_id, empresaId),
-        eq(pedido_dia_importado.data, data)
-      )
-    )
+  return unstable_cache(
+    async (): Promise<ContagemTamanhos> => {
+      const rows = await db
+        .select({
+          tipo: pedido_dia_importado.tipo,
+          tamanho: pedido_dia_importado.tamanho,
+          prato: pedido_dia_importado.prato,
+          recusou: pedido_dia_importado.recusou,
+        })
+        .from(pedido_dia_importado)
+        .innerJoin(
+          colaborador_pedido,
+          eq(pedido_dia_importado.colaborador_id, colaborador_pedido.id)
+        )
+        .where(
+          and(
+            eq(colaborador_pedido.empresa_id, empresaId),
+            eq(pedido_dia_importado.data, data)
+          )
+        )
 
-  const contagem: ContagemTamanhos = { p: 0, m: 0, g: 0, lanche: 0 }
-  for (const row of rows) {
-    if (row.recusou || ehRecusa(row.prato)) continue
-    if (row.tipo === 'lanche') {
-      contagem.lanche++
-      continue
-    }
-    if (row.tamanho === 'P') contagem.p++
-    else if (row.tamanho === 'M') contagem.m++
-    else if (row.tamanho === 'G') contagem.g++
-  }
-  return contagem
+      const contagem: ContagemTamanhos = { p: 0, m: 0, g: 0, lanche: 0 }
+      for (const row of rows) {
+        if (row.recusou || ehRecusa(row.prato)) continue
+        if (row.tipo === 'lanche') {
+          contagem.lanche++
+          continue
+        }
+        if (row.tamanho === 'P') contagem.p++
+        else if (row.tamanho === 'M') contagem.m++
+        else if (row.tamanho === 'G') contagem.g++
+      }
+      return contagem
+    },
+    ['contagem-tamanhos', empresaId, data],
+    { tags: [tagEmpresaPedidos(empresaId)] }
+  )()
 }
 
 function mapItemFechamento(
@@ -250,17 +294,23 @@ function mapFechamento(
 }
 
 /** Com os itens (para reimpressão) — usado ao abrir o drawer "Finalizar dia". */
-export async function getFechamentoDoDia(
+export function getFechamentoDoDia(
   empresaId: string,
   data: string
 ): Promise<FechamentoDia | null> {
-  const row = await db.query.fechamento_dia_empresa.findFirst({
-    where: (f, { and: andOp, eq: eqOp }) =>
-      andOp(eqOp(f.empresa_id, empresaId), eqOp(f.data, data)),
-    with: { itens: true },
-  })
+  return unstable_cache(
+    async (): Promise<FechamentoDia | null> => {
+      const row = await db.query.fechamento_dia_empresa.findFirst({
+        where: (f, { and: andOp, eq: eqOp }) =>
+          andOp(eqOp(f.empresa_id, empresaId), eqOp(f.data, data)),
+        with: { itens: true },
+      })
 
-  return row ? mapFechamento(row) : null
+      return row ? mapFechamento(row) : null
+    },
+    ['fechamento-do-dia', empresaId, data],
+    { tags: [tagEmpresaFechamentos(empresaId)] }
+  )()
 }
 
 /**
@@ -268,22 +318,28 @@ export async function getFechamentoDoDia(
  * Sem itens (lista, não precisa do detalhe linha a linha). `from`/`to`
  * filtram por data do fechamento, não por quando foi finalizado.
  */
-export async function listarFechamentosDaEmpresa(
+export function listarFechamentosDaEmpresa(
   empresaId: string,
   intervalo?: { from?: string | null; to?: string | null }
 ): Promise<FechamentoDia[]> {
-  const rows = await db.query.fechamento_dia_empresa.findMany({
-    where: (f, { and: andOp, eq: eqOp, gte, lte }) =>
-      andOp(
-        eqOp(f.empresa_id, empresaId),
-        intervalo?.from ? gte(f.data, intervalo.from) : undefined,
-        intervalo?.to ? lte(f.data, intervalo.to) : undefined
-      ),
-    orderBy: (f, { desc }) => [desc(f.data)],
-    limit: 60,
-  })
+  return unstable_cache(
+    async (): Promise<FechamentoDia[]> => {
+      const rows = await db.query.fechamento_dia_empresa.findMany({
+        where: (f, { and: andOp, eq: eqOp, gte, lte }) =>
+          andOp(
+            eqOp(f.empresa_id, empresaId),
+            intervalo?.from ? gte(f.data, intervalo.from) : undefined,
+            intervalo?.to ? lte(f.data, intervalo.to) : undefined
+          ),
+        orderBy: (f, { desc }) => [desc(f.data)],
+        limit: 60,
+      })
 
-  return rows.map(mapFechamento)
+      return rows.map(mapFechamento)
+    },
+    ['fechamentos-da-empresa', empresaId, intervalo?.from ?? '', intervalo?.to ?? ''],
+    { tags: [tagEmpresaFechamentos(empresaId)] }
+  )()
 }
 
 const MES_LABEL = [
@@ -306,39 +362,45 @@ const MES_LABEL = [
  * `valor_total` já vem gravado no fechamento (ver `finalizarDiaAction`), não
  * precisa somar item por item de novo aqui.
  */
-export async function getFaturamentoMensal(
+export function getFaturamentoMensal(
   empresaId: string,
   intervalo?: { from?: string | null; to?: string | null }
 ): Promise<EmpresaFaturamentoMensal[]> {
-  const rows = await db.query.fechamento_dia_empresa.findMany({
-    where: (f, { and: andOp, eq: eqOp, gte, lte }) =>
-      andOp(
-        eqOp(f.empresa_id, empresaId),
-        intervalo?.from ? gte(f.data, intervalo.from) : undefined,
-        intervalo?.to ? lte(f.data, intervalo.to) : undefined
-      ),
-    columns: { data: true, valor_total: true },
-    orderBy: (f, { asc }) => [asc(f.data)],
-  })
+  return unstable_cache(
+    async (): Promise<EmpresaFaturamentoMensal[]> => {
+      const rows = await db.query.fechamento_dia_empresa.findMany({
+        where: (f, { and: andOp, eq: eqOp, gte, lte }) =>
+          andOp(
+            eqOp(f.empresa_id, empresaId),
+            intervalo?.from ? gte(f.data, intervalo.from) : undefined,
+            intervalo?.to ? lte(f.data, intervalo.to) : undefined
+          ),
+        columns: { data: true, valor_total: true },
+        orderBy: (f, { asc }) => [asc(f.data)],
+      })
 
-  const porMes = new Map<string, number>()
-  for (const row of rows) {
-    const [ano, mes] = row.data.split('-')
-    const chave = `${ano}-${mes}`
-    porMes.set(chave, (porMes.get(chave) ?? 0) + toNumber(row.valor_total))
-  }
+      const porMes = new Map<string, number>()
+      for (const row of rows) {
+        const [ano, mes] = row.data.split('-')
+        const chave = `${ano}-${mes}`
+        porMes.set(chave, (porMes.get(chave) ?? 0) + toNumber(row.valor_total))
+      }
 
-  return Array.from(porMes, ([chave, valor]) => {
-    const [, mes] = chave.split('-')
-    return {
-      chave,
-      mes: MES_LABEL[Number(mes) - 1]!,
-      valor,
-    }
-  })
-    .sort((a, b) => a.chave.localeCompare(b.chave))
-    .slice(-12)
-    .map(({ mes, valor }) => ({ mes, valor }))
+      return Array.from(porMes, ([chave, valor]) => {
+        const [, mes] = chave.split('-')
+        return {
+          chave,
+          mes: MES_LABEL[Number(mes) - 1]!,
+          valor,
+        }
+      })
+        .sort((a, b) => a.chave.localeCompare(b.chave))
+        .slice(-12)
+        .map(({ mes, valor }) => ({ mes, valor }))
+    },
+    ['faturamento-mensal', empresaId, intervalo?.from ?? '', intervalo?.to ?? ''],
+    { tags: [tagEmpresaFechamentos(empresaId)] }
+  )()
 }
 
 /**
@@ -346,29 +408,33 @@ export async function getFaturamentoMensal(
  * (`configuracao_comanda.impressora_id`); sem escolha ainda, cai na primeira
  * comanda ativa cadastrada.
  */
-export async function getImpressoraComanda(): Promise<{
-  id: string
-  nome: string
-  identificadorQz: string
-} | null> {
-  const config = await db.query.configuracaoComanda.findFirst({
-    where: (c, { eq }) => eq(c.id, 'default'),
-    columns: { impressora_id: true },
-  })
+export const getImpressoraComanda = unstable_cache(
+  async (): Promise<{
+    id: string
+    nome: string
+    identificadorQz: string
+  } | null> => {
+    const config = await db.query.configuracaoComanda.findFirst({
+      where: (c, { eq }) => eq(c.id, 'default'),
+      columns: { impressora_id: true },
+    })
 
-  const row = config?.impressora_id
-    ? await db.query.impressora.findFirst({
-        where: (i, { eq }) => eq(i.id, config.impressora_id!),
-      })
-    : await db.query.impressora.findFirst({
-        where: (i, { and: andOp, eq: eqOp }) =>
-          andOp(eqOp(i.tipo, 'comanda'), eqOp(i.ativo, true)),
-      })
+    const row = config?.impressora_id
+      ? await db.query.impressora.findFirst({
+          where: (i, { eq }) => eq(i.id, config.impressora_id!),
+        })
+      : await db.query.impressora.findFirst({
+          where: (i, { and: andOp, eq: eqOp }) =>
+            andOp(eqOp(i.tipo, 'comanda'), eqOp(i.ativo, true)),
+        })
 
-  return row
-    ? { id: row.id, nome: row.nome, identificadorQz: row.identificador_qz }
-    : null
-}
+    return row
+      ? { id: row.id, nome: row.nome, identificadorQz: row.identificador_qz }
+      : null
+  },
+  ['impressora-comanda'],
+  { tags: [TAG_CONFIGURACAO_IMPRESSAO] }
+)
 
 const NOME_PADRAO_POR_TIPO: Record<PrecoPadraoTipo, string> = {
   marmita_p: 'Marmita P',
@@ -385,27 +451,33 @@ const NOME_PADRAO_POR_TIPO: Record<PrecoPadraoTipo, string> = {
  * café adicional) — sempre devolve as 7 chaves, com nome/preço zerados pros
  * tipos ainda não configurados, pra quem usa não precisar tratar ausência.
  */
-export async function getPrecosEmpresa(
+export function getPrecosEmpresa(
   empresaId: string
 ): Promise<PrecosPadraoEmpresa> {
-  const rows = await db.query.empresa_preco_padrao.findMany({
-    where: (p, { eq: eqOp }) => eqOp(p.empresa_id, empresaId),
-  })
+  return unstable_cache(
+    async (): Promise<PrecosPadraoEmpresa> => {
+      const rows = await db.query.empresa_preco_padrao.findMany({
+        where: (p, { eq: eqOp }) => eqOp(p.empresa_id, empresaId),
+      })
 
-  const porTipo = new Map(rows.map((row) => [row.tipo, row]))
+      const porTipo = new Map(rows.map((row) => [row.tipo, row]))
 
-  return Object.fromEntries(
-    (Object.keys(NOME_PADRAO_POR_TIPO) as PrecoPadraoTipo[]).map((tipo) => {
-      const row = porTipo.get(tipo)
-      return [
-        tipo,
-        {
-          nome: row?.nome ?? NOME_PADRAO_POR_TIPO[tipo],
-          preco: row ? toNumber(row.preco) : 0,
-        },
-      ]
-    })
-  ) as PrecosPadraoEmpresa
+      return Object.fromEntries(
+        (Object.keys(NOME_PADRAO_POR_TIPO) as PrecoPadraoTipo[]).map((tipo) => {
+          const row = porTipo.get(tipo)
+          return [
+            tipo,
+            {
+              nome: row?.nome ?? NOME_PADRAO_POR_TIPO[tipo],
+              preco: row ? toNumber(row.preco) : 0,
+            },
+          ]
+        })
+      ) as PrecosPadraoEmpresa
+    },
+    ['precos-empresa', empresaId],
+    { tags: [tagEmpresaPrecos(empresaId)] }
+  )()
 }
 
 /**
@@ -415,44 +487,50 @@ export async function getPrecosEmpresa(
  * colaborador real. `ativo` é o único controle manual que falta expor numa
  * tela (a coluna já existe, só não tinha UI).
  */
-export async function getColaboradoresEmpresa(
+export function getColaboradoresEmpresa(
   empresaId: string
 ): Promise<ColaboradorEmpresaItem[]> {
-  const colaboradores = await db.query.colaborador_pedido.findMany({
-    where: (c, { and: andOp, eq: eqOp }) =>
-      andOp(eqOp(c.empresa_id, empresaId), eqOp(c.tipo, 'funcionario')),
-    orderBy: (c, { asc }) => [asc(c.nome)],
-  })
+  return unstable_cache(
+    async (): Promise<ColaboradorEmpresaItem[]> => {
+      const colaboradores = await db.query.colaborador_pedido.findMany({
+        where: (c, { and: andOp, eq: eqOp }) =>
+          andOp(eqOp(c.empresa_id, empresaId), eqOp(c.tipo, 'funcionario')),
+        orderBy: (c, { asc }) => [asc(c.nome)],
+      })
 
-  const contagens = await db
-    .select({
-      colaboradorId: pedido_dia_importado.colaborador_id,
-      total: count(),
-      ultimo: max(pedido_dia_importado.data),
-    })
-    .from(pedido_dia_importado)
-    .innerJoin(
-      colaborador_pedido,
-      eq(pedido_dia_importado.colaborador_id, colaborador_pedido.id)
-    )
-    .where(eq(colaborador_pedido.empresa_id, empresaId))
-    .groupBy(pedido_dia_importado.colaborador_id)
+      const contagens = await db
+        .select({
+          colaboradorId: pedido_dia_importado.colaborador_id,
+          total: count(),
+          ultimo: max(pedido_dia_importado.data),
+        })
+        .from(pedido_dia_importado)
+        .innerJoin(
+          colaborador_pedido,
+          eq(pedido_dia_importado.colaborador_id, colaborador_pedido.id)
+        )
+        .where(eq(colaborador_pedido.empresa_id, empresaId))
+        .groupBy(pedido_dia_importado.colaborador_id)
 
-  const porColaborador = new Map(
-    contagens.map((linha) => [linha.colaboradorId, linha])
-  )
+      const porColaborador = new Map(
+        contagens.map((linha) => [linha.colaboradorId, linha])
+      )
 
-  return colaboradores.map((colaborador) => {
-    const info = porColaborador.get(colaborador.id)
-    return {
-      id: colaborador.id,
-      nome: colaborador.nome,
-      whatsapp: colaborador.whatsapp,
-      ativo: colaborador.ativo,
-      totalPedidos: info?.total ?? 0,
-      ultimoPedidoEm: info?.ultimo ?? null,
-    }
-  })
+      return colaboradores.map((colaborador) => {
+        const info = porColaborador.get(colaborador.id)
+        return {
+          id: colaborador.id,
+          nome: colaborador.nome,
+          whatsapp: colaborador.whatsapp,
+          ativo: colaborador.ativo,
+          totalPedidos: info?.total ?? 0,
+          ultimoPedidoEm: info?.ultimo ?? null,
+        }
+      })
+    },
+    ['colaboradores-empresa', empresaId],
+    { tags: [tagEmpresa(empresaId), tagEmpresaPedidos(empresaId)] }
+  )()
 }
 
 const DIA_SEMANA_LABEL = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -479,7 +557,27 @@ function ultimosDias(quantidade: number, ateISO: string): string[] {
  * tem comparativo real (não existe histórico de "quem estava ativo há uma
  * semana").
  */
-export async function getVisaoGeralOperacional(
+export function getVisaoGeralOperacional(
+  empresaId: string
+): Promise<VisaoGeralOperacional> {
+  return unstable_cache(
+    async (): Promise<VisaoGeralOperacional> => {
+      return getVisaoGeralOperacionalSemCache(empresaId)
+    },
+    ['visao-geral-operacional', empresaId],
+    {
+      tags: [tagEmpresa(empresaId), tagEmpresaPedidos(empresaId)],
+      revalidate: 300,
+    }
+  )()
+}
+
+/**
+ * `revalidate: 300` cobre a janela de "hoje"/"últimos 7 dias" andar sozinha
+ * com o tempo, sem nenhuma escrita — as tags cobrem o caso comum
+ * (colaborador novo, pedido novo/removido).
+ */
+async function getVisaoGeralOperacionalSemCache(
   empresaId: string
 ): Promise<VisaoGeralOperacional> {
   const hoje = hojeISO()

@@ -1,11 +1,12 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 
 import { db } from '@/lib/db'
 import { authActionClient } from '@/lib/safe-action'
 import { configuracaoComanda, configuracaoResumoDia, impressora } from '@repo/db'
 
+import { TAG_CONFIGURACAO_IMPRESSAO } from '@/features/empresas/lib/cache-tags'
 import {
   getConfiguracaoComanda,
   getConfiguracaoLayoutResumo,
@@ -51,6 +52,7 @@ export const criarImpressoraAction = authActionClient
       .returning({ id: impressora.id, nome: impressora.nome })
 
     revalidatePath('/configuracoes/impressao')
+    updateTag(TAG_CONFIGURACAO_IMPRESSAO)
     return criada
   })
 
@@ -74,6 +76,7 @@ export const salvarConfiguracaoComandaAction = authActionClient
       })
 
     revalidatePath('/configuracoes/impressao')
+    updateTag(TAG_CONFIGURACAO_IMPRESSAO)
     return { campos: parsedInput.campos, impressoraId: parsedInput.impressoraId }
   })
 

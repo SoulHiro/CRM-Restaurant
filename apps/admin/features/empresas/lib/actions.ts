@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 
 import { createId } from '@paralleldrive/cuid2'
 import { db } from '@/lib/db'
@@ -16,6 +16,13 @@ import {
   pedido_dia_importado,
 } from '@repo/db'
 import { and, eq } from 'drizzle-orm'
+import {
+  TAG_EMPRESAS_LISTA,
+  tagEmpresa,
+  tagEmpresaFechamentos,
+  tagEmpresaPedidos,
+  tagEmpresaPrecos,
+} from './cache-tags'
 import {
   atualizarColaboradorAtivoSchema,
   atualizarPrecoPedidoSchema,
@@ -82,6 +89,7 @@ export const createEmpresaAction = authActionClient
     if (!criada) throw new ActionError('Não foi possível cadastrar a empresa')
 
     revalidatePath('/empresas')
+    updateTag(TAG_EMPRESAS_LISTA)
     return { empresaId: criada.id }
   })
 
@@ -95,12 +103,15 @@ export const listarColaboradoresEmpresaAction = authActionClient
 export const atualizarColaboradorAtivoAction = authActionClient
   .schema(atualizarColaboradorAtivoSchema)
   .action(async ({ parsedInput }) => {
-    await db
+    const [atualizado] = await db
       .update(colaborador_pedido)
       .set({ ativo: parsedInput.ativo })
       .where(eq(colaborador_pedido.id, parsedInput.colaboradorId))
+      .returning({ empresa_id: colaborador_pedido.empresa_id })
 
     revalidatePath('/empresas')
+    updateTag(TAG_EMPRESAS_LISTA)
+    if (atualizado) updateTag(tagEmpresa(atualizado.empresa_id))
   })
 
 export const createPausaAction = actionClient
@@ -250,6 +261,9 @@ export const importarPedidosAction = authActionClient
     await executarLote(statements)
 
     revalidatePath(`/empresas/${parsedInput.empresaId}`)
+    updateTag(TAG_EMPRESAS_LISTA)
+    updateTag(tagEmpresa(parsedInput.empresaId))
+    updateTag(tagEmpresaPedidos(parsedInput.empresaId))
 
     return {
       colaboradoresNovos: idPorColaboradorNovo.size,
@@ -364,6 +378,7 @@ export const finalizarDiaAction = authActionClient
     }
 
     revalidatePath(`/empresas/${parsedInput.empresaId}`)
+    updateTag(tagEmpresaFechamentos(parsedInput.empresaId))
 
     return {
       quantidadeP: contagem.p,
@@ -391,6 +406,7 @@ export const reabrirDiaAction = authActionClient
       )
 
     revalidatePath(`/empresas/${parsedInput.empresaId}`)
+    updateTag(tagEmpresaFechamentos(parsedInput.empresaId))
   })
 
 export const listarFechamentosAction = authActionClient
@@ -413,9 +429,26 @@ export const listarFaturamentoMensalAction = authActionClient
     return { faturamentoMensal }
   })
 
+/**
+ * Nenhum desses três actions recebe `empresaId` do cliente (só
+ * `colaboradorId`, já suficiente pro `WHERE`) — pra invalidar a tag certa
+ * de cache, resolve o dono do colaborador com uma leitura indexada rápida
+ * antes de escrever. Mais barato que adicionar `empresaId` em todo schema/
+ * prop-drilling só pra isso.
+ */
+async function empresaDoColaborador(colaboradorId: string): Promise<string | null> {
+  const row = await db.query.colaborador_pedido.findFirst({
+    where: (c, { eq: eqOp }) => eqOp(c.id, colaboradorId),
+    columns: { empresa_id: true },
+  })
+  return row?.empresa_id ?? null
+}
+
 export const removerPedidoAction = authActionClient
   .schema(removerPedidoSchema)
   .action(async ({ parsedInput }) => {
+    const empresaId = await empresaDoColaborador(parsedInput.colaboradorId)
+
     await db
       .delete(pedido_dia_importado)
       .where(
@@ -426,11 +459,15 @@ export const removerPedidoAction = authActionClient
       )
 
     revalidatePath('/empresas')
+    updateTag(TAG_EMPRESAS_LISTA)
+    if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
   })
 
 export const marcarRecusaAction = authActionClient
   .schema(marcarRecusaSchema)
   .action(async ({ parsedInput }) => {
+    const empresaId = await empresaDoColaborador(parsedInput.colaboradorId)
+
     await db
       .update(pedido_dia_importado)
       .set({ recusou: parsedInput.recusou })
@@ -442,6 +479,8 @@ export const marcarRecusaAction = authActionClient
       )
 
     revalidatePath('/empresas')
+    updateTag(TAG_EMPRESAS_LISTA)
+    if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
   })
 
 /**
@@ -453,6 +492,8 @@ export const marcarRecusaAction = authActionClient
 export const atualizarPrecoPedidoAction = authActionClient
   .schema(atualizarPrecoPedidoSchema)
   .action(async ({ parsedInput }) => {
+    const empresaId = await empresaDoColaborador(parsedInput.colaboradorId)
+
     await db
       .update(pedido_dia_importado)
       .set({
@@ -467,6 +508,7 @@ export const atualizarPrecoPedidoAction = authActionClient
       )
 
     revalidatePath('/empresas')
+    if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
   })
 
 export const obterPrecosEmpresaAction = authActionClient
@@ -497,6 +539,7 @@ export const salvarPrecosEmpresaAction = authActionClient
     await executarLote(statements)
 
     revalidatePath(`/empresas/${parsedInput.empresaId}`)
+    updateTag(tagEmpresaPrecos(parsedInput.empresaId))
 
     return { itens: parsedInput.itens }
   })
