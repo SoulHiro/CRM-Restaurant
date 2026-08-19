@@ -12,6 +12,17 @@ export function formatarEndereco(endereco: EmpresaEndereco): string {
 }
 
 /**
+ * Arredonda pra cima — melhor sobrar comida do que faltar, por instrução
+ * explícita. Um `Math.ceil` cru quebraria em resultados que deveriam ser
+ * exatos: `39 * 0.1 * 1.2 * 1000` dá `4680.000000000001` em ponto
+ * flutuante, não `4680` — sem a folga de epsilon, isso vira `4681` por
+ * erro de representação binária, não porque o valor é realmente quebrado.
+ */
+function arredondarParaCima(valor: number): number {
+  return Math.ceil(valor - 1e-9)
+}
+
+/**
  * Arroz/feijão em gramas — o "acrescentar dois zeros" que o pessoal da
  * cozinha usa de cabeça é só kg→g (×1000). A fórmula em si (pessoas × fator
  * × 1,2, o "1,2" sendo a folga que só esses dois têm) foi validada contra
@@ -20,23 +31,23 @@ export function formatarEndereco(endereco: EmpresaEndereco): string {
  * têm essa folga — é só pessoas × grama-por-pessoa, direto.
  */
 export function calcularArrozGramas(pessoas: number): number {
-  return Math.round(pessoas * 0.2 * 1.2 * 1000)
+  return arredondarParaCima(pessoas * 0.2 * 1.2 * 1000)
 }
 
 export function calcularFeijaoGramas(pessoas: number): number {
-  return Math.round(pessoas * 0.1 * 1.2 * 1000)
+  return arredondarParaCima(pessoas * 0.1 * 1.2 * 1000)
 }
 
 export function calcularLegumesGramas(pessoas: number): number {
-  return Math.round(pessoas * 100)
+  return arredondarParaCima(pessoas * 100)
 }
 
 export function calcularFarofaGramas(pessoas: number): number {
-  return Math.round(pessoas * 80)
+  return arredondarParaCima(pessoas * 80)
 }
 
 export function calcularMacarraoGramas(pessoas: number): number {
-  return Math.round(pessoas * 200)
+  return arredondarParaCima(pessoas * 200)
 }
 
 /** Não escala com o headcount — sempre a mesma quantidade, dia sim dia não. */

@@ -87,6 +87,19 @@ describe('SALADA_GRAMAS_FIXO', () => {
   })
 })
 
+describe('arredondamento pra cima sem erro de ponto flutuante', () => {
+  // 39 pessoas é o caso real que expôs o problema: em ponto flutuante,
+  // 39*0.1*1.2*1000 não dá exatamente 4680 (dá 4680.000000000001) — um
+  // Math.ceil cru arredondaria isso pra 4681, um grama a mais sem motivo.
+  it.each(Array.from({ length: 60 }, (_, i) => i + 1))(
+    'arroz/feijão de %i pessoas é sempre múltiplo exato de 240/120',
+    (pessoas) => {
+      expect(calcularArrozGramas(pessoas)).toBe(pessoas * 240)
+      expect(calcularFeijaoGramas(pessoas)).toBe(pessoas * 120)
+    }
+  )
+})
+
 describe('contarPorPrato', () => {
   it('conta quantas pessoas escolheram cada prato, maior primeiro', () => {
     const pedidos = [
