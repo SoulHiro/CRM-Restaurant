@@ -31,8 +31,11 @@ import {
   listarColaboradoresAction,
   obterPrecosEmpresaAction,
 } from '../../../../../lib/actions'
+import {
+  ColaboradorCombobox,
+  type ColaboradorOption,
+} from './colaborador-combobox'
 
-const NOVO = '__novo__'
 const SEM_TURNO = '__sem_turno__'
 const SEM_TAMANHO = '__sem_tamanho__'
 
@@ -48,11 +51,11 @@ export function AdicionarPedidoManualDrawer({
   onAdicionado: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const [colaboradores, setColaboradores] = useState<
-    { id: string; nome: string }[]
-  >([])
-  const [colaboradorId, setColaboradorId] = useState(NOVO)
-  const [nomeNovo, setNomeNovo] = useState('')
+  const [colaboradores, setColaboradores] = useState<ColaboradorOption[]>([])
+  const [busca, setBusca] = useState('')
+  const [colaboradorSelecionado, setColaboradorSelecionado] =
+    useState<ColaboradorOption | null>(null)
+  const [criandoNovo, setCriandoNovo] = useState(false)
   const [visitante, setVisitante] = useState(false)
   const [tipo, setTipo] = useState<TipoPedido>('marmita')
   const [turno, setTurno] = useState(SEM_TURNO)
@@ -83,8 +86,9 @@ export function AdicionarPedidoManualDrawer({
   }, [open])
 
   function limpar() {
-    setColaboradorId(NOVO)
-    setNomeNovo('')
+    setBusca('')
+    setColaboradorSelecionado(null)
+    setCriandoNovo(false)
     setVisitante(false)
     setTipo('marmita')
     setTurno(SEM_TURNO)
@@ -107,9 +111,7 @@ export function AdicionarPedidoManualDrawer({
   })
 
   const nomeSelecionado =
-    colaboradorId === NOVO
-      ? nomeNovo.trim()
-      : (colaboradores.find((c) => c.id === colaboradorId)?.nome ?? '')
+    colaboradorSelecionado?.nome ?? (criandoNovo ? busca.trim() : '')
 
   function confirmar() {
     if (!nomeSelecionado || !prato.trim()) return
@@ -120,7 +122,7 @@ export function AdicionarPedidoManualDrawer({
       itens: [
         {
           nome: nomeSelecionado,
-          colaboradorId: colaboradorId === NOVO ? null : colaboradorId,
+          colaboradorId: colaboradorSelecionado?.id ?? null,
           colaboradorTipo: visitante ? 'visitante' : 'funcionario',
           whatsapp: null,
           data,
@@ -146,6 +148,11 @@ export function AdicionarPedidoManualDrawer({
     <Drawer
       direction="right"
       open={open}
+      // Sem <Drawer.Handle /> nenhum, então isso desativa só o arrastar pra
+      // fechar — clicar fora e Esc continuam funcionando, como um Sheet
+      // normal fecharia (`dismissible={false}` desativaria os dois
+      // também, o que não é o que queremos aqui).
+      handleOnly
       onOpenChange={(v) => {
         setOpen(v)
         if (!v) limpar()
@@ -188,40 +195,34 @@ export function AdicionarPedidoManualDrawer({
 
           <div className="flex flex-col gap-1.5">
             <Label className="text-sm">Colaborador</Label>
-            <Select value={colaboradorId} onValueChange={setColaboradorId}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NOVO}>Novo colaborador</SelectItem>
-                {colaboradores.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ColaboradorCombobox
+              colaboradores={colaboradores}
+              busca={busca}
+              onBuscaChange={(valor) => {
+                setBusca(valor)
+                setColaboradorSelecionado(null)
+                setCriandoNovo(false)
+              }}
+              onSelecionar={(c) => {
+                setColaboradorSelecionado(c)
+                setBusca(c.nome)
+                setCriandoNovo(false)
+              }}
+              onCriarNovo={(nome) => {
+                setCriandoNovo(true)
+                setBusca(nome)
+              }}
+            />
           </div>
 
-          {colaboradorId === NOVO && (
-            <>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-sm">Nome</Label>
-                <Input
-                  value={nomeNovo}
-                  onChange={(e) => setNomeNovo(e.target.value)}
-                  placeholder="Nome completo"
-                />
-              </div>
-
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={visitante}
-                  onCheckedChange={(v) => setVisitante(v === true)}
-                />
-                Visitante (não é funcionário da empresa)
-              </label>
-            </>
+          {criandoNovo && (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={visitante}
+                onCheckedChange={(v) => setVisitante(v === true)}
+              />
+              Visitante (não é funcionário da empresa)
+            </label>
           )}
 
           {tipo === 'marmita' && (
