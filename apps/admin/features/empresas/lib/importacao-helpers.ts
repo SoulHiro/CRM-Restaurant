@@ -71,7 +71,7 @@ function textoDaCelula(valor: LinhaBruta[number]): string {
  * jogo quando a planilha não tiver a coluna formatada como data — o caminho
  * normal já chega como `Date` via `cellDates: true` no parse do xlsx.
  */
-function serialExcelParaData(serial: number): Date {
+export function serialExcelParaData(serial: number): Date {
   return new Date(Date.UTC(1899, 11, 30) + serial * 86_400_000)
 }
 

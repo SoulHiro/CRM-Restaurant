@@ -113,7 +113,7 @@ export function PedidosTab({
             onAdicionado={() => execute({ empresaId, data })}
           />
           <ImportarPlanilhaDrawer empresaId={empresaId} />
-          <CompararConferenciaDrawer pedidos={pedidos ?? []} />
+          <CompararConferenciaDrawer data={data} pedidos={pedidos ?? []} />
           <FinalizarDiaDrawer
             empresaId={empresaId}
             empresaNome={empresaNome}

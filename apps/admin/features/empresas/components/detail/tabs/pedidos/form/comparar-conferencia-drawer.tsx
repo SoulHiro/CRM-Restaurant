@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@repo/ui/components/dialog'
 
+import { formatDateBR } from '@/lib/formatters'
 import {
   extrairConfirmadosDaPlanilha,
   formatarListaParaCopiar,
@@ -23,8 +24,10 @@ import type { LinhaBruta } from '../../../../../lib/importacao-helpers'
 import type { PedidoDoDiaItem } from '../../../../../lib/types'
 
 export function CompararConferenciaDrawer({
+  data,
   pedidos,
 }: {
+  data: string
   pedidos: PedidoDoDiaItem[]
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -47,7 +50,7 @@ export function CompararConferenciaDrawer({
         )
       }
 
-      const confirmados = extrairConfirmadosDaPlanilha(abas)
+      const confirmados = extrairConfirmadosDaPlanilha(abas, data)
       if (confirmados.length === 0) {
         toast.error(
           'Não encontrei um bloco de Almoço/Janta reconhecível nessa planilha.'
@@ -99,9 +102,10 @@ export function CompararConferenciaDrawer({
         <DialogHeader>
           <DialogTitle>Comparar com a conferência</DialogTitle>
           <DialogDescription>
-            Envie a planilha de conferência do dia (Almoço/Janta, coluna
-            Enviar/NÃO ENVIAR) — mostro quem foi confirmado lá mas ainda não
-            tem pedido aqui.
+            Envie a planilha de conferência (Almoço/Janta, coluna Enviar/NÃO
+            ENVIAR) — comparo só as linhas datadas de {formatDateBR(data)}
+            (a data selecionada nesta tela) e mostro quem foi confirmado lá
+            mas ainda não tem pedido aqui.
           </DialogDescription>
         </DialogHeader>
 

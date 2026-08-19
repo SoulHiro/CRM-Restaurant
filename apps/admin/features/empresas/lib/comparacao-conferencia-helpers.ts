@@ -1,4 +1,8 @@
-import { distanciaLevenshtein, normalizar } from './importacao-helpers'
+import {
+  distanciaLevenshtein,
+  normalizar,
+  serialExcelParaData,
+} from './importacao-helpers'
 import type { LinhaBruta } from './importacao-helpers'
 
 export type TurnoConferencia = 'almoco' | 'jantar'
@@ -26,16 +30,41 @@ function ehConfirmado(status: string): boolean | null {
 }
 
 /**
- * A GPK manda uma planilha com blocos separados por turno dentro de cada
- * aba — um cabeçalho tipo "ALMOÇO- MARMITAS - 18/08/2026" ou "JANTA-
- * MARMITAS", seguido de linhas `[índice, nome, "Enviar"|"NÃO ENVIAR", data]`
- * até uma linha em branco. As abas de feriado/sábado seguem o mesmo formato
- * — por isso isso varre todas as abas do arquivo, não só a primeira.
+ * A coluna de data (índice 3) chega como `Date` (quando a célula tem
+ * formatação de data — caso normal aqui) ou como serial numérico do Excel,
+ * dependendo de como a célula foi criada na planilha original. Diferente de
+ * um timestamp de servidor, uma célula de planilha é um dia de calendário
+ * puro, sem fuso — por isso lê o Y-M-D em UTC direto, sem passar por
+ * `dataISO`/fuso de Brasília (isso empurraria meia-noite UTC pro dia
+ * anterior, ver docs/rules e `apps/admin/CLAUDE.md`).
+ */
+function dataDaCelulaISO(valor: LinhaBruta[number]): string | null {
+  const data =
+    valor instanceof Date
+      ? valor
+      : typeof valor === 'number'
+        ? serialExcelParaData(valor)
+        : null
+
+  if (!data || Number.isNaN(data.getTime())) return null
+  return data.toISOString().slice(0, 10)
+}
+
+/**
+ * A GPK manda um arquivo com várias abas (dia a dia, sábado, feriados) — a
+ * mesma aba pode até ter mais de um bloco "ALMOÇO"/"JANTA" (feriados
+ * costumam ter vários). Um cabeçalho de bloco não é garantia de que aquela
+ * lista é do dia sendo conferido: a única fonte confiável da data é a
+ * própria linha (coluna D, ao lado do "Enviar"/"NÃO ENVIAR") — por isso cada
+ * linha confirmada só entra se a data dela bater com `dataAlvo`, mesmo que o
+ * bloco em volta pareça certo pelo nome do cabeçalho.
  */
 export function extrairConfirmadosDaPlanilha(
-  abas: Record<string, LinhaBruta[]>
+  abas: Record<string, LinhaBruta[]>,
+  dataAlvo: string
 ): LinhaConferencia[] {
   const resultado: LinhaConferencia[] = []
+  const vistos = new Set<string>()
 
   for (const linhas of Object.values(abas)) {
     let turnoAtual: TurnoConferencia | null = null
@@ -58,6 +87,12 @@ export function extrairConfirmadosDaPlanilha(
       const status = typeof linha[2] === 'string' ? linha[2] : ''
       const confirmado = ehConfirmado(status)
       if (confirmado === null) continue
+
+      if (confirmado && dataDaCelulaISO(linha[3]) !== dataAlvo) continue
+
+      const chave = `${turnoAtual}|${normalizar(nome)}`
+      if (vistos.has(chave)) continue
+      vistos.add(chave)
 
       resultado.push({ nome, turno: turnoAtual, confirmado })
     }
