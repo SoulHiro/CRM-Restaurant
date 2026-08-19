@@ -50,7 +50,7 @@ export interface PedidoDiaBruto {
   whatsapp: string | null
 }
 
-function normalizar(texto: string): string {
+export function normalizar(texto: string): string {
   return texto
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '') // remove acentos
@@ -276,7 +276,7 @@ export interface SugestaoCorrespondencia {
   tipo: SugestaoTipo
 }
 
-function distanciaLevenshtein(a: string, b: string): number {
+export function distanciaLevenshtein(a: string, b: string): number {
   const linhas = a.length + 1
   const colunas = b.length + 1
   const matriz: number[][] = Array.from({ length: linhas }, (_, i) => [
