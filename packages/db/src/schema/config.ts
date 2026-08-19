@@ -4,6 +4,7 @@ import { createId } from '@paralleldrive/cuid2'
 export const impressoraTipoEnum = pgEnum('impressora_tipo', [
   'comanda',
   'etiqueta',
+  'pesagem',
 ])
 
 export const impressora = pgTable('impressora', {
@@ -54,5 +55,18 @@ export const configuracaoResumoDia = pgTable('configuracao_resumo_dia', {
   // (nome, endereço, CNPJ+IE) — mesma ideia de `configuracaoComanda.campos`,
   // só que pro resumo do dia em vez da comanda.
   layout_campos: jsonb('layout_campos').$type<string[]>(),
+  updated_at: timestamp('updated_at').notNull().defaultNow(),
+})
+
+/**
+ * Singleton — mesma ideia de `configuracaoComanda`, mas pro papel de
+ * pesagem (empresas com `empresa.fluxo_pedido = 'pesagem'`). Sem `campos`:
+ * o layout desse papel não é configurável por enquanto.
+ */
+export const configuracaoPesagem = pgTable('configuracao_pesagem', {
+  id: text('id').primaryKey().default('default'),
+  impressora_id: text('impressora_id').references(() => impressora.id, {
+    onDelete: 'set null',
+  }),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 })

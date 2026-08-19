@@ -2,6 +2,21 @@ export type EmpresaListStatus = 'aguardando' | 'finalizado'
 
 export type EmpresaRecordStatus = 'ativo' | 'inativo'
 
+/**
+ * 'pesagem': parte dos pedidos do dia é preparada em lote (arroz/feijão por
+ * headcount, resto contado por prato) em vez de virar comanda individual —
+ * ver features/empresas/lib/pesagem-helpers.ts. Hoje só a NOVAPRINT2 usa.
+ */
+export type EmpresaFluxoPedido = 'padrao' | 'pesagem'
+
+export type TurnoRefeicao =
+  | 'almoco'
+  | 'jantar'
+  | '1_turno'
+  | '2_turno'
+  | '3_turno'
+  | 'administrativo'
+
 export interface EmpresaListItem {
   id: string
   nome: string
@@ -14,6 +29,9 @@ export interface EmpresaListItem {
   funcionariosTotal: number
   status: EmpresaListStatus
   endereco: EmpresaEndereco
+  fluxoPedido: EmpresaFluxoPedido
+  /** P/M/G/Lanche/Café/Suco no resumo do dia — independente de fluxoPedido. */
+  resumoMostraQuantidades: boolean
 }
 
 export interface EmpresaEndereco {
@@ -89,6 +107,8 @@ export interface ColaboradorEmpresaItem {
   totalPedidos: number
   /** ISO (dia de calendário) da última vez que fez um pedido, se houver. */
   ultimoPedidoEm: string | null
+  /** "Marmita separada" — só relevante em empresas com fluxo_pedido='pesagem'. */
+  separado: boolean
 }
 
 export interface EmpresaRespostaSemanal {
@@ -139,7 +159,7 @@ export interface PedidoDoDiaItem {
   nome: string
   whatsapp: string | null
   tipo: 'marmita' | 'lanche'
-  turno: 'almoco' | 'jantar' | null
+  turno: TurnoRefeicao | null
   tamanho: 'P' | 'M' | 'G' | null
   prato: string | null
   /** Só lanche — preço travado no momento em que foi lançado. */

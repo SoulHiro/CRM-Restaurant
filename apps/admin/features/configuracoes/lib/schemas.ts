@@ -6,14 +6,27 @@ export const obterConfiguracaoComandaSchema = z.object({})
 
 export const listarImpressorasComandaSchema = z.object({})
 
+export const listarImpressorasPesagemSchema = z.object({})
+
 export const criarImpressoraSchema = z.object({
   nome: z.string().min(1, 'Informe um nome pra identificar a impressora'),
   identificadorQz: z
     .string()
     .min(1, 'Escolha a impressora detectada pelo QZ Tray'),
+  tipo: z.enum(['comanda', 'pesagem']).default('comanda'),
 })
 
 export type CriarImpressoraInput = z.infer<typeof criarImpressoraSchema>
+
+export const obterConfiguracaoPesagemSchema = z.object({})
+
+export const salvarConfiguracaoPesagemSchema = z.object({
+  impressoraId: z.string().nullable(),
+})
+
+export type SalvarConfiguracaoPesagemInput = z.infer<
+  typeof salvarConfiguracaoPesagemSchema
+>
 
 export const salvarConfiguracaoComandaSchema = z.object({
   campos: z

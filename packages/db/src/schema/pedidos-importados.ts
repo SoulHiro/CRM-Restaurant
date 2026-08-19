@@ -17,9 +17,17 @@ import { empresa } from './empresa'
 
 const PRECO = { precision: 12, scale: 2 } as const
 
+// almoco/jantar são o vocabulário padrão (GPK e demais). 1_turno/2_turno/
+// 3_turno/administrativo são específicos do fluxo de pesagem da NOVAPRINT2
+// (empresa.fluxo_pedido = 'pesagem') — mesmo enum compartilhado, cada
+// empresa só usa o subconjunto que faz sentido pra ela.
 export const turnoRefeicaoEnum = pgEnum('pedido_importado_turno', [
   'almoco',
   'jantar',
+  '1_turno',
+  '2_turno',
+  '3_turno',
+  'administrativo',
 ])
 
 export const tamanhoMarmitaEnum = pgEnum('pedido_importado_tamanho', [
@@ -67,6 +75,11 @@ export const colaborador_pedido = pgTable(
     // para preservar o histórico de pedidos já importados.
     ativo: boolean('ativo').notNull().default(true),
     tipo: colaboradorTipoEnum('tipo').notNull().default('funcionario'),
+    // "Marmita separada" — só usado em empresas com fluxo_pedido='pesagem'.
+    // Tira a pessoa do cálculo em lote (arroz/feijão por headcount) mesmo
+    // ela estando num turno que normalmente é pesagem; vira comanda
+    // individual, igual ao 3º turno (que é sempre separado, sem toggle).
+    separado: boolean('separado').notNull().default(false),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [index('colaborador_pedido_empresa_nome_idx').on(t.empresa_id, t.nome)]

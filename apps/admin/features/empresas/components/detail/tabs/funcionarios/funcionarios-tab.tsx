@@ -11,12 +11,22 @@ import { Skeleton } from '@repo/ui/components/skeleton'
 
 import {
   atualizarColaboradorAtivoAction,
+  atualizarColaboradorSeparadoAction,
   listarColaboradoresEmpresaAction,
 } from '../../../../lib/actions'
-import type { ColaboradorEmpresaItem } from '../../../../lib/types'
+import type {
+  ColaboradorEmpresaItem,
+  EmpresaFluxoPedido,
+} from '../../../../lib/types'
 import { FuncionarioRow } from './funcionario-row'
 
-export function FuncionariosTab({ empresaId }: { empresaId: string }) {
+export function FuncionariosTab({
+  empresaId,
+  fluxoPedido,
+}: {
+  empresaId: string
+  fluxoPedido: EmpresaFluxoPedido
+}) {
   const [colaboradores, setColaboradores] = useState<
     ColaboradorEmpresaItem[] | null
   >(null)
@@ -43,6 +53,27 @@ export function FuncionariosTab({ empresaId }: { empresaId: string }) {
     },
     onError: () => toast.error('Não foi possível atualizar o funcionário'),
   })
+
+  const { execute: alternarSeparado } = useAction(
+    atualizarColaboradorSeparadoAction,
+    {
+      onSuccess: ({ input }) => {
+        setColaboradores((atual) =>
+          (atual ?? []).map((c) =>
+            c.id === input.colaboradorId
+              ? { ...c, separado: input.separado }
+              : c
+          )
+        )
+        toast.success(
+          input.separado
+            ? 'Marcado como marmita separada'
+            : 'Voltou pra pesagem em lote'
+        )
+      },
+      onError: () => toast.error('Não foi possível atualizar o funcionário'),
+    }
+  )
 
   const colaboradoresFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
@@ -81,10 +112,17 @@ export function FuncionariosTab({ empresaId }: { empresaId: string }) {
             <FuncionarioRow
               key={colaborador.id}
               colaborador={colaborador}
+              mostrarSeparado={fluxoPedido === 'pesagem'}
               onAlternarAtivo={() =>
                 alternarAtivo({
                   colaboradorId: colaborador.id,
                   ativo: !colaborador.ativo,
+                })
+              }
+              onAlternarSeparado={() =>
+                alternarSeparado({
+                  colaboradorId: colaborador.id,
+                  separado: !colaborador.separado,
                 })
               }
             />

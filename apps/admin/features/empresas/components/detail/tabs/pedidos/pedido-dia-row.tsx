@@ -41,11 +41,15 @@ import {
   marcarRecusaAction,
   removerPedidoAction,
 } from '../../../../lib/actions'
-import type { PedidoDoDiaItem } from '../../../../lib/types'
+import type { PedidoDoDiaItem, TurnoRefeicao } from '../../../../lib/types'
 
-const TURNO_LABEL: Record<'almoco' | 'jantar', string> = {
+const TURNO_LABEL: Record<TurnoRefeicao, string> = {
   almoco: 'Almoço',
   jantar: 'Jantar',
+  '1_turno': '1º Turno',
+  '2_turno': '2º Turno',
+  '3_turno': '3º Turno',
+  administrativo: 'Administrativo',
 }
 
 const SEM_TURNO = '__sem_turno__'
@@ -153,7 +157,7 @@ export function PedidoDiaRow({
       turno:
         pedido.tipo === 'lanche' || turnoInput === SEM_TURNO
           ? null
-          : (turnoInput as 'almoco' | 'jantar'),
+          : (turnoInput as TurnoRefeicao),
       tamanho:
         pedido.tipo === 'lanche' || tamanhoInput === SEM_TAMANHO
           ? null
@@ -253,8 +257,13 @@ export function PedidoDiaRow({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={SEM_TURNO}>—</SelectItem>
-                        <SelectItem value="almoco">Almoço</SelectItem>
-                        <SelectItem value="jantar">Jantar</SelectItem>
+                        {(Object.entries(TURNO_LABEL) as [TurnoRefeicao, string][]).map(
+                          ([valor, label]) => (
+                            <SelectItem key={valor} value={valor}>
+                              {label}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

@@ -1,4 +1,5 @@
 import { somarDiasISO } from '@/lib/dates'
+import type { TurnoRefeicao } from './types'
 
 export type DiaSemana = 'segunda' | 'terca' | 'quarta' | 'quinta' | 'sexta'
 
@@ -43,7 +44,7 @@ export interface PedidoDiaBruto {
   nome: string
   semanaTexto: string
   data: string
-  turno: 'almoco' | 'jantar' | null
+  turno: TurnoRefeicao | null
   tamanho: 'P' | 'M' | 'G' | null
   prato: string | null
   observacao: string | null
@@ -136,11 +137,32 @@ export function detectarColunas(cabecalho: LinhaBruta): MapeamentoColunas {
   }
 }
 
-function lerTurno(texto: string): 'almoco' | 'jantar' | null {
+/**
+ * `1 turno`/`2 turno`/`3 turno`/`administrativo` são o vocabulário de
+ * empresas com `fluxo_pedido = 'pesagem'` (hoje só a NOVAPRINT2) — checados
+ * antes de `almoco`/`jantar` só por organização, os padrões não colidem.
+ */
+function lerTurno(texto: string): TurnoRefeicao | null {
   const normalizado = normalizar(texto)
+  // "1° turno"/"1º turno"/"1turno" — º/° são símbolo, não marca diacrítica,
+  // `normalizar()` não remove: o número pode vir colado a qualquer um dos
+  // dois (ou a nenhum) antes de "turno".
+  if (/1\s*[°º]?\s*turno/.test(normalizado)) return '1_turno'
+  if (/2\s*[°º]?\s*turno/.test(normalizado)) return '2_turno'
+  if (/3\s*[°º]?\s*turno/.test(normalizado)) return '3_turno'
+  if (normalizado.includes('administrativo')) return 'administrativo'
   if (normalizado.includes('almoco')) return 'almoco'
   if (normalizado.includes('jantar')) return 'jantar'
   return null
+}
+
+/**
+ * Férias/afastado: a pessoa não come naquele dia — a linha inteira é
+ * descartada na importação (`linhasParaDias`), nunca vira `PedidoDiaBruto`.
+ */
+export function ehTurnoExcluido(texto: string): boolean {
+  const normalizado = normalizar(texto)
+  return normalizado.includes('ferias') || normalizado.includes('afastado')
 }
 
 function lerTamanho(texto: string): 'P' | 'M' | 'G' | null {
@@ -176,11 +198,12 @@ export function linhasParaDias(
       mapeamento.colCarimbo == null ? null : linha[mapeamento.colCarimbo]
     )
 
-    const turno = lerTurno(
-      textoDaCelula(
-        mapeamento.colTurno == null ? null : linha[mapeamento.colTurno]
-      )
+    const turnoTexto = textoDaCelula(
+      mapeamento.colTurno == null ? null : linha[mapeamento.colTurno]
     )
+    if (ehTurnoExcluido(turnoTexto)) continue
+
+    const turno = lerTurno(turnoTexto)
     const tamanho = lerTamanho(
       textoDaCelula(
         mapeamento.colTamanho == null ? null : linha[mapeamento.colTamanho]

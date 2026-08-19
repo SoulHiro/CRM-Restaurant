@@ -11,6 +11,7 @@ import {
   type CampoResumoKey,
   type ConfiguracaoComanda,
   type ConfiguracaoLayoutResumo,
+  type ConfiguracaoPesagem,
   type ConfiguracaoResumoDia,
   type ImpressoraOption,
 } from './types'
@@ -50,6 +51,24 @@ export async function listarImpressorasComanda(): Promise<ImpressoraOption[]> {
   })
 
   return rows
+}
+
+export async function listarImpressorasPesagem(): Promise<ImpressoraOption[]> {
+  const rows = await db.query.impressora.findMany({
+    where: (i, { and, eq }) => and(eq(i.tipo, 'pesagem'), eq(i.ativo, true)),
+    columns: { id: true, nome: true },
+    orderBy: (i, { asc }) => [asc(i.nome)],
+  })
+
+  return rows
+}
+
+export async function getConfiguracaoPesagem(): Promise<ConfiguracaoPesagem> {
+  const row = await db.query.configuracaoPesagem.findFirst({
+    where: (c, { eq }) => eq(c.id, 'default'),
+  })
+
+  return { impressoraId: row?.impressora_id ?? null }
 }
 
 export async function getConfiguracaoResumoDia(): Promise<ConfiguracaoResumoDia> {

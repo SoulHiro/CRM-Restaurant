@@ -1,5 +1,6 @@
-import { UserCheck, UserX } from 'lucide-react'
+import { UserCheck, UserX, UtensilsCrossed } from 'lucide-react'
 
+import { Badge } from '@repo/ui/components/badge'
 import { Button } from '@repo/ui/components/button'
 import { PersonAvatar } from '@repo/ui/components/person-avatar'
 import {
@@ -16,10 +17,15 @@ import { AtivoInativoBadge } from '../../../shared/ativo-inativo-badge'
 
 export function FuncionarioRow({
   colaborador,
+  mostrarSeparado,
   onAlternarAtivo,
+  onAlternarSeparado,
 }: {
   colaborador: ColaboradorEmpresaItem
+  /** Só empresas com fluxo_pedido='pesagem' usam o toggle "marmita separada". */
+  mostrarSeparado: boolean
   onAlternarAtivo: () => void
+  onAlternarSeparado: () => void
 }) {
   return (
     <div
@@ -51,7 +57,42 @@ export function FuncionarioRow({
           </span>
         </div>
 
+        {mostrarSeparado && colaborador.separado && (
+          <Badge variant="secondary">Separado</Badge>
+        )}
+
         <AtivoInativoBadge active={colaborador.ativo} />
+
+        {mostrarSeparado && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={
+                    colaborador.separado
+                      ? `Voltar ${colaborador.nome} pra pesagem em lote`
+                      : `Marcar ${colaborador.nome} como marmita separada`
+                  }
+                  onClick={onAlternarSeparado}
+                >
+                  <UtensilsCrossed
+                    className={cn(
+                      'size-4',
+                      colaborador.separado && 'text-primary'
+                    )}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {colaborador.separado
+                  ? 'Voltar pra pesagem em lote'
+                  : 'Marcar como marmita separada'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
 
         <TooltipProvider>
           <Tooltip>

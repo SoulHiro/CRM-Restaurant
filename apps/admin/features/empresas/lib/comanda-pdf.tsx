@@ -2,6 +2,7 @@ import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
 import { formatDateTimeBR } from '@/lib/formatters'
 import type { CampoComandaKey } from '@/features/configuracoes/lib/types'
+import type { TurnoRefeicao } from './types'
 
 const MM_TO_PT = 2.834645669
 const LARGURA_BOBINA = 80 * MM_TO_PT
@@ -13,9 +14,13 @@ const LARGURA_BOBINA = 80 * MM_TO_PT
 // antes de renderizar.
 const ALTURA_MAXIMA = 150 * MM_TO_PT
 
-const TURNO_LABEL: Record<'almoco' | 'jantar', string> = {
+const TURNO_LABEL: Record<TurnoRefeicao, string> = {
   almoco: 'ALMOÇO',
   jantar: 'JANTAR',
+  '1_turno': '1º TURNO',
+  '2_turno': '2º TURNO',
+  '3_turno': '3º TURNO',
+  administrativo: 'ADMINISTRATIVO',
 }
 
 const TAMANHO_LABEL: Record<'P' | 'M' | 'G', string> = {
@@ -49,7 +54,7 @@ const styles = StyleSheet.create({
 export interface ComandaDados {
   nome: string
   empresaNome: string
-  turno: 'almoco' | 'jantar' | null
+  turno: TurnoRefeicao | null
   tamanho: 'P' | 'M' | 'G' | null
   prato: string | null
   observacao: string | null

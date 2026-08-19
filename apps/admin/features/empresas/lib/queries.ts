@@ -17,6 +17,7 @@ import {
 import { toNumber } from '@/lib/numeric'
 import {
   TAG_CONFIGURACAO_IMPRESSAO,
+  TAG_CONFIGURACAO_PESAGEM,
   TAG_EMPRESAS_LISTA,
   tagEmpresa,
   tagEmpresaFechamentos,
@@ -91,6 +92,8 @@ async function mapEmpresa(
     cadastradaEm: dataISO(row.created_at),
     funcionariosTotal: total,
     funcionariosRespondidos: respondidos,
+    fluxoPedido: row.fluxo_pedido,
+    resumoMostraQuantidades: row.resumo_mostra_quantidades,
     // Sem colaborador nenhum ainda não é "aguardando resposta" — é "nada
     // importado", mas a tela não distingue os dois hoje; tratar como
     // aguardando é o lado seguro (não esconde uma empresa sem pedidos de hoje).
@@ -438,6 +441,36 @@ export const getImpressoraComanda = unstable_cache(
   { tags: [TAG_CONFIGURACAO_IMPRESSAO] }
 )
 
+/**
+ * Impressora do papel de pesagem (`configuracao_pesagem.impressora_id`) —
+ * diferente da de comanda, empresas com `fluxo_pedido = 'pesagem'` usam.
+ * Sem fallback de "primeira ativa" (comanda tem porque sempre existe pelo
+ * menos uma; pesagem é opcional até o usuário configurar).
+ */
+export const getImpressoraPesagem = unstable_cache(
+  async (): Promise<{
+    id: string
+    nome: string
+    identificadorQz: string
+  } | null> => {
+    const config = await db.query.configuracaoPesagem.findFirst({
+      where: (c, { eq }) => eq(c.id, 'default'),
+      columns: { impressora_id: true },
+    })
+    if (!config?.impressora_id) return null
+
+    const row = await db.query.impressora.findFirst({
+      where: (i, { eq }) => eq(i.id, config.impressora_id!),
+    })
+
+    return row
+      ? { id: row.id, nome: row.nome, identificadorQz: row.identificador_qz }
+      : null
+  },
+  ['impressora-pesagem'],
+  { tags: [TAG_CONFIGURACAO_PESAGEM] }
+)
+
 const NOME_PADRAO_POR_TIPO: Record<PrecoPadraoTipo, string> = {
   marmita_p: 'Marmita P',
   marmita_m: 'Marmita M',
@@ -525,6 +558,7 @@ export function getColaboradoresEmpresa(
           nome: colaborador.nome,
           whatsapp: colaborador.whatsapp,
           ativo: colaborador.ativo,
+          separado: colaborador.separado,
           totalPedidos: info?.total ?? 0,
           ultimoPedidoEm: info?.ultimo ?? null,
         }

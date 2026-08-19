@@ -47,6 +47,10 @@ export interface ImpressoraOption {
   nome: string
 }
 
+export interface ConfiguracaoPesagem {
+  impressoraId: string | null
+}
+
 /**
  * Nome/endereço/CNPJ/IE não moram mais aqui — são fatos fixos, vivem em
  * `NEXT_PUBLIC_RESTAURANTE_*` (ver `lib/dados-restaurante.ts`). Só o que

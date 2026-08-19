@@ -43,12 +43,14 @@ export function FinalizarDiaDrawer({
   empresaNome,
   data,
   pedidos,
+  resumoMostraQuantidades,
   onFinalizado,
 }: {
   empresaId: string
   empresaNome: string
   data: string
   pedidos: PedidoDoDiaItem[]
+  resumoMostraQuantidades: boolean
   onFinalizado: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -235,6 +237,7 @@ export function FinalizarDiaDrawer({
 
     return {
       camposCabecalho,
+      mostrarQuantidades: resumoMostraQuantidades,
       empresaClienteNome: empresaNome,
       impressoEm: new Date().toISOString(),
       itens,

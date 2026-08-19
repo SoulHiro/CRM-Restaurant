@@ -2,6 +2,15 @@ import { z } from 'zod'
 
 import { onlyDigits } from '@repo/ui/lib/masks'
 
+const TURNOS_REFEICAO = [
+  'almoco',
+  'jantar',
+  '1_turno',
+  '2_turno',
+  '3_turno',
+  'administrativo',
+] as const
+
 export const UFS = [
   'AC',
   'AL',
@@ -90,6 +99,15 @@ export type AtualizarColaboradorAtivoInput = z.infer<
   typeof atualizarColaboradorAtivoSchema
 >
 
+export const atualizarColaboradorSeparadoSchema = z.object({
+  colaboradorId: z.string().min(1),
+  separado: z.boolean(),
+})
+
+export type AtualizarColaboradorSeparadoInput = z.infer<
+  typeof atualizarColaboradorSeparadoSchema
+>
+
 export const createPausaSchema = z.object({
   empresaId: z.string().min(1),
   data: z.string().min(1, 'Informe a data'),
@@ -120,6 +138,8 @@ export type ListarColaboradoresInput = z.infer<typeof listarColaboradoresSchema>
 
 export const obterImpressoraComandaSchema = z.object({})
 
+export const obterImpressoraPesagemSchema = z.object({})
+
 export const listarPedidosDoDiaSchema = z.object({
   empresaId: z.string().min(1),
   data: z.string().min(1),
@@ -136,7 +156,7 @@ const pedidoImportadoItemSchema = z.object({
   colaboradorTipo: z.enum(['funcionario', 'visitante']).default('funcionario'),
   data: z.string().min(1),
   tipo: z.enum(['marmita', 'lanche']).default('marmita'),
-  turno: z.enum(['almoco', 'jantar']).nullable(),
+  turno: z.enum(TURNOS_REFEICAO).nullable(),
   tamanho: z.enum(['P', 'M', 'G']).nullable(),
   prato: z.string().nullable(),
   preco: z.number().min(0).nullable(),
@@ -221,7 +241,7 @@ export const atualizarPedidoSchema = z.object({
   colaboradorId: z.string().min(1),
   data: z.string().min(1),
   prato: z.string().min(1, 'Informe o prato'),
-  turno: z.enum(['almoco', 'jantar']).nullable(),
+  turno: z.enum(TURNOS_REFEICAO).nullable(),
   tamanho: z.enum(['P', 'M', 'G']).nullable(),
   observacao: z.string().nullable(),
 })

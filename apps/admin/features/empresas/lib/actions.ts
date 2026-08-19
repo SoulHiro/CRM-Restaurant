@@ -25,6 +25,7 @@ import {
 } from './cache-tags'
 import {
   atualizarColaboradorAtivoSchema,
+  atualizarColaboradorSeparadoSchema,
   atualizarPedidoSchema,
   atualizarPrecoPedidoSchema,
   createEmpresaSchema,
@@ -41,6 +42,7 @@ import {
   marcarRecusaSchema,
   obterFechamentoDoDiaSchema,
   obterImpressoraComandaSchema,
+  obterImpressoraPesagemSchema,
   obterPrecosEmpresaSchema,
   reabrirDiaSchema,
   removerPedidoSchema,
@@ -52,6 +54,7 @@ import {
   getFaturamentoMensal,
   getFechamentoDoDia,
   getImpressoraComanda,
+  getImpressoraPesagem,
   getPedidosDoDia,
   getPrecosEmpresa,
   listarFechamentosDaEmpresa,
@@ -116,6 +119,19 @@ export const atualizarColaboradorAtivoAction = authActionClient
     if (atualizado) updateTag(tagEmpresa(atualizado.empresa_id))
   })
 
+/** "Marmita separada" — só relevante em empresas com fluxo_pedido='pesagem'. */
+export const atualizarColaboradorSeparadoAction = authActionClient
+  .schema(atualizarColaboradorSeparadoSchema)
+  .action(async ({ parsedInput }) => {
+    const [atualizado] = await db
+      .update(colaborador_pedido)
+      .set({ separado: parsedInput.separado })
+      .where(eq(colaborador_pedido.id, parsedInput.colaboradorId))
+      .returning({ empresa_id: colaborador_pedido.empresa_id })
+
+    if (atualizado) updateTag(tagEmpresaPedidos(atualizado.empresa_id))
+  })
+
 export const createPausaAction = actionClient
   .schema(createPausaSchema)
   .action(async ({ parsedInput }) => {
@@ -140,6 +156,13 @@ export const obterImpressoraComandaAction = authActionClient
   .schema(obterImpressoraComandaSchema)
   .action(async () => {
     const impressora = await getImpressoraComanda()
+    return { impressora }
+  })
+
+export const obterImpressoraPesagemAction = authActionClient
+  .schema(obterImpressoraPesagemSchema)
+  .action(async () => {
+    const impressora = await getImpressoraPesagem()
     return { impressora }
   })
 

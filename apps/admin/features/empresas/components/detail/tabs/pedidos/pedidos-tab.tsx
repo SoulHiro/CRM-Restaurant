@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useAction } from 'next-safe-action/hooks'
-import { Printer, Search } from 'lucide-react'
+import { Printer, Scale, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
@@ -19,14 +19,27 @@ import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { hojeISO } from '@/lib/formatters'
 import {
+  listarColaboradoresEmpresaAction,
   listarPedidosDoDiaAction,
   marcarPedidosImpressosAction,
 } from '../../../../lib/actions'
-import type { PedidoDoDiaItem } from '../../../../lib/types'
+import {
+  agruparParaPesagem,
+  formatarEndereco,
+  montarResumoPesagemGrupo,
+} from '../../../../lib/pesagem-helpers'
+import type { PesagemDadosPapel } from '../../../../lib/pesagem-pdf'
+import type {
+  ColaboradorEmpresaItem,
+  EmpresaEndereco,
+  EmpresaFluxoPedido,
+  PedidoDoDiaItem,
+} from '../../../../lib/types'
 import {
   useImprimirComandas,
   type ComandaEntrada,
 } from '../../../../hooks/use-imprimir-comandas'
+import { useImprimirPesagem } from '../../../../hooks/use-imprimir-pesagem'
 import { AdicionarPedidoManualDrawer } from './form/adicionar-pedido-manual-drawer'
 import { ImportarPlanilhaDrawer } from './form/importar-planilha-drawer'
 import { FinalizarDiaDrawer } from './finalizar-dia-drawer'
@@ -53,24 +66,28 @@ function paraComanda(
 export function PedidosTab({
   empresaId,
   empresaNome,
+  empresaEndereco,
+  fluxoPedido,
+  resumoMostraQuantidades,
 }: {
   empresaId: string
   empresaNome: string
+  empresaEndereco: EmpresaEndereco
+  fluxoPedido: EmpresaFluxoPedido
+  resumoMostraQuantidades: boolean
 }) {
+  const usaPesagem = fluxoPedido === 'pesagem'
+
   const [data, setData] = useState(hojeISO())
   const [pedidos, setPedidos] = useState<PedidoDoDiaItem[] | null>(null)
+  const [colaboradores, setColaboradores] = useState<ColaboradorEmpresaItem[]>(
+    []
+  )
   const [busca, setBusca] = useState('')
   const [turnoFiltro, setTurnoFiltro] = useState<TurnoFiltro>('todos')
   const { imprimir, imprimindo } = useImprimirComandas()
-
-  const pedidosFiltrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase()
-    return (pedidos ?? []).filter((p) => {
-      const bateNome = !termo || p.nome.toLowerCase().includes(termo)
-      const bateTurno = turnoFiltro === 'todos' || p.turno === turnoFiltro
-      return bateNome && bateTurno
-    })
-  }, [pedidos, busca, turnoFiltro])
+  const { imprimirPesagem, imprimindo: imprimindoPesagem } =
+    useImprimirPesagem()
 
   const { execute, isExecuting } = useAction(listarPedidosDoDiaAction, {
     onSuccess: ({ data: resultado }) => setPedidos(resultado?.pedidos ?? []),
@@ -80,10 +97,38 @@ export function PedidosTab({
     },
   })
 
+  const { execute: buscarColaboradores } = useAction(
+    listarColaboradoresEmpresaAction,
+    {
+      onSuccess: ({ data: resultado }) =>
+        setColaboradores(resultado?.colaboradores ?? []),
+    }
+  )
+
   useEffect(() => {
     execute({ empresaId, data })
+    if (usaPesagem) buscarColaboradores({ empresaId })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId, data])
+  }, [empresaId, data, usaPesagem])
+
+  const colaboradoresSeparados = useMemo(
+    () => new Set(colaboradores.filter((c) => c.separado).map((c) => c.id)),
+    [colaboradores]
+  )
+
+  const gruposPesagem = useMemo(
+    () => agruparParaPesagem(pedidos ?? [], colaboradoresSeparados),
+    [pedidos, colaboradoresSeparados]
+  )
+
+  const pedidosFiltrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    return (pedidos ?? []).filter((p) => {
+      const bateNome = !termo || p.nome.toLowerCase().includes(termo)
+      const bateTurno = turnoFiltro === 'todos' || p.turno === turnoFiltro
+      return bateNome && bateTurno
+    })
+  }, [pedidos, busca, turnoFiltro])
 
   const { executeAsync: marcarImpressos } = useAction(
     marcarPedidosImpressosAction
@@ -102,9 +147,54 @@ export function PedidosTab({
     }
   }
 
-  const comImprimivel = (pedidos ?? []).filter(
-    (p) => p.prato && !p.recusou
-  )
+  async function imprimirPesagemEMarcar() {
+    const enderecoFormatado = formatarEndereco(empresaEndereco)
+    const impressoEm = new Date().toISOString()
+
+    const papeis: PesagemDadosPapel[] = []
+    const colaboradorIds: string[] = []
+
+    if (gruposPesagem.grupoA.length > 0) {
+      const resumo = montarResumoPesagemGrupo(gruposPesagem.grupoA)
+      papeis.push({
+        tituloGrupo: '1º Turno + Administrativo',
+        empresaNome,
+        empresaEndereco: enderecoFormatado,
+        data,
+        impressoEm,
+        ...resumo,
+      })
+      colaboradorIds.push(...gruposPesagem.grupoA.map((p) => p.colaboradorId))
+    }
+
+    if (gruposPesagem.grupoB.length > 0) {
+      const resumo = montarResumoPesagemGrupo(gruposPesagem.grupoB)
+      papeis.push({
+        tituloGrupo: '2º Turno',
+        empresaNome,
+        empresaEndereco: enderecoFormatado,
+        data,
+        impressoEm,
+        ...resumo,
+      })
+      colaboradorIds.push(...gruposPesagem.grupoB.map((p) => p.colaboradorId))
+    }
+
+    if (papeis.length === 0) {
+      toast.info('Nenhum pedido em lote pra imprimir hoje.')
+      return
+    }
+
+    const sucesso = await imprimirPesagem(papeis)
+    if (sucesso) {
+      await marcarImpressos({ colaboradorIds, data })
+      execute({ empresaId, data })
+    }
+  }
+
+  const comImprimivel = (
+    usaPesagem ? gruposPesagem.individual : (pedidos ?? [])
+  ).filter((p) => p.prato && !p.recusou)
 
   return (
     <div className="flex flex-col gap-4">
@@ -141,6 +231,21 @@ export function PedidosTab({
           </Select>
         </div>
         <div className="flex items-center gap-2">
+          {usaPesagem && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={
+                imprimindoPesagem ||
+                (gruposPesagem.grupoA.length === 0 &&
+                  gruposPesagem.grupoB.length === 0)
+              }
+              onClick={imprimirPesagemEMarcar}
+            >
+              <Scale className="size-4" />
+              Imprimir pesagem
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -161,6 +266,7 @@ export function PedidosTab({
             empresaNome={empresaNome}
             data={data}
             pedidos={pedidos ?? []}
+            resumoMostraQuantidades={resumoMostraQuantidades}
             onFinalizado={() => execute({ empresaId, data })}
           />
         </div>

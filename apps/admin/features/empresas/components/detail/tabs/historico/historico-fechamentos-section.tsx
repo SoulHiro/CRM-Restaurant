@@ -41,9 +41,11 @@ import {
 export function HistoricoFechamentosSection({
   empresaId,
   empresaNome,
+  resumoMostraQuantidades,
 }: {
   empresaId: string
   empresaNome: string
+  resumoMostraQuantidades: boolean
 }) {
   const [fechamentos, setFechamentos] = useState<FechamentoDia[] | null>(null)
   const [intervalo, setIntervalo] = useState<DateRangeValue>({
@@ -109,6 +111,7 @@ export function HistoricoFechamentosSection({
 
       const dados: ResumoDiaDados = {
         camposCabecalho: resultadoLayout?.data?.campos ?? CAMPOS_RESUMO_PADRAO,
+        mostrarQuantidades: resumoMostraQuantidades,
         empresaClienteNome: empresaNome,
         impressoEm: fechamentoCompleto.finalizadoEm,
         itens,

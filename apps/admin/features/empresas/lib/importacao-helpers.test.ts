@@ -180,6 +180,64 @@ describe('linhasParaDias', () => {
     ]
     expect(linhasParaDias([linha], mapeamento)).toEqual([])
   })
+
+  // Vocabulário de turno da NOVAPRINT2 (empresa.fluxo_pedido = 'pesagem') —
+  // 1°/2°/3° turno vêm com º ou ° (não são marca diacrítica, `normalizar`
+  // não remove) e às vezes sem nenhum símbolo.
+  it.each([
+    ['1° TURNO', '1_turno'],
+    ['2° TURNO', '2_turno'],
+    ['3º TURNO', '3_turno'],
+    ['1 TURNO', '1_turno'],
+    ['ADMINISTRATIVO', 'administrativo'],
+  ])('reconhece o turno "%s" como %s', (textoTurno, turnoEsperado) => {
+    const linha: LinhaBruta = [
+      45000,
+      '10/08/2026 a 14/08/2026',
+      'Fulano',
+      textoTurno,
+      '',
+      'Frango',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+    ]
+    expect(linhasParaDias([linha], mapeamento)[0]).toMatchObject({
+      turno: turnoEsperado,
+    })
+  })
+
+  it.each(['FÉRIAS', 'AFASTADO'])(
+    'ignora a linha inteira quando o turno é "%s"',
+    (textoTurno) => {
+      const linha: LinhaBruta = [
+        45000,
+        '10/08/2026 a 14/08/2026',
+        'Fulano',
+        textoTurno,
+        '',
+        'Frango',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+      ]
+      expect(linhasParaDias([linha], mapeamento)).toEqual([])
+    }
+  )
 })
 
 describe('deduparPorCarimbo', () => {

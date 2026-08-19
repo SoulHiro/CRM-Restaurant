@@ -23,3 +23,4 @@ export function tagEmpresaPrecos(empresaId: string): string {
 }
 
 export const TAG_CONFIGURACAO_IMPRESSAO = 'configuracao-impressao'
+export const TAG_CONFIGURACAO_PESAGEM = 'configuracao-pesagem'

@@ -26,10 +26,12 @@ export function HistoricoTab({
   empresaId,
   empresaNome,
   funcionarios,
+  resumoMostraQuantidades,
 }: {
   empresaId: string
   empresaNome: string
   funcionarios: EmpresaFuncionario[]
+  resumoMostraQuantidades: boolean
 }) {
   const [q, setQ] = useState('')
   const [from, setFrom] = useState<string | null>(null)
@@ -57,7 +59,11 @@ export function HistoricoTab({
 
   return (
     <div className="flex flex-col gap-6">
-      <HistoricoFechamentosSection empresaId={empresaId} empresaNome={empresaNome} />
+      <HistoricoFechamentosSection
+        empresaId={empresaId}
+        empresaNome={empresaNome}
+        resumoMostraQuantidades={resumoMostraQuantidades}
+      />
 
       {semanas.length > 0 && (
         <div className="flex flex-col gap-4">

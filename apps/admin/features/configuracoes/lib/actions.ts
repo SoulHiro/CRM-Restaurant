@@ -4,22 +4,35 @@ import { revalidatePath, updateTag } from 'next/cache'
 
 import { db } from '@/lib/db'
 import { authActionClient } from '@/lib/safe-action'
-import { configuracaoComanda, configuracaoResumoDia, impressora } from '@repo/db'
+import {
+  configuracaoComanda,
+  configuracaoPesagem,
+  configuracaoResumoDia,
+  impressora,
+} from '@repo/db'
 
-import { TAG_CONFIGURACAO_IMPRESSAO } from '@/features/empresas/lib/cache-tags'
+import {
+  TAG_CONFIGURACAO_IMPRESSAO,
+  TAG_CONFIGURACAO_PESAGEM,
+} from '@/features/empresas/lib/cache-tags'
 import {
   getConfiguracaoComanda,
   getConfiguracaoLayoutResumo,
+  getConfiguracaoPesagem,
   getConfiguracaoResumoDia,
   listarImpressorasComanda,
+  listarImpressorasPesagem,
 } from './queries'
 import {
   criarImpressoraSchema,
   listarImpressorasComandaSchema,
+  listarImpressorasPesagemSchema,
   obterConfiguracaoComandaSchema,
   obterConfiguracaoLayoutResumoSchema,
+  obterConfiguracaoPesagemSchema,
   obterConfiguracaoResumoDiaSchema,
   salvarConfiguracaoComandaSchema,
+  salvarConfiguracaoPesagemSchema,
   salvarConfiguracaoResumoDiaSchema,
   salvarLayoutResumoSchema,
 } from './schemas'
@@ -38,6 +51,13 @@ export const listarImpressorasComandaAction = authActionClient
     return { impressoras }
   })
 
+export const listarImpressorasPesagemAction = authActionClient
+  .schema(listarImpressorasPesagemSchema)
+  .action(async () => {
+    const impressoras = await listarImpressorasPesagem()
+    return { impressoras }
+  })
+
 export const criarImpressoraAction = authActionClient
   .schema(criarImpressoraSchema)
   .action(async ({ parsedInput }) => {
@@ -45,7 +65,7 @@ export const criarImpressoraAction = authActionClient
       .insert(impressora)
       .values({
         nome: parsedInput.nome.trim(),
-        tipo: 'comanda',
+        tipo: parsedInput.tipo,
         identificador_qz: parsedInput.identificadorQz,
         ativo: true,
       })
@@ -53,7 +73,33 @@ export const criarImpressoraAction = authActionClient
 
     revalidatePath('/configuracoes/impressao')
     updateTag(TAG_CONFIGURACAO_IMPRESSAO)
+    updateTag(TAG_CONFIGURACAO_PESAGEM)
     return criada
+  })
+
+export const obterConfiguracaoPesagemAction = authActionClient
+  .schema(obterConfiguracaoPesagemSchema)
+  .action(async () => {
+    return getConfiguracaoPesagem()
+  })
+
+export const salvarConfiguracaoPesagemAction = authActionClient
+  .schema(salvarConfiguracaoPesagemSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .insert(configuracaoPesagem)
+      .values({ id: 'default', impressora_id: parsedInput.impressoraId })
+      .onConflictDoUpdate({
+        target: configuracaoPesagem.id,
+        set: {
+          impressora_id: parsedInput.impressoraId,
+          updated_at: new Date(),
+        },
+      })
+
+    revalidatePath('/configuracoes/impressao')
+    updateTag(TAG_CONFIGURACAO_PESAGEM)
+    return { impressoraId: parsedInput.impressoraId }
   })
 
 export const salvarConfiguracaoComandaAction = authActionClient

@@ -45,10 +45,16 @@ export function EmpresaTabs({
         <OverviewTab detail={detail} operacional={operacional} />
       </TabsContent>
       <TabsContent value="funcionarios" className="mt-6">
-        <FuncionariosTab empresaId={empresa.id} />
+        <FuncionariosTab empresaId={empresa.id} fluxoPedido={empresa.fluxoPedido} />
       </TabsContent>
       <TabsContent value="pedidos" className="mt-6">
-        <PedidosTab empresaId={empresa.id} empresaNome={empresa.nome} />
+        <PedidosTab
+          empresaId={empresa.id}
+          empresaNome={empresa.nome}
+          empresaEndereco={empresa.endereco}
+          fluxoPedido={empresa.fluxoPedido}
+          resumoMostraQuantidades={empresa.resumoMostraQuantidades}
+        />
       </TabsContent>
       <TabsContent value="valores" className="mt-6">
         <ValoresTab empresaId={empresa.id} />
@@ -58,6 +64,7 @@ export function EmpresaTabs({
           empresaId={empresa.id}
           empresaNome={empresa.nome}
           funcionarios={detail.funcionarios}
+          resumoMostraQuantidades={empresa.resumoMostraQuantidades}
         />
       </TabsContent>
       <TabsContent value="pausas" className="mt-6">

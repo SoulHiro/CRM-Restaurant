@@ -117,6 +117,12 @@ export interface ItemResumoDia {
 export interface ResumoDiaDados {
   /** Quais linhas do cabeçalho aparecem e em que ordem — ver Configurações → Impressão. */
   camposCabecalho: CampoResumoKey[]
+  /**
+   * P/M/G/Lanche/Café/Suco não existem pra empresas de fluxo de pesagem
+   * (ex: NOVAPRINT2) nem pra fluxo simples sem café/suco — esconde o bloco
+   * de contagem no topo, mantém a lista de itens e o total.
+   */
+  mostrarQuantidades: boolean
   empresaClienteNome: string
   impressoEm: string
   itens: ItemResumoDia[]
@@ -162,40 +168,42 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
         orientation="portrait"
         style={styles.page}
       >
-        <View style={styles.quantidadesLinha}>
-          <View style={styles.quantidadeBloco}>
-            <Text style={styles.quantidadeLabel}>P</Text>
-            <Text style={styles.quantidadeValor}>
-              {contarTamanho(dados.itens, 'P')}
-            </Text>
+        {dados.mostrarQuantidades && (
+          <View style={styles.quantidadesLinha}>
+            <View style={styles.quantidadeBloco}>
+              <Text style={styles.quantidadeLabel}>P</Text>
+              <Text style={styles.quantidadeValor}>
+                {contarTamanho(dados.itens, 'P')}
+              </Text>
+            </View>
+            <View style={styles.quantidadeBloco}>
+              <Text style={styles.quantidadeLabel}>M</Text>
+              <Text style={styles.quantidadeValor}>
+                {contarTamanho(dados.itens, 'M')}
+              </Text>
+            </View>
+            <View style={styles.quantidadeBloco}>
+              <Text style={styles.quantidadeLabel}>G</Text>
+              <Text style={styles.quantidadeValor}>
+                {contarTamanho(dados.itens, 'G')}
+              </Text>
+            </View>
+            <View style={styles.quantidadeBloco}>
+              <Text style={styles.quantidadeLabel}>Lanche</Text>
+              <Text style={styles.quantidadeValor}>
+                {contarLanches(dados.itens)}
+              </Text>
+            </View>
+            <View style={styles.quantidadeBloco}>
+              <Text style={styles.quantidadeLabel}>Café</Text>
+              <Text style={styles.quantidadeValor}>{dados.quantidadeCafe}</Text>
+            </View>
+            <View style={styles.quantidadeBloco}>
+              <Text style={styles.quantidadeLabel}>Suco</Text>
+              <Text style={styles.quantidadeValor}>{dados.quantidadeSuco}</Text>
+            </View>
           </View>
-          <View style={styles.quantidadeBloco}>
-            <Text style={styles.quantidadeLabel}>M</Text>
-            <Text style={styles.quantidadeValor}>
-              {contarTamanho(dados.itens, 'M')}
-            </Text>
-          </View>
-          <View style={styles.quantidadeBloco}>
-            <Text style={styles.quantidadeLabel}>G</Text>
-            <Text style={styles.quantidadeValor}>
-              {contarTamanho(dados.itens, 'G')}
-            </Text>
-          </View>
-          <View style={styles.quantidadeBloco}>
-            <Text style={styles.quantidadeLabel}>Lanche</Text>
-            <Text style={styles.quantidadeValor}>
-              {contarLanches(dados.itens)}
-            </Text>
-          </View>
-          <View style={styles.quantidadeBloco}>
-            <Text style={styles.quantidadeLabel}>Café</Text>
-            <Text style={styles.quantidadeValor}>{dados.quantidadeCafe}</Text>
-          </View>
-          <View style={styles.quantidadeBloco}>
-            <Text style={styles.quantidadeLabel}>Suco</Text>
-            <Text style={styles.quantidadeValor}>{dados.quantidadeSuco}</Text>
-          </View>
-        </View>
+        )}
 
         {dados.camposCabecalho.map((campo) => {
           if (campo === 'nome') {

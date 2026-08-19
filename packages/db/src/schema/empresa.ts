@@ -11,6 +11,15 @@ import { createId } from '@paralleldrive/cuid2'
 
 export const empresaStatusEnum = pgEnum('empresa_status', ['ativo', 'inativo'])
 
+// 'pesagem': parte dos pedidos do dia não vira comanda individual — é
+// preparada em lote (arroz/feijão calculados por headcount, resto contado
+// por prato) e impressa num papel de conferência à parte. Hoje só a
+// NOVAPRINT2 usa isso; ver features/empresas/lib/pesagem-helpers.ts.
+export const empresaFluxoPedidoEnum = pgEnum('empresa_fluxo_pedido', [
+  'padrao',
+  'pesagem',
+])
+
 export const empresa = pgTable('empresa', {
   id: text('id')
     .primaryKey()
@@ -28,6 +37,13 @@ export const empresa = pgTable('empresa', {
   cidade: text('cidade'),
   uf: text('uf'),
   status: empresaStatusEnum('status').notNull().default('ativo'),
+  fluxo_pedido: empresaFluxoPedidoEnum('fluxo_pedido').notNull().default('padrao'),
+  // Independente de fluxo_pedido — CANÚBIO é fluxo padrão mas também não usa
+  // P/M/G/Lanche/Café/Suco no resumo do dia (só marmita simples, sem esses
+  // conceitos). GPK/LNR continuam com o bloco de quantidades normal.
+  resumo_mostra_quantidades: boolean('resumo_mostra_quantidades')
+    .notNull()
+    .default(true),
   created_at: timestamp('created_at').notNull().defaultNow(),
 })
 
