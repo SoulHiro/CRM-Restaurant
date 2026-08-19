@@ -5,27 +5,16 @@ import { useAction } from 'next-safe-action/hooks'
 import { Search } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Button } from '@repo/ui/components/button'
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { Input } from '@repo/ui/components/input'
-import { PersonAvatar } from '@repo/ui/components/person-avatar'
 import { Skeleton } from '@repo/ui/components/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@repo/ui/components/table'
 
-import { formatDateBR } from '@/lib/formatters'
 import {
   atualizarColaboradorAtivoAction,
   listarColaboradoresEmpresaAction,
 } from '../../../../lib/actions'
 import type { ColaboradorEmpresaItem } from '../../../../lib/types'
-import { AtivoInativoBadge } from '../../../shared/ativo-inativo-badge'
+import { FuncionarioRow } from './funcionario-row'
 
 export function FuncionariosTab({ empresaId }: { empresaId: string }) {
   const [colaboradores, setColaboradores] = useState<
@@ -87,56 +76,20 @@ export function FuncionariosTab({ empresaId }: { empresaId: string }) {
       ) : !colaboradoresFiltrados || colaboradoresFiltrados.length === 0 ? (
         <EmptyState message={`Nenhum funcionário encontrado para "${busca}".`} />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>WhatsApp</TableHead>
-              <TableHead>Pedidos feitos</TableHead>
-              <TableHead>Último pedido</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {colaboradoresFiltrados.map((colaborador) => (
-              <TableRow key={colaborador.id}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <PersonAvatar name={colaborador.nome} className="size-7" />
-                    <span className="font-medium">{colaborador.nome}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {colaborador.whatsapp ?? '—'}
-                </TableCell>
-                <TableCell>{colaborador.totalPedidos}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {colaborador.ultimoPedidoEm
-                    ? formatDateBR(colaborador.ultimoPedidoEm)
-                    : '—'}
-                </TableCell>
-                <TableCell>
-                  <AtivoInativoBadge active={colaborador.ativo} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      alternarAtivo({
-                        colaboradorId: colaborador.id,
-                        ativo: !colaborador.ativo,
-                      })
-                    }
-                  >
-                    {colaborador.ativo ? 'Marcar inativo' : 'Reativar'}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="flex flex-col gap-2">
+          {colaboradoresFiltrados.map((colaborador) => (
+            <FuncionarioRow
+              key={colaborador.id}
+              colaborador={colaborador}
+              onAlternarAtivo={() =>
+                alternarAtivo({
+                  colaboradorId: colaborador.id,
+                  ativo: !colaborador.ativo,
+                })
+              }
+            />
+          ))}
+        </div>
       )}
     </div>
   )

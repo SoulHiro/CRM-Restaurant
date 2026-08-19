@@ -1,3 +1,4 @@
+import { Badge } from '@repo/ui/components/badge'
 import {
   Table,
   TableBody,
@@ -14,6 +15,12 @@ const STATUS_LABEL: Record<string, string> = {
   pendente: 'Pendente',
   impresso: 'Impresso',
   erro_impressao: 'Erro de impressão',
+}
+
+const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive'> = {
+  pendente: 'secondary',
+  impresso: 'default',
+  erro_impressao: 'destructive',
 }
 
 export function HistoricoSemana({ semana }: { semana: SemanaAgrupada }) {
@@ -59,8 +66,14 @@ export function HistoricoSemana({ semana }: { semana: SemanaAgrupada }) {
                     </span>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {row.pedido.status ? STATUS_LABEL[row.pedido.status] : '—'}
+                <TableCell>
+                  {row.pedido.status ? (
+                    <Badge variant={STATUS_VARIANT[row.pedido.status] ?? 'secondary'}>
+                      {STATUS_LABEL[row.pedido.status]}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

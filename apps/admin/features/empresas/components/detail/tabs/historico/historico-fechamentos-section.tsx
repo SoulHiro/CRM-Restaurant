@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAction } from 'next-safe-action/hooks'
-import { Eye } from 'lucide-react'
+import { Eye, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
@@ -146,7 +146,7 @@ export function HistoricoFechamentosSection({
           fechamentos.map((f) => (
             <div
               key={f.data}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted px-3 py-2.5 text-sm"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-card p-4 text-sm"
             >
               <div className="flex flex-col">
                 <span className="font-medium">{formatDateBR(f.data)}</span>
@@ -164,13 +164,17 @@ export function HistoricoFechamentosSection({
                 {formatCurrencyBRL(f.valorTotal)}
               </span>
               <Button
-                variant="outline"
-                size="sm"
+                variant="ghost"
+                size="icon"
+                aria-label={`Preview do fechamento de ${formatDateBR(f.data)}`}
                 disabled={gerandoPreview === f.data}
                 onClick={() => abrirPreview(f)}
               >
-                <Eye className="size-4" />
-                {gerandoPreview === f.data ? 'Gerando...' : 'Preview'}
+                {gerandoPreview === f.data ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
               </Button>
             </div>
           ))

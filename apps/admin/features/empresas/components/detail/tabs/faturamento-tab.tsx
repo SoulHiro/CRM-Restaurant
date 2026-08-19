@@ -26,6 +26,7 @@ import type {
 import { AtivoInativoBadge } from '../../shared/ativo-inativo-badge'
 import { DateRangeFilter, type DateRangeValue } from '../../shared/date-range-filter'
 import { FaturamentoBarChart } from '../../shared/faturamento-bar-chart'
+import { HeroStatPanel } from '../../shared/hero-stat-panel'
 
 export function FaturamentoTab({
   empresaId,
@@ -68,7 +69,7 @@ export function FaturamentoTab({
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        <StatCard
+        <HeroStatPanel
           label="Faturado no período"
           value={formatCurrencyBRL(totalPeriodo)}
         />

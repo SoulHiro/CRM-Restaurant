@@ -9,6 +9,7 @@ import { StatCard } from '@repo/ui/components/stat-card'
 
 import { formatCurrencyBRL, formatShortDateBR } from '@/lib/formatters'
 import type { EmpresaPausa } from '../../../../lib/types'
+import { HeroStatPanel } from '../../../shared/hero-stat-panel'
 import { TrendBadge } from '../../../shared/trend-badge'
 
 export function ResumoSemanaCard({
@@ -56,30 +57,15 @@ export function ResumoSemanaCard({
             />
           </div>
 
-          <div className="relative col-span-2 min-h-0 overflow-hidden rounded-lg bg-sidebar p-4 text-sidebar-foreground">
-            <svg
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-            >
-              <path
-                d="M0,100 C25,85 15,65 35,55 C55,45 45,25 65,18 C80,12 88,6 100,0 L100,100 Z"
-                fill="var(--sidebar-accent)"
-                fillOpacity="0.5"
-              />
-            </svg>
-
-            <div className="relative z-10 flex min-w-0 max-w-[70%] flex-col gap-1">
-              <span className="text-xs text-sidebar-foreground/70">
-                Faturamento do mês
-              </span>
-              <span className="truncate text-2xl font-bold">
-                {ultimoFaturamento != null
-                  ? formatCurrencyBRL(ultimoFaturamento)
-                  : '—'}
-              </span>
-            </div>
-
+          <HeroStatPanel
+            className="col-span-2 min-h-0"
+            label="Faturamento do mês"
+            value={
+              ultimoFaturamento != null
+                ? formatCurrencyBRL(ultimoFaturamento)
+                : '—'
+            }
+          >
             <div className="absolute bottom-0 right-0 z-10 rounded-tl-lg bg-card p-3 text-center text-card-foreground">
               <span className="text-[10px] text-muted-foreground">
                 Próxima pausa
@@ -88,7 +74,7 @@ export function ResumoSemanaCard({
                 {proximaPausa ? formatShortDateBR(proximaPausa.data) : '—'}
               </p>
             </div>
-          </div>
+          </HeroStatPanel>
         </div>
       </CardContent>
     </Card>
