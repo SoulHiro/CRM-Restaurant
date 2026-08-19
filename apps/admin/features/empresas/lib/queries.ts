@@ -199,6 +199,8 @@ export function getPedidosDoDia(
             observacao: pedido.observacao,
             respondidoEm: pedido.respondido_em?.toISOString() ?? null,
             recusou: pedido.recusou || ehRecusa(pedido.prato),
+            importadoEm: pedido.importado_em.toISOString(),
+            impressoEm: pedido.impresso_em?.toISOString() ?? null,
           }
         })
     },

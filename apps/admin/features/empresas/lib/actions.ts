@@ -15,7 +15,7 @@ import {
   fechamento_dia_item,
   pedido_dia_importado,
 } from '@repo/db'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import {
   TAG_EMPRESAS_LISTA,
   tagEmpresa,
@@ -25,6 +25,7 @@ import {
 } from './cache-tags'
 import {
   atualizarColaboradorAtivoSchema,
+  atualizarPedidoSchema,
   atualizarPrecoPedidoSchema,
   createEmpresaSchema,
   createPausaSchema,
@@ -36,6 +37,7 @@ import {
   listarFaturamentoMensalSchema,
   listarFechamentosSchema,
   listarPedidosDoDiaSchema,
+  marcarPedidosImpressosSchema,
   marcarRecusaSchema,
   obterFechamentoDoDiaSchema,
   obterImpressoraComandaSchema,
@@ -480,6 +482,58 @@ export const marcarRecusaAction = authActionClient
 
     revalidatePath('/empresas')
     updateTag(TAG_EMPRESAS_LISTA)
+    if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
+  })
+
+/**
+ * Edita prato/turno/tamanho/observação de um pedido já existente — não
+ * mexe em `tipo` (marmita/lanche) nem em preço, que têm caminho próprio
+ * (recriar o pedido e `atualizarPrecoPedidoAction`, respectivamente).
+ */
+export const atualizarPedidoAction = authActionClient
+  .schema(atualizarPedidoSchema)
+  .action(async ({ parsedInput }) => {
+    const empresaId = await empresaDoColaborador(parsedInput.colaboradorId)
+
+    await db
+      .update(pedido_dia_importado)
+      .set({
+        prato: parsedInput.prato.trim(),
+        turno: parsedInput.turno,
+        tamanho: parsedInput.tamanho,
+        observacao: parsedInput.observacao?.trim() || null,
+      })
+      .where(
+        and(
+          eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),
+          eq(pedido_dia_importado.data, parsedInput.data)
+        )
+      )
+
+    revalidatePath('/empresas')
+    if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
+  })
+
+/**
+ * Chamado depois que a impressão de verdade (QZ Tray) já terminou — marca
+ * `impresso_em = agora` pra essas comandas saírem de "novo"/"atualizado"
+ * pra "impresso" na tela. `empresaId` vem do primeiro colaborador do lote
+ * (todos vêm da mesma empresa, sempre — a tela de pedidos é por empresa).
+ */
+export const marcarPedidosImpressosAction = authActionClient
+  .schema(marcarPedidosImpressosSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .update(pedido_dia_importado)
+      .set({ impresso_em: new Date() })
+      .where(
+        and(
+          inArray(pedido_dia_importado.colaborador_id, parsedInput.colaboradorIds),
+          eq(pedido_dia_importado.data, parsedInput.data)
+        )
+      )
+
+    const empresaId = await empresaDoColaborador(parsedInput.colaboradorIds[0]!)
     if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
   })
 

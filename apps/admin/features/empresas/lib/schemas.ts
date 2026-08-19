@@ -217,6 +217,26 @@ export const marcarRecusaSchema = z.object({
 
 export type MarcarRecusaInput = z.infer<typeof marcarRecusaSchema>
 
+export const atualizarPedidoSchema = z.object({
+  colaboradorId: z.string().min(1),
+  data: z.string().min(1),
+  prato: z.string().min(1, 'Informe o prato'),
+  turno: z.enum(['almoco', 'jantar']).nullable(),
+  tamanho: z.enum(['P', 'M', 'G']).nullable(),
+  observacao: z.string().nullable(),
+})
+
+export type AtualizarPedidoInput = z.infer<typeof atualizarPedidoSchema>
+
+export const marcarPedidosImpressosSchema = z.object({
+  colaboradorIds: z.array(z.string().min(1)).min(1),
+  data: z.string().min(1),
+})
+
+export type MarcarPedidosImpressosInput = z.infer<
+  typeof marcarPedidosImpressosSchema
+>
+
 export const atualizarPrecoPedidoSchema = z.object({
   colaboradorId: z.string().min(1),
   data: z.string().min(1),

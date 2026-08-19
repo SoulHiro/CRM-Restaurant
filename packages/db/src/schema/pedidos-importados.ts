@@ -112,6 +112,12 @@ export const pedido_dia_importado = pgTable(
     // quando importamos, é quando o funcionário respondeu.
     respondido_em: timestamp('respondido_em'),
     importado_em: timestamp('importado_em').notNull().defaultNow(),
+    // Quando essa comanda saiu impressa pela última vez — nulo até a primeira
+    // impressão. Comparado com `importado_em` na tela (não gravado como
+    // "estado" derivado): se o pedido mudou (reimportação atualizou a linha,
+    // ver `onConflictDoUpdate`) depois da última impressão, precisa
+    // reimprimir. `impresso_em > importado_em` = já impresso e sem mudança.
+    impresso_em: timestamp('impresso_em'),
   },
   (t) => [
     // Reimportar a mesma semana faz upsert por dia, não duplica.

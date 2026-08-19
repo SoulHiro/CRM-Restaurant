@@ -57,10 +57,11 @@ export function useImprimirComandas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function imprimir(comandas: ComandaEntrada[]) {
+  /** `true` só quando a impressão de verdade termina — usado pra marcar as comandas como impressas. */
+  async function imprimir(comandas: ComandaEntrada[]): Promise<boolean> {
     if (comandas.length === 0) {
       toast.info('Nenhuma comanda para imprimir.')
-      return
+      return false
     }
 
     await carregamentoInicial.current
@@ -69,7 +70,7 @@ export function useImprimirComandas() {
       toast.error(
         'Nenhuma impressora de comanda configurada. Cadastre uma em Configurações.'
       )
-      return
+      return false
     }
 
     setImprimindo(true)
@@ -104,11 +105,13 @@ export function useImprimirComandas() {
           : `${comandas.length} comandas enviadas para impressão`,
         { id: 'imprimir-comandas' }
       )
+      return true
     } catch {
       toast.error(
         'Não foi possível imprimir. Confira se o QZ Tray está aberto e conectado.',
         { id: 'imprimir-comandas' }
       )
+      return false
     } finally {
       setImprimindo(false)
     }

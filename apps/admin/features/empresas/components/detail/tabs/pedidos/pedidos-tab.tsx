@@ -8,10 +8,20 @@ import { toast } from 'sonner'
 import { Button } from '@repo/ui/components/button'
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { Input } from '@repo/ui/components/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@repo/ui/components/select'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { hojeISO } from '@/lib/formatters'
-import { listarPedidosDoDiaAction } from '../../../../lib/actions'
+import {
+  listarPedidosDoDiaAction,
+  marcarPedidosImpressosAction,
+} from '../../../../lib/actions'
 import type { PedidoDoDiaItem } from '../../../../lib/types'
 import {
   useImprimirComandas,
@@ -22,6 +32,8 @@ import { ImportarPlanilhaDrawer } from './form/importar-planilha-drawer'
 import { FinalizarDiaDrawer } from './finalizar-dia-drawer'
 import { PedidoDiaRow } from './pedido-dia-row'
 import { PedidosInsights } from './pedidos-insights'
+
+type TurnoFiltro = 'todos' | 'almoco' | 'jantar'
 
 function paraComanda(
   pedido: PedidoDoDiaItem,
@@ -48,13 +60,17 @@ export function PedidosTab({
   const [data, setData] = useState(hojeISO())
   const [pedidos, setPedidos] = useState<PedidoDoDiaItem[] | null>(null)
   const [busca, setBusca] = useState('')
+  const [turnoFiltro, setTurnoFiltro] = useState<TurnoFiltro>('todos')
   const { imprimir, imprimindo } = useImprimirComandas()
 
   const pedidosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
-    if (!termo) return pedidos
-    return (pedidos ?? []).filter((p) => p.nome.toLowerCase().includes(termo))
-  }, [pedidos, busca])
+    return (pedidos ?? []).filter((p) => {
+      const bateNome = !termo || p.nome.toLowerCase().includes(termo)
+      const bateTurno = turnoFiltro === 'todos' || p.turno === turnoFiltro
+      return bateNome && bateTurno
+    })
+  }, [pedidos, busca, turnoFiltro])
 
   const { execute, isExecuting } = useAction(listarPedidosDoDiaAction, {
     onSuccess: ({ data: resultado }) => setPedidos(resultado?.pedidos ?? []),
@@ -68,6 +84,23 @@ export function PedidosTab({
     execute({ empresaId, data })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [empresaId, data])
+
+  const { executeAsync: marcarImpressos } = useAction(
+    marcarPedidosImpressosAction
+  )
+
+  async function imprimirEMarcar(pedidosParaImprimir: PedidoDoDiaItem[]) {
+    const sucesso = await imprimir(
+      pedidosParaImprimir.map((p) => paraComanda(p, empresaNome))
+    )
+    if (sucesso) {
+      await marcarImpressos({
+        colaboradorIds: pedidosParaImprimir.map((p) => p.colaboradorId),
+        data,
+      })
+      execute({ empresaId, data })
+    }
+  }
 
   const comImprimivel = (pedidos ?? []).filter(
     (p) => p.prato && !p.recusou
@@ -93,15 +126,26 @@ export function PedidosTab({
               onChange={(event) => setBusca(event.target.value)}
             />
           </div>
+          <Select
+            value={turnoFiltro}
+            onValueChange={(v) => setTurnoFiltro(v as TurnoFiltro)}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os turnos</SelectItem>
+              <SelectItem value="almoco">Almoço</SelectItem>
+              <SelectItem value="jantar">Jantar</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             disabled={imprimindo || comImprimivel.length === 0}
-            onClick={() =>
-              imprimir(comImprimivel.map((p) => paraComanda(p, empresaNome)))
-            }
+            onClick={() => imprimirEMarcar(comImprimivel)}
           >
             <Printer className="size-4" />
             Imprimir todos ({comImprimivel.length})
@@ -137,7 +181,13 @@ export function PedidosTab({
               message={`Nenhum colaborador importado para ${empresaNome} ainda.`}
             />
           ) : !pedidosFiltrados || pedidosFiltrados.length === 0 ? (
-            <EmptyState message={`Nenhuma pessoa encontrada para "${busca}".`} />
+            <EmptyState
+              message={
+                busca.trim()
+                  ? `Nenhuma pessoa encontrada para "${busca}".`
+                  : 'Nenhum pedido nesse turno.'
+              }
+            />
           ) : (
             <div className="flex flex-col gap-2">
               {pedidosFiltrados.map((pedido) => (
@@ -145,7 +195,7 @@ export function PedidosTab({
                   key={pedido.colaboradorId}
                   pedido={pedido}
                   data={data}
-                  onImprimir={() => imprimir([paraComanda(pedido, empresaNome)])}
+                  onImprimir={() => imprimirEMarcar([pedido])}
                   onRemovido={() => execute({ empresaId, data })}
                 />
               ))}

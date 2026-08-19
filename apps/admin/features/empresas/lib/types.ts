@@ -148,6 +148,10 @@ export interface PedidoDoDiaItem {
   /** ISO — quando o funcionário respondeu no formulário, não quando importamos. */
   respondidoEm: string | null
   recusou: boolean
+  /** ISO — quando essa linha entrou/foi atualizada (reimportação inclusa). */
+  importadoEm: string
+  /** ISO — última vez que saiu impresso; nulo = nunca imprimiu. */
+  impressoEm: string | null
 }
 
 export interface ContagemTamanhos {
