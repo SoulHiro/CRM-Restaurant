@@ -1,7 +1,7 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
 import { formatDateBR, formatDateTimeSecondsBR } from '@/lib/formatters'
-import type { ContagemPrato } from './pesagem-helpers'
+import type { ContagemPrato, QuantidadeItemPesagem } from './pesagem-helpers'
 
 const styles = StyleSheet.create({
   page: { padding: 36, fontFamily: 'Helvetica', fontSize: 11 },
@@ -19,11 +19,13 @@ const styles = StyleSheet.create({
   metaValor: { fontSize: 12, fontWeight: 700 },
   pesagemLinha: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
     marginBottom: 16,
   },
   pesagemBloco: {
-    flex: 1,
+    flexBasis: '30%',
+    flexGrow: 1,
     border: '1.5pt solid #000',
     borderRadius: 4,
     padding: 10,
@@ -69,8 +71,7 @@ export interface PesagemDadosPapel {
   empresaEndereco: string
   data: string
   totalPessoas: number
-  arrozGramas: number
-  feijaoGramas: number
+  quantidades: QuantidadeItemPesagem[]
   itens: ContagemPrato[]
   /**
    * Pedidos avulsos que pertencem a esse mesmo papel (3º turno inteiro, e
@@ -111,14 +112,15 @@ export function PesagemPDF({ dados }: { dados: PesagemDadosPapel }) {
         </View>
 
         <View style={styles.pesagemLinha}>
-          <View style={styles.pesagemBloco}>
-            <Text style={styles.pesagemLabel}>ARROZ</Text>
-            <Text style={styles.pesagemValor}>{dados.arrozGramas}G</Text>
-          </View>
-          <View style={styles.pesagemBloco}>
-            <Text style={styles.pesagemLabel}>FEIJÃO</Text>
-            <Text style={styles.pesagemValor}>{dados.feijaoGramas}G</Text>
-          </View>
+          {dados.quantidades.map((item) => (
+            <View key={item.chave} style={styles.pesagemBloco}>
+              <Text style={styles.pesagemLabel}>{item.label.toUpperCase()}</Text>
+              <Text style={styles.pesagemValor}>
+                {item.valor}
+                {item.unidade === 'g' ? 'G' : ' UNID'}
+              </Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.tabela}>

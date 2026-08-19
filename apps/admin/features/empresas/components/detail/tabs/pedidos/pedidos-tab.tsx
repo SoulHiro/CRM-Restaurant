@@ -6,8 +6,15 @@ import { Printer, Scale, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
+import { Checkbox } from '@repo/ui/components/checkbox'
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { Input } from '@repo/ui/components/input'
+import { Label } from '@repo/ui/components/label'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@repo/ui/components/popover'
 import {
   Select,
   SelectContent,
@@ -26,7 +33,10 @@ import {
 import {
   agruparParaPesagem,
   formatarEndereco,
+  ITENS_PESAGEM,
+  ITENS_PESAGEM_SEMPRE_LIGADOS,
   montarResumoPesagemGrupo,
+  type ItemPesagemChave,
 } from '../../../../lib/pesagem-helpers'
 import type { PesagemDadosPapel } from '../../../../lib/pesagem-pdf'
 import type {
@@ -85,6 +95,11 @@ export function PedidosTab({
   )
   const [busca, setBusca] = useState('')
   const [turnoFiltro, setTurnoFiltro] = useState<TurnoFiltro>('todos')
+  const [popoverPesagemAberto, setPopoverPesagemAberto] = useState(false)
+  const [itensExtras, setItensExtras] = useState<Set<ItemPesagemChave>>(
+    new Set()
+  )
+  const [detalheLegumes, setDetalheLegumes] = useState('')
   const { imprimir, imprimindo } = useImprimirComandas()
   const { imprimirPesagem, imprimindo: imprimindoPesagem } =
     useImprimirPesagem()
@@ -158,14 +173,20 @@ export function PedidosTab({
    * só informativo pra cozinha, não substitui a comanda dessa pessoa.
    */
   async function imprimirPesagemEMarcar() {
+    setPopoverPesagemAberto(false)
     const enderecoFormatado = formatarEndereco(empresaEndereco)
     const impressoEm = new Date().toISOString()
+    const extras = [...itensExtras]
 
     const papeis: PesagemDadosPapel[] = []
     const colaboradorIds: string[] = []
 
     if (gruposPesagem.grupoA.length > 0 || gruposPesagem.individualA.length > 0) {
-      const resumo = montarResumoPesagemGrupo(gruposPesagem.grupoA)
+      const resumo = montarResumoPesagemGrupo(
+        gruposPesagem.grupoA,
+        extras,
+        detalheLegumes
+      )
       papeis.push({
         tituloGrupo: '1º Turno + Administrativo',
         empresaNome,
@@ -181,7 +202,11 @@ export function PedidosTab({
     }
 
     if (gruposPesagem.grupoB.length > 0 || gruposPesagem.individualB.length > 0) {
-      const resumo = montarResumoPesagemGrupo(gruposPesagem.grupoB)
+      const resumo = montarResumoPesagemGrupo(
+        gruposPesagem.grupoB,
+        extras,
+        detalheLegumes
+      )
       papeis.push({
         tituloGrupo: '2º Turno',
         empresaNome,
@@ -207,6 +232,19 @@ export function PedidosTab({
       execute({ empresaId, data })
     }
   }
+
+  function alternarItemExtra(chave: ItemPesagemChave) {
+    setItensExtras((atual) => {
+      const novo = new Set(atual)
+      if (novo.has(chave)) novo.delete(chave)
+      else novo.add(chave)
+      return novo
+    })
+  }
+
+  const itensOpcionais = ITENS_PESAGEM.filter(
+    (item) => !ITENS_PESAGEM_SEMPRE_LIGADOS.includes(item.chave)
+  )
 
   const comImprimivel = (
     usaPesagem ? gruposPesagem.individual : (pedidos ?? [])
@@ -248,21 +286,70 @@ export function PedidosTab({
         </div>
         <div className="flex items-center gap-2">
           {usaPesagem && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={
-                imprimindoPesagem ||
-                (gruposPesagem.grupoA.length === 0 &&
-                  gruposPesagem.grupoB.length === 0 &&
-                  gruposPesagem.individualA.length === 0 &&
-                  gruposPesagem.individualB.length === 0)
-              }
-              onClick={imprimirPesagemEMarcar}
+            <Popover
+              open={popoverPesagemAberto}
+              onOpenChange={setPopoverPesagemAberto}
             >
-              <Scale className="size-4" />
-              Imprimir pesagem
-            </Button>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    imprimindoPesagem ||
+                    (gruposPesagem.grupoA.length === 0 &&
+                      gruposPesagem.grupoB.length === 0 &&
+                      gruposPesagem.individualA.length === 0 &&
+                      gruposPesagem.individualB.length === 0)
+                  }
+                >
+                  <Scale className="size-4" />
+                  Imprimir pesagem
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72" align="end">
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm font-medium">
+                    O que mais tem no cardápio hoje?
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Arroz e feijão sempre entram. Marque o resto que tem hoje.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {itensOpcionais.map((item) => (
+                      <label
+                        key={item.chave}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <Checkbox
+                          checked={itensExtras.has(item.chave)}
+                          onCheckedChange={() => alternarItemExtra(item.chave)}
+                        />
+                        {item.label}
+                      </label>
+                    ))}
+                  </div>
+
+                  {itensExtras.has('legumes') && (
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-sm">Qual legume hoje?</Label>
+                      <Input
+                        value={detalheLegumes}
+                        onChange={(e) => setDetalheLegumes(e.target.value)}
+                        placeholder="Ex: Cenoura/Chuchu"
+                      />
+                    </div>
+                  )}
+
+                  <Button
+                    size="sm"
+                    disabled={imprimindoPesagem}
+                    onClick={imprimirPesagemEMarcar}
+                  >
+                    {imprimindoPesagem ? 'Imprimindo...' : 'Gerar papéis'}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
           <Button
             variant="outline"

@@ -3,9 +3,14 @@ import { describe, expect, it } from 'vitest'
 import {
   agruparParaPesagem,
   calcularArrozGramas,
+  calcularFarofaGramas,
   calcularFeijaoGramas,
+  calcularLegumesGramas,
+  calcularMacarraoGramas,
+  calcularSobremesaUnidades,
   contarPorPrato,
   montarResumoPesagemGrupo,
+  SALADA_GRAMAS_FIXO,
 } from './pesagem-helpers'
 import type { PedidoDoDiaItem } from './types'
 
@@ -49,6 +54,36 @@ describe('calcularFeijaoGramas', () => {
 
   it('39 pessoas -> 4680g', () => {
     expect(calcularFeijaoGramas(39)).toBe(4680)
+  })
+})
+
+describe('calcularLegumesGramas', () => {
+  it('100g por pessoa, sem folga extra', () => {
+    expect(calcularLegumesGramas(39)).toBe(3900)
+  })
+})
+
+describe('calcularFarofaGramas', () => {
+  it('80g por pessoa', () => {
+    expect(calcularFarofaGramas(39)).toBe(3120)
+  })
+})
+
+describe('calcularMacarraoGramas', () => {
+  it('200g por pessoa', () => {
+    expect(calcularMacarraoGramas(39)).toBe(7800)
+  })
+})
+
+describe('calcularSobremesaUnidades', () => {
+  it('1 unidade por pessoa', () => {
+    expect(calcularSobremesaUnidades(39)).toBe(39)
+  })
+})
+
+describe('SALADA_GRAMAS_FIXO', () => {
+  it('não escala com o headcount — sempre 2,7kg', () => {
+    expect(SALADA_GRAMAS_FIXO).toBe(2700)
   })
 })
 
@@ -144,7 +179,7 @@ describe('agruparParaPesagem', () => {
 })
 
 describe('montarResumoPesagemGrupo', () => {
-  it('monta headcount, arroz/feijão e itens de um grupo', () => {
+  it('arroz e feijão saem sempre, mesmo sem pedir nenhum item extra', () => {
     const pedidos = Array.from({ length: 39 }, (_, i) =>
       pedido({ colaboradorId: `c${i}`, prato: i < 20 ? 'Arroz A' : 'Arroz B' })
     )
@@ -152,12 +187,51 @@ describe('montarResumoPesagemGrupo', () => {
     const resumo = montarResumoPesagemGrupo(pedidos)
 
     expect(resumo.totalPessoas).toBe(39)
-    expect(resumo.arrozGramas).toBe(9360)
-    expect(resumo.feijaoGramas).toBe(4680)
+    expect(resumo.quantidades).toEqual([
+      { chave: 'arroz', label: 'Arroz', valor: 9360, unidade: 'g' },
+      { chave: 'feijao', label: 'Feijão', valor: 4680, unidade: 'g' },
+    ])
     expect(resumo.itens).toEqual([
       { prato: 'Arroz A', quantidade: 20 },
       { prato: 'Arroz B', quantidade: 19 },
     ])
+  })
+
+  it('itens extras marcados na hora de imprimir entram na lista, na ordem do cardápio', () => {
+    const pedidos = Array.from({ length: 10 }, (_, i) =>
+      pedido({ colaboradorId: `c${i}` })
+    )
+
+    const resumo = montarResumoPesagemGrupo(pedidos, [
+      'sobremesa',
+      'legumes',
+      'salada',
+    ])
+
+    expect(resumo.quantidades).toEqual([
+      { chave: 'arroz', label: 'Arroz', valor: 2400, unidade: 'g' },
+      { chave: 'feijao', label: 'Feijão', valor: 1200, unidade: 'g' },
+      { chave: 'legumes', label: 'Legumes', valor: 1000, unidade: 'g' },
+      { chave: 'salada', label: 'Salada', valor: 2700, unidade: 'g' },
+      { chave: 'sobremesa', label: 'Sobremesa', valor: 10, unidade: 'unid' },
+    ])
+  })
+
+  it('detalheLegumes substitui o label padrão de Legumes', () => {
+    const pedidos = [pedido({})]
+
+    const resumo = montarResumoPesagemGrupo(
+      pedidos,
+      ['legumes'],
+      'Cenoura/Chuchu'
+    )
+
+    expect(resumo.quantidades).toContainEqual({
+      chave: 'legumes',
+      label: 'Legumes (Cenoura/Chuchu)',
+      valor: 100,
+      unidade: 'g',
+    })
   })
 
   it('quem recusou não conta no headcount', () => {
