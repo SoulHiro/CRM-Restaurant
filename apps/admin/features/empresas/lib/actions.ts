@@ -16,6 +16,7 @@ import {
   pedido_dia_importado,
 } from '@repo/db'
 import { and, eq, inArray } from 'drizzle-orm'
+import { normalizar } from './importacao-helpers'
 import {
   TAG_EMPRESAS_LISTA,
   tagEmpresa,
@@ -247,6 +248,12 @@ export const listarColaboradoresAction = authActionClient
  * na hora (`createId()`), porque o `db.batch` do neon-http não deixa um
  * statement ler o resultado do anterior — sem isso não daria pra referenciar
  * o colaborador recém-criado no mesmo lote.
+ *
+ * Nunca cria um colaborador duplicado por causa de acento/maiúscula
+ * diferente — todo `colaboradorId: null` é primeiro conferido contra os
+ * nomes já cadastrados na empresa (via `normalizar`, mesma função que a
+ * planilha usa pra sugerir vínculo) antes de gerar um id novo. Bate =
+ * reaproveita o colaborador existente, silenciosamente.
  */
 export const importarPedidosAction = authActionClient
   .schema(importarPedidosSchema)
@@ -259,16 +266,32 @@ export const importarPedidosAction = authActionClient
       throw new ActionError('Empresa não encontrada.')
     }
 
+    const colaboradoresExistentes = await db.query.colaborador_pedido.findMany({
+      where: eq(colaborador_pedido.empresa_id, parsedInput.empresaId),
+      columns: { id: true, nome: true },
+    })
+    const idPorNomeNormalizado = new Map(
+      colaboradoresExistentes.map((c) => [normalizar(c.nome), c.id])
+    )
+
     const idPorColaboradorNovo = new Map<
       string,
-      { id: string; whatsapp: string | null; tipo: 'funcionario' | 'visitante' }
+      {
+        id: string
+        nome: string
+        whatsapp: string | null
+        tipo: 'funcionario' | 'visitante'
+      }
     >()
 
     for (const item of parsedInput.itens) {
       if (item.colaboradorId) continue
-      if (!idPorColaboradorNovo.has(item.nome)) {
-        idPorColaboradorNovo.set(item.nome, {
+      const chave = normalizar(item.nome)
+      if (idPorNomeNormalizado.has(chave)) continue
+      if (!idPorColaboradorNovo.has(chave)) {
+        idPorColaboradorNovo.set(chave, {
           id: createId(),
+          nome: item.nome,
           whatsapp: item.whatsapp,
           tipo: item.colaboradorTipo,
         })
@@ -277,27 +300,32 @@ export const importarPedidosAction = authActionClient
 
     const statements: Statement[] = []
 
-    for (const [nome, info] of idPorColaboradorNovo) {
+    for (const info of idPorColaboradorNovo.values()) {
       statements.push(
         db.insert(colaborador_pedido).values({
           id: info.id,
           empresa_id: parsedInput.empresaId,
-          nome,
+          nome: info.nome,
           whatsapp: info.whatsapp,
           tipo: info.tipo,
         })
       )
     }
 
+    const colaboradorIdsResolvidos: string[] = []
+
     for (const item of parsedInput.itens) {
       const colaboradorId =
-        item.colaboradorId ?? idPorColaboradorNovo.get(item.nome)?.id
+        item.colaboradorId ??
+        idPorNomeNormalizado.get(normalizar(item.nome)) ??
+        idPorColaboradorNovo.get(normalizar(item.nome))?.id
 
       if (!colaboradorId) {
         throw new ActionError(
           `Não foi possível resolver o colaborador "${item.nome}".`
         )
       }
+      colaboradorIdsResolvidos.push(colaboradorId)
 
       statements.push(
         db
@@ -312,7 +340,9 @@ export const importarPedidosAction = authActionClient
             preco: item.preco != null ? toMoneyString(item.preco) : null,
             observacao: item.observacao,
             arquivo_origem: parsedInput.arquivoOrigem,
-            respondido_em: item.respondidoEm ? new Date(item.respondidoEm) : null,
+            respondido_em: item.respondidoEm
+              ? new Date(item.respondidoEm)
+              : null,
           })
           .onConflictDoUpdate({
             target: [
@@ -346,6 +376,7 @@ export const importarPedidosAction = authActionClient
     return {
       colaboradoresNovos: idPorColaboradorNovo.size,
       diasImportados: parsedInput.itens.length,
+      colaboradorIds: colaboradorIdsResolvidos,
     }
   })
 
@@ -402,7 +433,10 @@ export const finalizarDiaAction = authActionClient
     // No modo único a empresa não marca tamanho nenhum (ex: COFEL) — toda
     // marmita do dia entra pelo preço fixo, com ou sem tamanho na linha.
     const itensMarmita = pedidos.filter(
-      (p) => p.tipo === 'marmita' && (usaPrecoUnico || p.tamanho != null) && !p.recusou
+      (p) =>
+        p.tipo === 'marmita' &&
+        (usaPrecoUnico || p.tamanho != null) &&
+        !p.recusou
     )
     const itensLanche = pedidos.filter((p) => p.tipo === 'lanche' && !p.recusou)
 
@@ -509,10 +543,13 @@ export const reabrirDiaAction = authActionClient
 export const listarFechamentosAction = authActionClient
   .schema(listarFechamentosSchema)
   .action(async ({ parsedInput }) => {
-    const fechamentos = await listarFechamentosDaEmpresa(parsedInput.empresaId, {
-      from: parsedInput.from,
-      to: parsedInput.to,
-    })
+    const fechamentos = await listarFechamentosDaEmpresa(
+      parsedInput.empresaId,
+      {
+        from: parsedInput.from,
+        to: parsedInput.to,
+      }
+    )
     return { fechamentos }
   })
 
@@ -533,7 +570,9 @@ export const listarFaturamentoMensalAction = authActionClient
  * antes de escrever. Mais barato que adicionar `empresaId` em todo schema/
  * prop-drilling só pra isso.
  */
-async function empresaDoColaborador(colaboradorId: string): Promise<string | null> {
+async function empresaDoColaborador(
+  colaboradorId: string
+): Promise<string | null> {
   const row = await db.query.colaborador_pedido.findFirst({
     where: (c, { eq: eqOp }) => eqOp(c.id, colaboradorId),
     columns: { empresa_id: true },
@@ -623,7 +662,10 @@ export const marcarPedidosImpressosAction = authActionClient
       .set({ impresso_em: new Date() })
       .where(
         and(
-          inArray(pedido_dia_importado.colaborador_id, parsedInput.colaboradorIds),
+          inArray(
+            pedido_dia_importado.colaborador_id,
+            parsedInput.colaboradorIds
+          ),
           eq(pedido_dia_importado.data, parsedInput.data)
         )
       )

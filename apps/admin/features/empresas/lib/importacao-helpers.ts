@@ -51,7 +51,7 @@ export interface PedidoDiaBruto {
   whatsapp: string | null
 }
 
-function normalizar(texto: string): string {
+export function normalizar(texto: string): string {
   return texto
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '') // remove acentos
@@ -119,9 +119,7 @@ export function detectarColunas(cabecalho: LinhaBruta): MapeamentoColunas {
 
   const dias: DiaColuna[] = DIAS_UTEIS.map((dia) => {
     const nomeDia = dia === 'terca' ? 'terca' : dia // já normalizado (sem cedilha)
-    const colPrato = primeiraColuna(
-      new RegExp(`${nomeDia}(?!.*observ)`, 'i')
-    )
+    const colPrato = primeiraColuna(new RegExp(`${nomeDia}(?!.*observ)`, 'i'))
     const colObs = primeiraColuna(new RegExp(`observ.*${nomeDia}`, 'i'))
     return { dia, colPrato, colObs }
   })
@@ -341,7 +339,11 @@ export function sugerirCorrespondencia(
   for (const colaborador of colaboradoresExistentes) {
     const nomeExistente = normalizar(colaborador.nome)
     if (nomeExistente === alvo) {
-      return { colaboradorId: colaborador.id, nome: colaborador.nome, tipo: 'exata' }
+      return {
+        colaboradorId: colaborador.id,
+        nome: colaborador.nome,
+        tipo: 'exata',
+      }
     }
 
     const distancia = distanciaLevenshtein(alvo, nomeExistente)
