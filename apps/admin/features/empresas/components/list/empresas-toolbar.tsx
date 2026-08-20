@@ -5,7 +5,7 @@ import { Input } from '@repo/ui/components/input'
 
 import { CadastrarEmpresaDrawer } from '../form/cadastrar-empresa-drawer'
 
-export function EmpresasToolbar() {
+export function EmpresasToolbar({ podeCadastrar }: { podeCadastrar: boolean }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-2">
@@ -25,7 +25,7 @@ export function EmpresasToolbar() {
         </Button>
       </div>
 
-      <CadastrarEmpresaDrawer />
+      {podeCadastrar && <CadastrarEmpresaDrawer />}
     </div>
   )
 }

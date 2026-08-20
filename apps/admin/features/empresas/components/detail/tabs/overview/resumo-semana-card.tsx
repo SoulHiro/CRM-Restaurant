@@ -18,6 +18,7 @@ export function ResumoSemanaCard({
   taxaResposta,
   deltaTaxaResposta,
   ultimoFaturamento,
+  mostraFaturamento = true,
   proximaPausa,
 }: {
   funcionariosAtivos: number
@@ -25,6 +26,7 @@ export function ResumoSemanaCard({
   taxaResposta: string
   deltaTaxaResposta: number | null
   ultimoFaturamento: number | undefined
+  mostraFaturamento?: boolean
   proximaPausa: EmpresaPausa | undefined
 }) {
   return (
@@ -61,9 +63,11 @@ export function ResumoSemanaCard({
             className="col-span-2 min-h-0"
             label="Faturamento do mês"
             value={
-              ultimoFaturamento != null
-                ? formatCurrencyBRL(ultimoFaturamento)
-                : '—'
+              !mostraFaturamento
+                ? 'R$ ••••••'
+                : ultimoFaturamento != null
+                  ? formatCurrencyBRL(ultimoFaturamento)
+                  : '—'
             }
           >
             <div className="absolute bottom-0 right-0 z-10 rounded-tl-lg bg-card p-3 text-center text-card-foreground">

@@ -42,7 +42,16 @@ export const authActionClient = actionClient.use(async ({ next }) => {
       user: {
         id: session.user.id as string,
         name: session.user.name as string,
+        role: (session.user as { role?: string }).role,
       },
     },
   })
+})
+
+/** Só admin — usada pelas actions de gestão de usuários (aba Usuários). */
+export const adminActionClient = authActionClient.use(async ({ next, ctx }) => {
+  if (ctx.user.role !== 'admin') {
+    throw new ActionError('Só administradores podem fazer isso.')
+  }
+  return next({ ctx })
 })

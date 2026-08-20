@@ -24,30 +24,46 @@ export function EmpresaTabs({
   empresa,
   detail,
   operacional,
+  role,
 }: {
   empresa: EmpresaListItem
   detail: EmpresaDetail
   operacional: VisaoGeralOperacional
+  role?: string
 }) {
+  // Caixa só acompanha operação (visão geral, funcionários, pedidos,
+  // histórico, pausas, dados) — sem acesso a valores/faturamento nem às
+  // configurações operacionais da empresa.
+  const vePrecos = role !== 'caixa'
+
   return (
     <Tabs defaultValue="visao-geral">
       <TabsList className="flex w-full justify-start bg-sidebar">
         <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
         <TabsTrigger value="funcionarios">Funcionários</TabsTrigger>
         <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
-        <TabsTrigger value="valores">Valores</TabsTrigger>
+        {vePrecos && <TabsTrigger value="valores">Valores</TabsTrigger>}
         <TabsTrigger value="historico">Histórico</TabsTrigger>
         <TabsTrigger value="pausas">Pausas</TabsTrigger>
-        <TabsTrigger value="faturamento">Faturamento</TabsTrigger>
+        {vePrecos && <TabsTrigger value="faturamento">Faturamento</TabsTrigger>}
         <TabsTrigger value="dados">Dados</TabsTrigger>
-        <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
+        {vePrecos && (
+          <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
+        )}
       </TabsList>
 
       <TabsContent value="visao-geral" className="mt-6">
-        <OverviewTab detail={detail} operacional={operacional} />
+        <OverviewTab
+          detail={detail}
+          operacional={operacional}
+          mostraFaturamento={vePrecos}
+        />
       </TabsContent>
       <TabsContent value="funcionarios" className="mt-6">
-        <FuncionariosTab empresaId={empresa.id} fluxoPedido={empresa.fluxoPedido} />
+        <FuncionariosTab
+          empresaId={empresa.id}
+          fluxoPedido={empresa.fluxoPedido}
+        />
       </TabsContent>
       <TabsContent value="pedidos" className="mt-6">
         <PedidosTab
@@ -62,15 +78,17 @@ export function EmpresaTabs({
           pedeSuco={empresa.pedeSuco}
         />
       </TabsContent>
-      <TabsContent value="valores" className="mt-6">
-        <ValoresTab
-          empresaId={empresa.id}
-          precoModo={empresa.precoModo}
-          pedeCafe={empresa.pedeCafe}
-          pedeLanche={empresa.pedeLanche}
-          pedeSuco={empresa.pedeSuco}
-        />
-      </TabsContent>
+      {vePrecos && (
+        <TabsContent value="valores" className="mt-6">
+          <ValoresTab
+            empresaId={empresa.id}
+            precoModo={empresa.precoModo}
+            pedeCafe={empresa.pedeCafe}
+            pedeLanche={empresa.pedeLanche}
+            pedeSuco={empresa.pedeSuco}
+          />
+        </TabsContent>
+      )}
       <TabsContent value="historico" className="mt-6">
         <HistoricoTab
           empresaId={empresa.id}
@@ -86,9 +104,11 @@ export function EmpresaTabs({
       <TabsContent value="pausas" className="mt-6">
         <PausasTab empresaId={empresa.id} pausas={detail.pausas} />
       </TabsContent>
-      <TabsContent value="faturamento" className="mt-6">
-        <FaturamentoTab empresaId={empresa.id} contrato={detail.contrato} />
-      </TabsContent>
+      {vePrecos && (
+        <TabsContent value="faturamento" className="mt-6">
+          <FaturamentoTab empresaId={empresa.id} contrato={detail.contrato} />
+        </TabsContent>
+      )}
       <TabsContent value="dados" className="mt-6">
         <DadosTab
           empresa={empresa}
@@ -96,9 +116,11 @@ export function EmpresaTabs({
           documentos={detail.documentos}
         />
       </TabsContent>
-      <TabsContent value="configuracoes" className="mt-6">
-        <ConfiguracoesTab empresa={empresa} />
-      </TabsContent>
+      {vePrecos && (
+        <TabsContent value="configuracoes" className="mt-6">
+          <ConfiguracoesTab empresa={empresa} />
+        </TabsContent>
+      )}
     </Tabs>
   )
 }

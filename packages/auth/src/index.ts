@@ -13,6 +13,10 @@ export const roles = [
   'empresa',
   'funcionario',
   'cliente',
+  'estoquista',
+  'tesoureiro',
+  'entregador',
+  'gestor_compras',
 ] as const
 export type Role = (typeof roles)[number]
 

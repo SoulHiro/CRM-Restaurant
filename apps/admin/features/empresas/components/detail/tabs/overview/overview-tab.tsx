@@ -1,4 +1,7 @@
-import type { EmpresaDetail, VisaoGeralOperacional } from '../../../../lib/types'
+import type {
+  EmpresaDetail,
+  VisaoGeralOperacional,
+} from '../../../../lib/types'
 import { getProximaPausa } from '../../../../lib/overview-helpers'
 import { FuncionariosPendentesCard } from './funcionarios-pendentes-card'
 import { RespostasPorDiaCard } from './respostas-por-dia-card'
@@ -8,9 +11,11 @@ import { SatisfacaoCard } from './satisfacao-card'
 export function OverviewTab({
   detail,
   operacional,
+  mostraFaturamento = true,
 }: {
   detail: EmpresaDetail
   operacional: VisaoGeralOperacional
+  mostraFaturamento?: boolean
 }) {
   const { pausas, satisfacao, faturamentoMensal } = detail
   const {
@@ -35,6 +40,7 @@ export function OverviewTab({
         taxaResposta={taxaResposta}
         deltaTaxaResposta={deltaTaxaResposta}
         ultimoFaturamento={ultimoFaturamento}
+        mostraFaturamento={mostraFaturamento}
         proximaPausa={proximaPausa}
       />
       <RespostasPorDiaCard respostasSemanais={respostasSemanais} />
