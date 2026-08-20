@@ -212,15 +212,6 @@ export function PedidosTab({
     }
   }
 
-  function paraPedidoIndividual(pedido: PedidoDoDiaItem) {
-    return {
-      nome: pedido.nome,
-      prato: pedido.prato,
-      tamanho: pedido.tamanho,
-      observacao: pedido.observacao,
-    }
-  }
-
   const { executeAsync: atualizarSeparados } = useAction(
     atualizarColaboradoresSeparadosAction
   )
@@ -231,6 +222,12 @@ export function PedidosTab({
    * persiste qualquer mudança feita no drawer (quem entrou/saiu do lote
    * pra virar pedido individual) — só o que de fato mudou, pra não gerar
    * um lote de update à toa toda vez que abre e fecha sem mexer em nada.
+   *
+   * O total de arroz/feijão do papel é sempre todo mundo que efetivamente
+   * almoça (`candidatosPapelA` inteiro, `!recusou`) — quem tá marcado como
+   * "separado" continua contando na pesagem, só não aparece listado no
+   * papel; a comanda individual dessa pessoa é impressa à parte (ver
+   * "Imprimir todos"). Só quem recusou/não almoça fica fora da conta.
    */
   async function imprimirPesagemEMarcar() {
     const mudancas = candidatosPapelA
@@ -247,17 +244,14 @@ export function PedidosTab({
     const grupoAFinal = candidatosPapelA.filter(
       (p) => !selecaoIndividual.has(p.colaboradorId)
     )
-    const individualAFinal = candidatosPapelA.filter((p) =>
-      selecaoIndividual.has(p.colaboradorId)
-    )
 
-    if (grupoAFinal.length === 0 && individualAFinal.length === 0) {
+    if (candidatosPapelA.length === 0) {
       toast.info('Nenhum pedido do 1º turno/administrativo pra imprimir hoje.')
       return
     }
 
     const resumo = montarResumoPesagemGrupo(
-      grupoAFinal,
+      candidatosPapelA,
       [...itensExtras],
       detalheLegumes
     )
@@ -268,9 +262,6 @@ export function PedidosTab({
       data,
       impressoEm: new Date().toISOString(),
       ...resumo,
-      pedidosIndividuais: individualAFinal
-        .filter((p) => !p.recusou)
-        .map(paraPedidoIndividual),
     }
 
     const sucesso = await imprimirPesagem([papel])
