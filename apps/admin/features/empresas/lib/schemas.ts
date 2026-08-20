@@ -108,6 +108,21 @@ export type AtualizarColaboradorSeparadoInput = z.infer<
   typeof atualizarColaboradorSeparadoSchema
 >
 
+export const atualizarColaboradoresSeparadosSchema = z.object({
+  atualizacoes: z
+    .array(
+      z.object({
+        colaboradorId: z.string().min(1),
+        separado: z.boolean(),
+      })
+    )
+    .min(1),
+})
+
+export type AtualizarColaboradoresSeparadosInput = z.infer<
+  typeof atualizarColaboradoresSeparadosSchema
+>
+
 export const createPausaSchema = z.object({
   empresaId: z.string().min(1),
   data: z.string().min(1, 'Informe a data'),

@@ -7,14 +7,18 @@ import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
 import { Checkbox } from '@repo/ui/components/checkbox'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@repo/ui/components/drawer'
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@repo/ui/components/popover'
 import {
   Select,
   SelectContent,
@@ -26,6 +30,7 @@ import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { hojeISO } from '@/lib/formatters'
 import {
+  atualizarColaboradoresSeparadosAction,
   listarColaboradoresEmpresaAction,
   listarPedidosDoDiaAction,
   marcarPedidosImpressosAction,
@@ -95,11 +100,14 @@ export function PedidosTab({
   )
   const [busca, setBusca] = useState('')
   const [turnoFiltro, setTurnoFiltro] = useState<TurnoFiltro>('todos')
-  const [popoverPesagemAberto, setPopoverPesagemAberto] = useState(false)
+  const [drawerPesagemAberto, setDrawerPesagemAberto] = useState(false)
   const [itensExtras, setItensExtras] = useState<Set<ItemPesagemChave>>(
     new Set()
   )
   const [detalheLegumes, setDetalheLegumes] = useState('')
+  const [selecaoIndividual, setSelecaoIndividual] = useState<Set<string>>(
+    new Set()
+  )
   const { imprimir, imprimindo } = useImprimirComandas()
   const { imprimirPesagem, imprimindo: imprimindoPesagem } =
     useImprimirPesagem()
@@ -136,6 +144,39 @@ export function PedidosTab({
     [pedidos, colaboradoresSeparados]
   )
 
+  /**
+   * "Imprimir pesagem" só gera o Papel A (1º turno + administrativo) — o
+   * 2º/3º turno não tem papel de pesagem próprio. `candidatosPapelA` é todo
+   * mundo desse grupo, separado ou não: quem tá marcado como separado
+   * aparece pré-marcado no drawer, mas continua editável ali na hora — não
+   * dá pra pré-marcar antes porque a planilha é importada, não cadastrada
+   * pessoa a pessoa.
+   */
+  const candidatosPapelA = useMemo(
+    () => [...gruposPesagem.grupoA, ...gruposPesagem.individualA],
+    [gruposPesagem]
+  )
+
+  function abrirDrawerPesagem() {
+    setSelecaoIndividual(
+      new Set(
+        candidatosPapelA
+          .filter((p) => colaboradoresSeparados.has(p.colaboradorId))
+          .map((p) => p.colaboradorId)
+      )
+    )
+    setDrawerPesagemAberto(true)
+  }
+
+  function alternarIndividual(colaboradorId: string) {
+    setSelecaoIndividual((atual) => {
+      const novo = new Set(atual)
+      if (novo.has(colaboradorId)) novo.delete(colaboradorId)
+      else novo.add(colaboradorId)
+      return novo
+    })
+  }
+
   const pedidosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return (pedidos ?? []).filter((p) => {
@@ -163,73 +204,77 @@ export function PedidosTab({
   }
 
   function paraPedidoIndividual(pedido: PedidoDoDiaItem) {
-    return { nome: pedido.nome, prato: pedido.prato, tamanho: pedido.tamanho }
+    return {
+      nome: pedido.nome,
+      prato: pedido.prato,
+      tamanho: pedido.tamanho,
+      observacao: pedido.observacao,
+    }
   }
 
+  const { executeAsync: atualizarSeparados } = useAction(
+    atualizarColaboradoresSeparadosAction
+  )
+
   /**
-   * Marca como impresso só quem está no bloco em lote (`grupoA`/`grupoB`) —
-   * quem aparece na lista de "Pedidos individuais" do papel ainda precisa
-   * da própria comanda impressa à parte (`imprimirEMarcar`); listar aqui é
-   * só informativo pra cozinha, não substitui a comanda dessa pessoa.
+   * Só gera o Papel A (1º turno + administrativo) — o 2º/3º turno não tem
+   * papel de pesagem, por instrução explícita. Antes de montar o papel,
+   * persiste qualquer mudança feita no drawer (quem entrou/saiu do lote
+   * pra virar pedido individual) — só o que de fato mudou, pra não gerar
+   * um lote de update à toa toda vez que abre e fecha sem mexer em nada.
    */
   async function imprimirPesagemEMarcar() {
-    setPopoverPesagemAberto(false)
-    const enderecoFormatado = formatarEndereco(empresaEndereco)
-    const impressoEm = new Date().toISOString()
-    const extras = [...itensExtras]
+    const mudancas = candidatosPapelA
+      .map((p) => ({
+        colaboradorId: p.colaboradorId,
+        separado: selecaoIndividual.has(p.colaboradorId),
+      }))
+      .filter((m) => m.separado !== colaboradoresSeparados.has(m.colaboradorId))
 
-    const papeis: PesagemDadosPapel[] = []
-    const colaboradorIds: string[] = []
-
-    if (gruposPesagem.grupoA.length > 0 || gruposPesagem.individualA.length > 0) {
-      const resumo = montarResumoPesagemGrupo(
-        gruposPesagem.grupoA,
-        extras,
-        detalheLegumes
-      )
-      papeis.push({
-        tituloGrupo: '1º Turno + Administrativo',
-        empresaNome,
-        empresaEndereco: enderecoFormatado,
-        data,
-        impressoEm,
-        ...resumo,
-        pedidosIndividuais: gruposPesagem.individualA
-          .filter((p) => !p.recusou)
-          .map(paraPedidoIndividual),
-      })
-      colaboradorIds.push(...gruposPesagem.grupoA.map((p) => p.colaboradorId))
+    if (mudancas.length > 0) {
+      await atualizarSeparados({ atualizacoes: mudancas })
     }
 
-    if (gruposPesagem.grupoB.length > 0 || gruposPesagem.individualB.length > 0) {
-      const resumo = montarResumoPesagemGrupo(
-        gruposPesagem.grupoB,
-        extras,
-        detalheLegumes
-      )
-      papeis.push({
-        tituloGrupo: '2º Turno',
-        empresaNome,
-        empresaEndereco: enderecoFormatado,
-        data,
-        impressoEm,
-        ...resumo,
-        pedidosIndividuais: gruposPesagem.individualB
-          .filter((p) => !p.recusou)
-          .map(paraPedidoIndividual),
-      })
-      colaboradorIds.push(...gruposPesagem.grupoB.map((p) => p.colaboradorId))
-    }
+    const grupoAFinal = candidatosPapelA.filter(
+      (p) => !selecaoIndividual.has(p.colaboradorId)
+    )
+    const individualAFinal = candidatosPapelA.filter((p) =>
+      selecaoIndividual.has(p.colaboradorId)
+    )
 
-    if (papeis.length === 0) {
-      toast.info('Nenhum pedido em lote pra imprimir hoje.')
+    if (grupoAFinal.length === 0 && individualAFinal.length === 0) {
+      toast.info('Nenhum pedido do 1º turno/administrativo pra imprimir hoje.')
       return
     }
 
-    const sucesso = await imprimirPesagem(papeis)
-    if (sucesso && colaboradorIds.length > 0) {
-      await marcarImpressos({ colaboradorIds, data })
+    const resumo = montarResumoPesagemGrupo(
+      grupoAFinal,
+      [...itensExtras],
+      detalheLegumes
+    )
+    const papel: PesagemDadosPapel = {
+      tituloGrupo: '1º Turno + Administrativo',
+      empresaNome,
+      empresaEndereco: formatarEndereco(empresaEndereco),
+      data,
+      impressoEm: new Date().toISOString(),
+      ...resumo,
+      pedidosIndividuais: individualAFinal
+        .filter((p) => !p.recusou)
+        .map(paraPedidoIndividual),
+    }
+
+    const sucesso = await imprimirPesagem([papel])
+    if (sucesso) {
+      setDrawerPesagemAberto(false)
+      if (grupoAFinal.length > 0) {
+        await marcarImpressos({
+          colaboradorIds: grupoAFinal.map((p) => p.colaboradorId),
+          data,
+        })
+      }
       execute({ empresaId, data })
+      if (mudancas.length > 0) buscarColaboradores({ empresaId })
     }
   }
 
@@ -286,70 +331,119 @@ export function PedidosTab({
         </div>
         <div className="flex items-center gap-2">
           {usaPesagem && (
-            <Popover
-              open={popoverPesagemAberto}
-              onOpenChange={setPopoverPesagemAberto}
+            <Drawer
+              direction="right"
+              open={drawerPesagemAberto}
+              handleOnly
+              onOpenChange={(v) => {
+                if (v) abrirDrawerPesagem()
+                else setDrawerPesagemAberto(false)
+              }}
             >
-              <PopoverTrigger asChild>
+              <DrawerTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={
-                    imprimindoPesagem ||
-                    (gruposPesagem.grupoA.length === 0 &&
-                      gruposPesagem.grupoB.length === 0 &&
-                      gruposPesagem.individualA.length === 0 &&
-                      gruposPesagem.individualB.length === 0)
-                  }
+                  disabled={imprimindoPesagem || candidatosPapelA.length === 0}
                 >
                   <Scale className="size-4" />
                   Imprimir pesagem
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72" align="end">
-                <div className="flex flex-col gap-3">
-                  <p className="text-sm font-medium">
-                    O que mais tem no cardápio hoje?
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Arroz e feijão sempre entram. Marque o resto que tem hoje.
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {itensOpcionais.map((item) => (
-                      <label
-                        key={item.chave}
-                        className="flex items-center gap-2 text-sm"
-                      >
-                        <Checkbox
-                          checked={itensExtras.has(item.chave)}
-                          onCheckedChange={() => alternarItemExtra(item.chave)}
+              </DrawerTrigger>
+              <DrawerContent
+                direction="right"
+                variant="float"
+                className="flex w-full flex-col gap-0 sm:max-w-md"
+              >
+                <DrawerHeader>
+                  <DrawerTitle>Imprimir pesagem — 1º turno + administrativo</DrawerTitle>
+                  <DrawerDescription>
+                    Só esse papel imprime em lote. Marque quem sai do lote e
+                    vai como pedido individual.
+                  </DrawerDescription>
+                </DrawerHeader>
+
+                <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-6">
+                  <div className="flex flex-col gap-3">
+                    <p className="text-sm font-medium">
+                      O que mais tem no cardápio hoje?
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Arroz e feijão sempre entram. Marque o resto que tem
+                      hoje.
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {itensOpcionais.map((item) => (
+                        <label
+                          key={item.chave}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <Checkbox
+                            checked={itensExtras.has(item.chave)}
+                            onCheckedChange={() => alternarItemExtra(item.chave)}
+                          />
+                          {item.label}
+                        </label>
+                      ))}
+                    </div>
+
+                    {itensExtras.has('legumes') && (
+                      <div className="flex flex-col gap-1.5">
+                        <Label className="text-sm">Qual legume hoje?</Label>
+                        <Input
+                          value={detalheLegumes}
+                          onChange={(e) => setDetalheLegumes(e.target.value)}
+                          placeholder="Ex: Cenoura/Chuchu"
                         />
-                        {item.label}
-                      </label>
-                    ))}
+                      </div>
+                    )}
                   </div>
 
-                  {itensExtras.has('legumes') && (
+                  <div className="flex flex-col gap-2 border-t pt-4">
+                    <p className="text-sm font-medium">
+                      Quem vai como pedido individual?
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Desmarcado = entra no lote da pesagem. Marcado = vira
+                      comanda avulsa (ex: marmita separada).
+                    </p>
                     <div className="flex flex-col gap-1.5">
-                      <Label className="text-sm">Qual legume hoje?</Label>
-                      <Input
-                        value={detalheLegumes}
-                        onChange={(e) => setDetalheLegumes(e.target.value)}
-                        placeholder="Ex: Cenoura/Chuchu"
-                      />
+                      {candidatosPapelA.map((pedido) => (
+                        <label
+                          key={pedido.colaboradorId}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <Checkbox
+                            checked={selecaoIndividual.has(pedido.colaboradorId)}
+                            onCheckedChange={() =>
+                              alternarIndividual(pedido.colaboradorId)
+                            }
+                          />
+                          {pedido.nome}
+                        </label>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                </div>
 
+                <DrawerFooter className="flex-row justify-end gap-2 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDrawerPesagemAberto(false)}
+                    disabled={imprimindoPesagem}
+                  >
+                    Cancelar
+                  </Button>
                   <Button
                     size="sm"
                     disabled={imprimindoPesagem}
                     onClick={imprimirPesagemEMarcar}
                   >
-                    {imprimindoPesagem ? 'Imprimindo...' : 'Gerar papéis'}
+                    {imprimindoPesagem ? 'Imprimindo...' : 'Gerar papel'}
                   </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
           )}
           <Button
             variant="outline"

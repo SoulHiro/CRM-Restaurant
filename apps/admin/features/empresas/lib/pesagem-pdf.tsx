@@ -63,6 +63,7 @@ export interface PesagemPedidoIndividual {
   nome: string
   prato: string | null
   tamanho: string | null
+  observacao: string | null
 }
 
 export interface PesagemDadosPapel {
@@ -156,6 +157,7 @@ export function PesagemPDF({ dados }: { dados: PesagemDadosPapel }) {
                   <Text style={styles.colPratoIndividual}>
                     {pedido.prato ?? '—'}
                     {pedido.tamanho ? ` · ${pedido.tamanho}` : ''}
+                    {pedido.observacao ? ` · ${pedido.observacao}` : ''}
                   </Text>
                 </View>
               ))}

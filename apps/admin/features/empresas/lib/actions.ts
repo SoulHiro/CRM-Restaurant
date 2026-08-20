@@ -25,6 +25,7 @@ import {
 } from './cache-tags'
 import {
   atualizarColaboradorAtivoSchema,
+  atualizarColaboradoresSeparadosSchema,
   atualizarColaboradorSeparadoSchema,
   atualizarPedidoSchema,
   atualizarPrecoPedidoSchema,
@@ -130,6 +131,30 @@ export const atualizarColaboradorSeparadoAction = authActionClient
       .returning({ empresa_id: colaborador_pedido.empresa_id })
 
     if (atualizado) updateTag(tagEmpresaPedidos(atualizado.empresa_id))
+  })
+
+/**
+ * Igual à de cima, mas pra quando várias pessoas mudam de status de uma vez
+ * (ex: o drawer de "Imprimir pesagem", onde o usuário marca quem sai do
+ * lote na hora de imprimir) — um `executarLote` em vez de N chamadas
+ * sequenciais.
+ */
+export const atualizarColaboradoresSeparadosAction = authActionClient
+  .schema(atualizarColaboradoresSeparadosSchema)
+  .action(async ({ parsedInput }) => {
+    const statements: Statement[] = parsedInput.atualizacoes.map((item) =>
+      db
+        .update(colaborador_pedido)
+        .set({ separado: item.separado })
+        .where(eq(colaborador_pedido.id, item.colaboradorId))
+    )
+
+    await executarLote(statements)
+
+    const empresaId = await empresaDoColaborador(
+      parsedInput.atualizacoes[0]!.colaboradorId
+    )
+    if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
   })
 
 export const createPausaAction = actionClient
