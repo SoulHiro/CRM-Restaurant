@@ -29,8 +29,14 @@ import {
 import {
   importarPedidosAction,
   listarColaboradoresAction,
+  marcarPedidosImpressosAction,
   obterPrecosEmpresaAction,
 } from '../../../../../lib/actions'
+import {
+  useImprimirComandas,
+  type ComandaEntrada,
+} from '../../../../../hooks/use-imprimir-comandas'
+import type { PedidoDoDiaItem } from '../../../../../lib/types'
 import {
   ColaboradorCombobox,
   type ColaboradorOption,
@@ -41,13 +47,35 @@ const SEM_TAMANHO = '__sem_tamanho__'
 
 type TipoPedido = 'marmita' | 'lanche'
 
+/** Prato mais frequente entre os pedidos de marmita já lançados hoje — na prática, o prato do dia. */
+function pratoDoDia(pedidosHoje: PedidoDoDiaItem[]): string | null {
+  const contagem = new Map<string, number>()
+  for (const pedido of pedidosHoje) {
+    if (pedido.tipo !== 'marmita' || !pedido.prato || pedido.recusou) continue
+    contagem.set(pedido.prato, (contagem.get(pedido.prato) ?? 0) + 1)
+  }
+  let melhor: string | null = null
+  let maior = 0
+  for (const [prato, quantidade] of contagem) {
+    if (quantidade > maior) {
+      maior = quantidade
+      melhor = prato
+    }
+  }
+  return melhor
+}
+
 export function AdicionarPedidoManualDrawer({
   empresaId,
+  empresaNome,
   data,
+  pedidosHoje,
   onAdicionado,
 }: {
   empresaId: string
+  empresaNome: string
   data: string
+  pedidosHoje: PedidoDoDiaItem[]
   onAdicionado: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -63,18 +91,28 @@ export function AdicionarPedidoManualDrawer({
   const [prato, setPrato] = useState('')
   const [preco, setPreco] = useState('0')
   const [observacao, setObservacao] = useState('')
+  const [lanchePadrao, setLanchePadrao] = useState<{
+    nome: string
+    preco: number
+  } | null>(null)
+  const [imprimirAoCriar, setImprimirAoCriar] = useState(true)
 
-  const { execute: buscarColaboradores } = useAction(listarColaboradoresAction, {
-    onSuccess: ({ data: resultado }) =>
-      setColaboradores(resultado?.colaboradores ?? []),
-  })
+  const { imprimir, imprimindo } = useImprimirComandas()
+  const { executeAsync: marcarImpresso } = useAction(
+    marcarPedidosImpressosAction
+  )
+
+  const { execute: buscarColaboradores } = useAction(
+    listarColaboradoresAction,
+    {
+      onSuccess: ({ data: resultado }) =>
+        setColaboradores(resultado?.colaboradores ?? []),
+    }
+  )
   const { execute: buscarPrecos } = useAction(obterPrecosEmpresaAction, {
     onSuccess: ({ data: resultado }) => {
       const lanche = resultado?.precos?.lanche
-      if (lanche) {
-        setPrato((atual) => atual || lanche.nome)
-        setPreco((atual) => (atual === '0' ? String(lanche.preco) : atual))
-      }
+      if (lanche) setLanchePadrao({ nome: lanche.nome, preco: lanche.preco })
     },
   })
 
@@ -84,6 +122,20 @@ export function AdicionarPedidoManualDrawer({
     buscarPrecos({ empresaId })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Muda o default do prato de acordo com o tipo: lanche usa sempre o nome
+  // padrão cadastrado em Valores (sem input pra digitar); marmita sugere o
+  // prato mais pedido hoje, mas sem sobrescrever o que a pessoa já digitou.
+  useEffect(() => {
+    if (!open) return
+    if (tipo === 'lanche') {
+      setPrato(lanchePadrao?.nome ?? '')
+      if (lanchePadrao) setPreco(String(lanchePadrao.preco))
+    } else {
+      setPrato((atual) => atual || pratoDoDia(pedidosHoje) || '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, tipo, lanchePadrao])
 
   function limpar() {
     setBusca('')
@@ -99,8 +151,31 @@ export function AdicionarPedidoManualDrawer({
   }
 
   const { execute, isExecuting } = useAction(importarPedidosAction, {
-    onSuccess: () => {
+    onSuccess: async ({ data: resultado }) => {
       toast.success('Pedido adicionado')
+
+      const colaboradorId = resultado?.colaboradorIds?.[0]
+      if (imprimirAoCriar && colaboradorId) {
+        const comanda: ComandaEntrada = {
+          nome: nomeSelecionado,
+          empresaNome,
+          turno:
+            tipo === 'lanche' || turno === SEM_TURNO
+              ? null
+              : (turno as 'almoco' | 'jantar'),
+          tamanho:
+            tipo === 'lanche' || tamanho === SEM_TAMANHO
+              ? null
+              : (tamanho as 'P' | 'M' | 'G'),
+          prato: prato.trim(),
+          observacao: observacao.trim() || null,
+          respondidoEm: null,
+        }
+        const sucesso = await imprimir([comanda])
+        if (sucesso)
+          await marcarImpresso({ colaboradorIds: [colaboradorId], data })
+      }
+
       setOpen(false)
       limpar()
       onAdicionado()
@@ -258,18 +333,23 @@ export function AdicionarPedidoManualDrawer({
             </div>
           )}
 
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-sm">
-              {tipo === 'lanche' ? 'Nome do lanche' : 'Prato'}
-            </Label>
-            <Input
-              value={prato}
-              onChange={(e) => setPrato(e.target.value)}
-              placeholder={
-                tipo === 'lanche' ? 'Ex: Lanche misto quente' : 'Ex: Frango grelhado'
-              }
-            />
-          </div>
+          {tipo === 'lanche' ? (
+            <p className="text-sm text-muted-foreground">
+              Lanche:{' '}
+              <span className="font-medium text-foreground">
+                {prato || '—'}
+              </span>
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-sm">Prato</Label>
+              <Input
+                value={prato}
+                onChange={(e) => setPrato(e.target.value)}
+                placeholder="Ex: Frango grelhado"
+              />
+            </div>
+          )}
 
           {tipo === 'lanche' && (
             <div className="flex flex-col gap-1.5">
@@ -292,21 +372,31 @@ export function AdicionarPedidoManualDrawer({
               placeholder="Ex: sem cebola"
             />
           </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={imprimirAoCriar}
+              onCheckedChange={(v) => setImprimirAoCriar(v === true)}
+            />
+            Imprimir a comanda automaticamente ao criar
+          </label>
         </div>
 
         <DrawerFooter className="flex-row justify-end gap-2 border-t">
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            disabled={isExecuting}
+            disabled={isExecuting || imprimindo}
           >
             Cancelar
           </Button>
           <Button
             onClick={confirmar}
-            disabled={isExecuting || !nomeSelecionado || !prato.trim()}
+            disabled={
+              isExecuting || imprimindo || !nomeSelecionado || !prato.trim()
+            }
           >
-            {isExecuting ? 'Adicionando...' : 'Adicionar'}
+            {isExecuting || imprimindo ? 'Adicionando...' : 'Adicionar'}
           </Button>
         </DrawerFooter>
       </DrawerContent>

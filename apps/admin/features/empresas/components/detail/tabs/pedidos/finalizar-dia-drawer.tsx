@@ -37,7 +37,10 @@ import type {
   ItemFechamento,
   PedidoDoDiaItem,
 } from '../../../../lib/types'
-import type { ItemResumoDia, ResumoDiaDados } from '../../../../lib/resumo-dia-pdf'
+import type {
+  ItemResumoDia,
+  ResumoDiaDados,
+} from '../../../../lib/resumo-dia-pdf'
 
 export function FinalizarDiaDrawer({
   empresaId,
@@ -98,7 +101,9 @@ export function FinalizarDiaDrawer({
     () =>
       pedidos.filter(
         (p) =>
-          p.tipo === 'marmita' && (usaPrecoUnico || p.tamanho != null) && !p.recusou
+          p.tipo === 'marmita' &&
+          (usaPrecoUnico || p.tamanho != null) &&
+          !p.recusou
       ),
     [pedidos, usaPrecoUnico]
   )
@@ -144,7 +149,8 @@ export function FinalizarDiaDrawer({
     }
   )
   const { executeAsync: buscarPrecos } = useAction(obterPrecosEmpresaAction, {
-    onError: () => toast.error('Não foi possível carregar os valores da empresa'),
+    onError: () =>
+      toast.error('Não foi possível carregar os valores da empresa'),
   })
 
   useEffect(() => {
@@ -211,7 +217,9 @@ export function FinalizarDiaDrawer({
     reabrirDiaAction,
     {
       onSuccess: () => {
-        toast.success('Fechamento desfeito — ajuste os pedidos e finalize de novo')
+        toast.success(
+          'Fechamento desfeito — ajuste os pedidos e finalize de novo'
+        )
         setFechamento(null)
       },
       onError: () => toast.error('Não foi possível reabrir o dia'),
@@ -354,7 +362,7 @@ export function FinalizarDiaDrawer({
   return (
     <Drawer direction="right" open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
-        <Button size="sm" variant="outline">
+        <Button size="sm">
           <ClipboardCheck className="size-4" />
           Finalizar dia
         </Button>
@@ -430,7 +438,9 @@ export function FinalizarDiaDrawer({
                 {usaPrecoUnico ? (
                   <div>
                     <p className="text-xs text-muted-foreground">Marmitas</p>
-                    <p className="text-2xl font-bold">{contagem.marmitaUnica}</p>
+                    <p className="text-2xl font-bold">
+                      {contagem.marmitaUnica}
+                    </p>
                   </div>
                 ) : (
                   <>

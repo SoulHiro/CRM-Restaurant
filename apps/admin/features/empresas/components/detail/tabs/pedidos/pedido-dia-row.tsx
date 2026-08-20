@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CircleDollarSign, Pencil, Printer, Trash2, UserX } from 'lucide-react'
+import { CircleDollarSign, Pencil, Printer, Trash2 } from 'lucide-react'
 import { useAction } from 'next-safe-action/hooks'
 import { toast } from 'sonner'
 
@@ -38,7 +38,6 @@ import { formatCurrencyBRL } from '@/lib/formatters'
 import {
   atualizarPedidoAction,
   atualizarPrecoPedidoAction,
-  marcarRecusaAction,
   removerPedidoAction,
 } from '../../../../lib/actions'
 import type { PedidoDoDiaItem, TurnoRefeicao } from '../../../../lib/types'
@@ -96,8 +95,12 @@ export function PedidoDiaRow({
   const [editarAberto, setEditarAberto] = useState(false)
   const [pratoInput, setPratoInput] = useState(pedido.prato ?? '')
   const [turnoInput, setTurnoInput] = useState(pedido.turno ?? SEM_TURNO)
-  const [tamanhoInput, setTamanhoInput] = useState(pedido.tamanho ?? SEM_TAMANHO)
-  const [observacaoInput, setObservacaoInput] = useState(pedido.observacao ?? '')
+  const [tamanhoInput, setTamanhoInput] = useState(
+    pedido.tamanho ?? SEM_TAMANHO
+  )
+  const [observacaoInput, setObservacaoInput] = useState(
+    pedido.observacao ?? ''
+  )
 
   const { execute, isExecuting } = useAction(removerPedidoAction, {
     onSuccess: () => {
@@ -106,19 +109,6 @@ export function PedidoDiaRow({
     },
     onError: () => toast.error('Não foi possível remover o pedido'),
   })
-
-  const { execute: marcarRecusa, isExecuting: marcandoRecusa } = useAction(
-    marcarRecusaAction,
-    {
-      onSuccess: ({ input }) => {
-        toast.success(
-          input.recusou ? 'Marcado como "não vai comer hoje"' : 'Pedido reativado'
-        )
-        onRemovido()
-      },
-      onError: () => toast.error('Não foi possível atualizar o pedido'),
-    }
-  )
 
   const { execute: salvarPreco, isExecuting: salvandoPreco } = useAction(
     atualizarPrecoPedidoAction,
@@ -257,13 +247,16 @@ export function PedidoDiaRow({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={SEM_TURNO}>—</SelectItem>
-                        {(Object.entries(TURNO_LABEL) as [TurnoRefeicao, string][]).map(
-                          ([valor, label]) => (
-                            <SelectItem key={valor} value={valor}>
-                              {label}
-                            </SelectItem>
-                          )
-                        )}
+                        {(
+                          Object.entries(TURNO_LABEL) as [
+                            TurnoRefeicao,
+                            string,
+                          ][]
+                        ).map(([valor, label]) => (
+                          <SelectItem key={valor} value={valor}>
+                            {label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -324,10 +317,7 @@ export function PedidoDiaRow({
               disabled={pedido.recusou}
             >
               <CircleDollarSign
-                className={cn(
-                  'size-4',
-                  pedido.preco != null && 'text-primary'
-                )}
+                className={cn('size-4', pedido.preco != null && 'text-primary')}
               />
             </Button>
           </PopoverTrigger>
@@ -345,8 +335,8 @@ export function PedidoDiaRow({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                O pedido continua contando normalmente no resumo do dia — só
-                o valor cobrado muda.
+                O pedido continua contando normalmente no resumo do dia — só o
+                valor cobrado muda.
               </p>
               <div className="flex justify-end gap-2">
                 {pedido.tipo === 'marmita' && pedido.preco != null && (
@@ -379,25 +369,6 @@ export function PedidoDiaRow({
           </PopoverContent>
         </Popover>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={
-            pedido.recusou
-              ? `Reativar pedido de ${pedido.nome}`
-              : `Marcar ${pedido.nome} como "não vai comer hoje"`
-          }
-          disabled={marcandoRecusa}
-          onClick={() =>
-            marcarRecusa({
-              colaboradorId: pedido.colaboradorId,
-              data,
-              recusou: !pedido.recusou,
-            })
-          }
-        >
-          <UserX className={cn('size-4', pedido.recusou && 'text-destructive')} />
-        </Button>
         <Button
           variant="ghost"
           size="icon"

@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useAction } from 'next-safe-action/hooks'
-import { Printer, Scale, Search } from 'lucide-react'
+import {
+  ListFilter,
+  Printer,
+  Scale,
+  Search,
+  UtensilsCrossed,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
@@ -16,16 +22,16 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@repo/ui/components/drawer'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@repo/ui/components/dropdown-menu'
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@repo/ui/components/select'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { hojeISO } from '@/lib/formatters'
@@ -63,6 +69,18 @@ import { PedidoDiaRow } from './pedido-dia-row'
 import { PedidosInsights } from './pedidos-insights'
 
 type TurnoFiltro = 'todos' | 'almoco' | 'jantar'
+type RecusaFiltro = 'todos' | 'vao' | 'nao_vao'
+
+/** Almoços primeiro, depois jantas, alfabético dentro de cada grupo (o sort é estável — a ordem alfabética que já vem da query se mantém). */
+const ORDEM_TURNO_IMPRESSAO: Record<string, number> = { almoco: 0, jantar: 1 }
+
+function ordenarParaImpressao(pedidos: PedidoDoDiaItem[]): PedidoDoDiaItem[] {
+  return [...pedidos].sort((a, b) => {
+    const ordemA = a.turno ? (ORDEM_TURNO_IMPRESSAO[a.turno] ?? 2) : 2
+    const ordemB = b.turno ? (ORDEM_TURNO_IMPRESSAO[b.turno] ?? 2) : 2
+    return ordemA - ordemB
+  })
+}
 
 function paraComanda(
   pedido: PedidoDoDiaItem,
@@ -109,6 +127,7 @@ export function PedidosTab({
   )
   const [busca, setBusca] = useState('')
   const [turnoFiltro, setTurnoFiltro] = useState<TurnoFiltro>('todos')
+  const [recusaFiltro, setRecusaFiltro] = useState<RecusaFiltro>('todos')
   const [drawerPesagemAberto, setDrawerPesagemAberto] = useState(false)
   const [itensExtras, setItensExtras] = useState<Set<ItemPesagemChave>>(
     new Set()
@@ -191,9 +210,12 @@ export function PedidosTab({
     return (pedidos ?? []).filter((p) => {
       const bateNome = !termo || p.nome.toLowerCase().includes(termo)
       const bateTurno = turnoFiltro === 'todos' || p.turno === turnoFiltro
-      return bateNome && bateTurno
+      const bateRecusa =
+        recusaFiltro === 'todos' ||
+        (recusaFiltro === 'vao' ? !p.recusou : p.recusou)
+      return bateNome && bateTurno && bateRecusa
     })
-  }, [pedidos, busca, turnoFiltro])
+  }, [pedidos, busca, turnoFiltro, recusaFiltro])
 
   const { executeAsync: marcarImpressos } = useAction(
     marcarPedidosImpressosAction
@@ -291,13 +313,15 @@ export function PedidosTab({
     (item) => !ITENS_PESAGEM_SEMPRE_LIGADOS.includes(item.chave)
   )
 
-  const comImprimivel = (
-    usaPesagem ? gruposPesagem.individual : (pedidos ?? [])
-  ).filter((p) => p.prato && !p.recusou)
+  const comImprimivel = ordenarParaImpressao(
+    (usaPesagem ? gruposPesagem.individual : (pedidos ?? [])).filter(
+      (p) => p.prato && !p.recusou
+    )
+  )
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 bg-background px-1 py-2">
         <div className="flex items-center gap-2">
           <Input
             type="date"
@@ -315,151 +339,73 @@ export function PedidosTab({
               onChange={(event) => setBusca(event.target.value)}
             />
           </div>
-          <Select
-            value={turnoFiltro}
-            onValueChange={(v) => setTurnoFiltro(v as TurnoFiltro)}
-          >
-            <SelectTrigger className="w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os turnos</SelectItem>
-              <SelectItem value="almoco">Almoço</SelectItem>
-              <SelectItem value="jantar">Jantar</SelectItem>
-            </SelectContent>
-          </Select>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={turnoFiltro !== 'todos' ? 'default' : 'outline'}
+                size="icon"
+                aria-label="Filtrar por turno"
+                title="Filtrar por turno"
+              >
+                <ListFilter className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuRadioGroup
+                value={turnoFiltro}
+                onValueChange={(v) => setTurnoFiltro(v as TurnoFiltro)}
+              >
+                <DropdownMenuRadioItem value="todos">
+                  Todos os turnos
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="almoco">
+                  Almoço
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="jantar">
+                  Jantar
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={recusaFiltro !== 'todos' ? 'default' : 'outline'}
+                size="icon"
+                aria-label="Filtrar por quem vai comer"
+                title="Filtrar por quem vai comer"
+              >
+                <UtensilsCrossed className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuRadioGroup
+                value={recusaFiltro}
+                onValueChange={(v) => setRecusaFiltro(v as RecusaFiltro)}
+              >
+                <DropdownMenuRadioItem value="todos">
+                  Todos
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="vao">
+                  Vão comer
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="nao_vao">
+                  Não vão comer
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex items-center gap-2">
-          {usaPesagem && (
-            <Drawer
-              direction="right"
-              open={drawerPesagemAberto}
-              handleOnly
-              onOpenChange={(v) => {
-                if (v) abrirDrawerPesagem()
-                else setDrawerPesagemAberto(false)
-              }}
-            >
-              <DrawerTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={imprimindoPesagem || candidatosPapelA.length === 0}
-                >
-                  <Scale className="size-4" />
-                  Imprimir pesagem
-                </Button>
-              </DrawerTrigger>
-              <DrawerContent
-                direction="right"
-                variant="float"
-                className="flex w-full flex-col gap-0 sm:max-w-md"
-              >
-                <DrawerHeader>
-                  <DrawerTitle>Imprimir pesagem — 1º turno + administrativo</DrawerTitle>
-                  <DrawerDescription>
-                    Só esse papel imprime em lote. Marque quem sai do lote e
-                    vai como pedido individual.
-                  </DrawerDescription>
-                </DrawerHeader>
-
-                <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-6">
-                  <div className="flex flex-col gap-3">
-                    <p className="text-sm font-medium">
-                      O que mais tem no cardápio hoje?
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Arroz e feijão sempre entram. Marque o resto que tem
-                      hoje.
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      {itensOpcionais.map((item) => (
-                        <label
-                          key={item.chave}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <Checkbox
-                            checked={itensExtras.has(item.chave)}
-                            onCheckedChange={() => alternarItemExtra(item.chave)}
-                          />
-                          {item.label}
-                        </label>
-                      ))}
-                    </div>
-
-                    {itensExtras.has('legumes') && (
-                      <div className="flex flex-col gap-1.5">
-                        <Label className="text-sm">Qual legume hoje?</Label>
-                        <Input
-                          value={detalheLegumes}
-                          onChange={(e) => setDetalheLegumes(e.target.value)}
-                          placeholder="Ex: Cenoura/Chuchu"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-2 border-t pt-4">
-                    <p className="text-sm font-medium">
-                      Quem vai como pedido individual?
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Desmarcado = entra no lote da pesagem. Marcado = vira
-                      comanda avulsa (ex: marmita separada).
-                    </p>
-                    <div className="flex flex-col gap-1.5">
-                      {candidatosPapelA.map((pedido) => (
-                        <label
-                          key={pedido.colaboradorId}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <Checkbox
-                            checked={selecaoIndividual.has(pedido.colaboradorId)}
-                            onCheckedChange={() =>
-                              alternarIndividual(pedido.colaboradorId)
-                            }
-                          />
-                          {pedido.nome}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <DrawerFooter className="flex-row justify-end gap-2 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setDrawerPesagemAberto(false)}
-                    disabled={imprimindoPesagem}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={imprimindoPesagem}
-                    onClick={imprimirPesagemEMarcar}
-                  >
-                    {imprimindoPesagem ? 'Imprimindo...' : 'Gerar papel'}
-                  </Button>
-                </DrawerFooter>
-              </DrawerContent>
-            </Drawer>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={imprimindo || comImprimivel.length === 0}
-            onClick={() => imprimirEMarcar(comImprimivel)}
-          >
-            <Printer className="size-4" />
-            Imprimir todos ({comImprimivel.length})
-          </Button>
           <AdicionarPedidoManualDrawer
             empresaId={empresaId}
+            empresaNome={empresaNome}
             data={data}
+            pedidosHoje={pedidos ?? []}
             onAdicionado={() => execute({ empresaId, data })}
           />
-          <ImportarPlanilhaDrawer empresaId={empresaId} />
           <FinalizarDiaDrawer
             empresaId={empresaId}
             empresaNome={empresaNome}
@@ -473,6 +419,135 @@ export function PedidosTab({
             onFinalizado={() => execute({ empresaId, data })}
           />
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <ImportarPlanilhaDrawer empresaId={empresaId} />
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={imprimindo || comImprimivel.length === 0}
+          onClick={() => imprimirEMarcar(comImprimivel)}
+        >
+          <Printer className="size-4" />
+          Imprimir todos ({comImprimivel.length})
+        </Button>
+        {usaPesagem && (
+          <Drawer
+            direction="right"
+            open={drawerPesagemAberto}
+            handleOnly
+            onOpenChange={(v) => {
+              if (v) abrirDrawerPesagem()
+              else setDrawerPesagemAberto(false)
+            }}
+          >
+            <DrawerTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={imprimindoPesagem || candidatosPapelA.length === 0}
+              >
+                <Scale className="size-4" />
+                Imprimir pesagem
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent
+              direction="right"
+              variant="float"
+              className="flex w-full flex-col gap-0 sm:max-w-md"
+            >
+              <DrawerHeader>
+                <DrawerTitle>
+                  Imprimir pesagem — 1º turno + administrativo
+                </DrawerTitle>
+                <DrawerDescription>
+                  Só esse papel imprime em lote. Marque quem sai do lote e vai
+                  como pedido individual.
+                </DrawerDescription>
+              </DrawerHeader>
+
+              <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-6">
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm font-medium">
+                    O que mais tem no cardápio hoje?
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Arroz e feijão sempre entram. Marque o resto que tem hoje.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {itensOpcionais.map((item) => (
+                      <label
+                        key={item.chave}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <Checkbox
+                          checked={itensExtras.has(item.chave)}
+                          onCheckedChange={() => alternarItemExtra(item.chave)}
+                        />
+                        {item.label}
+                      </label>
+                    ))}
+                  </div>
+
+                  {itensExtras.has('legumes') && (
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-sm">Qual legume hoje?</Label>
+                      <Input
+                        value={detalheLegumes}
+                        onChange={(e) => setDetalheLegumes(e.target.value)}
+                        placeholder="Ex: Cenoura/Chuchu"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 border-t pt-4">
+                  <p className="text-sm font-medium">
+                    Quem vai como pedido individual?
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Desmarcado = entra no lote da pesagem. Marcado = vira
+                    comanda avulsa (ex: marmita separada).
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {candidatosPapelA.map((pedido) => (
+                      <label
+                        key={pedido.colaboradorId}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <Checkbox
+                          checked={selecaoIndividual.has(pedido.colaboradorId)}
+                          onCheckedChange={() =>
+                            alternarIndividual(pedido.colaboradorId)
+                          }
+                        />
+                        {pedido.nome}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <DrawerFooter className="flex-row justify-end gap-2 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setDrawerPesagemAberto(false)}
+                  disabled={imprimindoPesagem}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={imprimindoPesagem}
+                  onClick={imprimirPesagemEMarcar}
+                >
+                  {imprimindoPesagem ? 'Imprimindo...' : 'Gerar papel'}
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
