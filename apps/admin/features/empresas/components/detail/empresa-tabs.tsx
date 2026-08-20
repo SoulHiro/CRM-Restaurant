@@ -10,6 +10,7 @@ import type {
   EmpresaListItem,
   VisaoGeralOperacional,
 } from '../../lib/types'
+import { ConfiguracoesTab } from './tabs/configuracoes-tab'
 import { DadosTab } from './tabs/dados-tab'
 import { FaturamentoTab } from './tabs/faturamento-tab'
 import { FuncionariosTab } from './tabs/funcionarios/funcionarios-tab'
@@ -39,6 +40,7 @@ export function EmpresaTabs({
         <TabsTrigger value="pausas">Pausas</TabsTrigger>
         <TabsTrigger value="faturamento">Faturamento</TabsTrigger>
         <TabsTrigger value="dados">Dados</TabsTrigger>
+        <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
       </TabsList>
 
       <TabsContent value="visao-geral" className="mt-6">
@@ -54,10 +56,20 @@ export function EmpresaTabs({
           empresaEndereco={empresa.endereco}
           fluxoPedido={empresa.fluxoPedido}
           resumoMostraQuantidades={empresa.resumoMostraQuantidades}
+          precoModo={empresa.precoModo}
+          pedeCafe={empresa.pedeCafe}
+          pedeLanche={empresa.pedeLanche}
+          pedeSuco={empresa.pedeSuco}
         />
       </TabsContent>
       <TabsContent value="valores" className="mt-6">
-        <ValoresTab empresaId={empresa.id} />
+        <ValoresTab
+          empresaId={empresa.id}
+          precoModo={empresa.precoModo}
+          pedeCafe={empresa.pedeCafe}
+          pedeLanche={empresa.pedeLanche}
+          pedeSuco={empresa.pedeSuco}
+        />
       </TabsContent>
       <TabsContent value="historico" className="mt-6">
         <HistoricoTab
@@ -65,6 +77,10 @@ export function EmpresaTabs({
           empresaNome={empresa.nome}
           funcionarios={detail.funcionarios}
           resumoMostraQuantidades={empresa.resumoMostraQuantidades}
+          precoModo={empresa.precoModo}
+          pedeCafe={empresa.pedeCafe}
+          pedeLanche={empresa.pedeLanche}
+          pedeSuco={empresa.pedeSuco}
         />
       </TabsContent>
       <TabsContent value="pausas" className="mt-6">
@@ -79,6 +95,9 @@ export function EmpresaTabs({
           endereco={empresa.endereco}
           documentos={detail.documentos}
         />
+      </TabsContent>
+      <TabsContent value="configuracoes" className="mt-6">
+        <ConfiguracoesTab empresa={empresa} />
       </TabsContent>
     </Tabs>
   )

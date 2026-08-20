@@ -20,6 +20,14 @@ export const empresaFluxoPedidoEnum = pgEnum('empresa_fluxo_pedido', [
   'pesagem',
 ])
 
+// 'unico': a empresa não distingue P/M/G — todo mundo paga o mesmo valor por
+// marmita (ex: COFEL, R$26 fixo). Troca os 3 campos de preço por 1 só em
+// Valores/Finalizar dia, e a comanda não imprime linha de tamanho.
+export const empresaPrecoModoEnum = pgEnum('empresa_preco_modo', [
+  'por_tamanho',
+  'unico',
+])
+
 export const empresa = pgTable('empresa', {
   id: text('id')
     .primaryKey()
@@ -44,6 +52,13 @@ export const empresa = pgTable('empresa', {
   resumo_mostra_quantidades: boolean('resumo_mostra_quantidades')
     .notNull()
     .default(true),
+  preco_modo: empresaPrecoModoEnum('preco_modo').notNull().default('por_tamanho'),
+  // Ligados por padrão (comportamento de hoje) — desliga por empresa quando
+  // ela nunca pede aquele item, pra sumir o campo de Finalizar dia/Valores e
+  // o bloco correspondente no resumo do dia, em vez de mostrar zerado.
+  pede_cafe: boolean('pede_cafe').notNull().default(true),
+  pede_lanche: boolean('pede_lanche').notNull().default(true),
+  pede_suco: boolean('pede_suco').notNull().default(true),
   created_at: timestamp('created_at').notNull().defaultNow(),
 })
 

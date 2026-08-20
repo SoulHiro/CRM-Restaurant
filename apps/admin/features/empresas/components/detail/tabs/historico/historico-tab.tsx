@@ -16,7 +16,10 @@ import {
   filterHistorico,
   flattenHistoricoSemanas,
 } from '../../../../lib/historico-helpers'
-import type { EmpresaFuncionario } from '../../../../lib/types'
+import type {
+  EmpresaFuncionario,
+  EmpresaPrecoModo,
+} from '../../../../lib/types'
 import { HistoricoDateRangePicker } from './historico-date-range-picker'
 import { HistoricoFechamentosSection } from './historico-fechamentos-section'
 import { HistoricoSearchInput } from './historico-search-input'
@@ -27,11 +30,19 @@ export function HistoricoTab({
   empresaNome,
   funcionarios,
   resumoMostraQuantidades,
+  precoModo,
+  pedeCafe,
+  pedeLanche,
+  pedeSuco,
 }: {
   empresaId: string
   empresaNome: string
   funcionarios: EmpresaFuncionario[]
   resumoMostraQuantidades: boolean
+  precoModo: EmpresaPrecoModo
+  pedeCafe: boolean
+  pedeLanche: boolean
+  pedeSuco: boolean
 }) {
   const [q, setQ] = useState('')
   const [from, setFrom] = useState<string | null>(null)
@@ -63,6 +74,10 @@ export function HistoricoTab({
         empresaId={empresaId}
         empresaNome={empresaNome}
         resumoMostraQuantidades={resumoMostraQuantidades}
+        precoModo={precoModo}
+        pedeCafe={pedeCafe}
+        pedeLanche={pedeLanche}
+        pedeSuco={pedeSuco}
       />
 
       {semanas.length > 0 && (

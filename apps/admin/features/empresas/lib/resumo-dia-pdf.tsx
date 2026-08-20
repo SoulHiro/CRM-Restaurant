@@ -123,6 +123,12 @@ export interface ResumoDiaDados {
    * de contagem no topo, mantém a lista de itens e o total.
    */
   mostrarQuantidades: boolean
+  /** 'unico' (ex: COFEL): 1 bloco "Marmitas" no topo, em vez de P/M/G. */
+  precoModo: 'por_tamanho' | 'unico'
+  quantidadeMarmitaUnica: number
+  pedeCafe: boolean
+  pedeLanche: boolean
+  pedeSuco: boolean
   empresaClienteNome: string
   impressoEm: string
   itens: ItemResumoDia[]
@@ -170,38 +176,55 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
       >
         {dados.mostrarQuantidades && (
           <View style={styles.quantidadesLinha}>
-            <View style={styles.quantidadeBloco}>
-              <Text style={styles.quantidadeLabel}>P</Text>
-              <Text style={styles.quantidadeValor}>
-                {contarTamanho(dados.itens, 'P')}
-              </Text>
-            </View>
-            <View style={styles.quantidadeBloco}>
-              <Text style={styles.quantidadeLabel}>M</Text>
-              <Text style={styles.quantidadeValor}>
-                {contarTamanho(dados.itens, 'M')}
-              </Text>
-            </View>
-            <View style={styles.quantidadeBloco}>
-              <Text style={styles.quantidadeLabel}>G</Text>
-              <Text style={styles.quantidadeValor}>
-                {contarTamanho(dados.itens, 'G')}
-              </Text>
-            </View>
-            <View style={styles.quantidadeBloco}>
-              <Text style={styles.quantidadeLabel}>Lanche</Text>
-              <Text style={styles.quantidadeValor}>
-                {contarLanches(dados.itens)}
-              </Text>
-            </View>
-            <View style={styles.quantidadeBloco}>
-              <Text style={styles.quantidadeLabel}>Café</Text>
-              <Text style={styles.quantidadeValor}>{dados.quantidadeCafe}</Text>
-            </View>
-            <View style={styles.quantidadeBloco}>
-              <Text style={styles.quantidadeLabel}>Suco</Text>
-              <Text style={styles.quantidadeValor}>{dados.quantidadeSuco}</Text>
-            </View>
+            {dados.precoModo === 'unico' ? (
+              <View style={styles.quantidadeBloco}>
+                <Text style={styles.quantidadeLabel}>Marmitas</Text>
+                <Text style={styles.quantidadeValor}>
+                  {dados.quantidadeMarmitaUnica}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.quantidadeBloco}>
+                  <Text style={styles.quantidadeLabel}>P</Text>
+                  <Text style={styles.quantidadeValor}>
+                    {contarTamanho(dados.itens, 'P')}
+                  </Text>
+                </View>
+                <View style={styles.quantidadeBloco}>
+                  <Text style={styles.quantidadeLabel}>M</Text>
+                  <Text style={styles.quantidadeValor}>
+                    {contarTamanho(dados.itens, 'M')}
+                  </Text>
+                </View>
+                <View style={styles.quantidadeBloco}>
+                  <Text style={styles.quantidadeLabel}>G</Text>
+                  <Text style={styles.quantidadeValor}>
+                    {contarTamanho(dados.itens, 'G')}
+                  </Text>
+                </View>
+              </>
+            )}
+            {dados.pedeLanche && (
+              <View style={styles.quantidadeBloco}>
+                <Text style={styles.quantidadeLabel}>Lanche</Text>
+                <Text style={styles.quantidadeValor}>
+                  {contarLanches(dados.itens)}
+                </Text>
+              </View>
+            )}
+            {dados.pedeCafe && (
+              <View style={styles.quantidadeBloco}>
+                <Text style={styles.quantidadeLabel}>Café</Text>
+                <Text style={styles.quantidadeValor}>{dados.quantidadeCafe}</Text>
+              </View>
+            )}
+            {dados.pedeSuco && (
+              <View style={styles.quantidadeBloco}>
+                <Text style={styles.quantidadeLabel}>Suco</Text>
+                <Text style={styles.quantidadeValor}>{dados.quantidadeSuco}</Text>
+              </View>
+            )}
           </View>
         )}
 

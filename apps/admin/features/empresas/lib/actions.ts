@@ -27,6 +27,7 @@ import {
   atualizarColaboradorAtivoSchema,
   atualizarColaboradoresSeparadosSchema,
   atualizarColaboradorSeparadoSchema,
+  atualizarConfiguracaoEmpresaSchema,
   atualizarPedidoSchema,
   atualizarPrecoPedidoSchema,
   createEmpresaSchema,
@@ -97,6 +98,33 @@ export const createEmpresaAction = authActionClient
     revalidatePath('/empresas')
     updateTag(TAG_EMPRESAS_LISTA)
     return { empresaId: criada.id }
+  })
+
+/**
+ * Aba "Configurações" da empresa — fluxo de pedido (padrão/pesagem), se o
+ * resumo do dia mostra o bloco de quantidades, modo de preço da marmita
+ * (por tamanho/único) e quais itens extras (café/lanche/suco) ela pede.
+ * Tudo num único action porque os campos sempre são editados juntos, na
+ * mesma tela.
+ */
+export const atualizarConfiguracaoEmpresaAction = authActionClient
+  .schema(atualizarConfiguracaoEmpresaSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .update(empresa)
+      .set({
+        fluxo_pedido: parsedInput.fluxoPedido,
+        resumo_mostra_quantidades: parsedInput.resumoMostraQuantidades,
+        preco_modo: parsedInput.precoModo,
+        pede_cafe: parsedInput.pedeCafe,
+        pede_lanche: parsedInput.pedeLanche,
+        pede_suco: parsedInput.pedeSuco,
+      })
+      .where(eq(empresa.id, parsedInput.empresaId))
+
+    revalidatePath('/empresas')
+    updateTag(TAG_EMPRESAS_LISTA)
+    updateTag(tagEmpresa(parsedInput.empresaId))
   })
 
 export const listarColaboradoresEmpresaAction = authActionClient
@@ -352,25 +380,40 @@ export const finalizarDiaAction = authActionClient
       throw new ActionError('Esse dia já foi finalizado para essa empresa.')
     }
 
+    const empresaConfig = await db.query.empresa.findFirst({
+      where: eq(empresa.id, parsedInput.empresaId),
+      columns: { preco_modo: true },
+    })
+    if (!empresaConfig) throw new ActionError('Empresa não encontrada.')
+
     const [contagem, pedidos] = await Promise.all([
       getContagemTamanhos(parsedInput.empresaId, parsedInput.data),
       getPedidosDoDia(parsedInput.empresaId, parsedInput.data),
     ])
 
+    const precoUnico = parsedInput.precoUnitarioMarmitaUnica
     const precoPorTamanho: Record<'P' | 'M' | 'G', number> = {
       P: parsedInput.precoUnitarioP,
       M: parsedInput.precoUnitarioM,
       G: parsedInput.precoUnitarioG,
     }
+    const usaPrecoUnico = empresaConfig.preco_modo === 'unico'
 
+    // No modo único a empresa não marca tamanho nenhum (ex: COFEL) — toda
+    // marmita do dia entra pelo preço fixo, com ou sem tamanho na linha.
     const itensMarmita = pedidos.filter(
-      (p): p is typeof p & { tamanho: 'P' | 'M' | 'G' } =>
-        p.tipo === 'marmita' && p.tamanho != null && !p.recusou
+      (p) => p.tipo === 'marmita' && (usaPrecoUnico || p.tamanho != null) && !p.recusou
     )
     const itensLanche = pedidos.filter((p) => p.tipo === 'lanche' && !p.recusou)
 
+    function precoDaMarmita(item: (typeof itensMarmita)[number]): number {
+      if (item.preco != null) return item.preco
+      if (usaPrecoUnico) return precoUnico
+      return precoPorTamanho[item.tamanho as 'P' | 'M' | 'G']
+    }
+
     const totalMarmitas = itensMarmita.reduce(
-      (soma, item) => soma + (item.preco ?? precoPorTamanho[item.tamanho]),
+      (soma, item) => soma + precoDaMarmita(item),
       0
     )
     const totalLanches = itensLanche.reduce(
@@ -392,6 +435,10 @@ export const finalizarDiaAction = authActionClient
         preco_unitario_m: toMoneyString(parsedInput.precoUnitarioM),
         quantidade_g: contagem.g,
         preco_unitario_g: toMoneyString(parsedInput.precoUnitarioG),
+        quantidade_marmita_unica: usaPrecoUnico ? itensMarmita.length : 0,
+        preco_unitario_marmita_unica: usaPrecoUnico
+          ? toMoneyString(precoUnico)
+          : '0',
         quantidade_cafe: parsedInput.quantidadeCafe,
         preco_unitario_cafe: toMoneyString(parsedInput.precoUnitarioCafe),
         quantidade_suco: parsedInput.quantidadeSuco,
@@ -411,7 +458,7 @@ export const finalizarDiaAction = authActionClient
         tipo: 'marmita' as const,
         prato: item.prato,
         tamanho: item.tamanho,
-        preco: toMoneyString(item.preco ?? precoPorTamanho[item.tamanho]),
+        preco: toMoneyString(precoDaMarmita(item)),
       })),
       ...itensLanche.map((item) => ({
         fechamento_id: criado.id,

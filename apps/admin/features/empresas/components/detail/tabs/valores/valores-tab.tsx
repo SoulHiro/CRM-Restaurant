@@ -19,24 +19,41 @@ import {
   obterPrecosEmpresaAction,
   salvarPrecosEmpresaAction,
 } from '../../../../lib/actions'
-import type { PrecoPadraoTipo, PrecosPadraoEmpresa } from '../../../../lib/types'
+import type {
+  EmpresaPrecoModo,
+  PrecoPadraoTipo,
+  PrecosPadraoEmpresa,
+} from '../../../../lib/types'
 
-const GRUPOS: { titulo: string; tipos: PrecoPadraoTipo[] }[] = [
-  {
-    titulo: 'Marmita',
-    tipos: ['marmita_p', 'marmita_m', 'marmita_g'],
-  },
-  {
-    titulo: 'Café, suco e lanche',
-    tipos: ['cafe', 'suco', 'lanche'],
-  },
-  {
-    titulo: 'Outros',
-    tipos: ['garrafa_cafe_adicional'],
-  },
-]
+export function ValoresTab({
+  empresaId,
+  precoModo,
+  pedeCafe,
+  pedeLanche,
+  pedeSuco,
+}: {
+  empresaId: string
+  precoModo: EmpresaPrecoModo
+  pedeCafe: boolean
+  pedeLanche: boolean
+  pedeSuco: boolean
+}) {
+  const tiposMarmita: PrecoPadraoTipo[] =
+    precoModo === 'unico' ? ['marmita_unica'] : ['marmita_p', 'marmita_m', 'marmita_g']
 
-export function ValoresTab({ empresaId }: { empresaId: string }) {
+  const tiposExtras: PrecoPadraoTipo[] = []
+  if (pedeCafe) tiposExtras.push('cafe')
+  if (pedeSuco) tiposExtras.push('suco')
+  if (pedeLanche) tiposExtras.push('lanche')
+
+  const tiposOutros: PrecoPadraoTipo[] = ['garrafa_cafe_adicional']
+
+  const grupos: { titulo: string; tipos: PrecoPadraoTipo[] }[] = [
+    { titulo: 'Marmita', tipos: tiposMarmita },
+    { titulo: 'Café, suco e lanche', tipos: tiposExtras },
+    { titulo: 'Outros', tipos: tiposOutros },
+  ].filter((grupo) => grupo.tipos.length > 0)
+
   const [precos, setPrecos] = useState<PrecosPadraoEmpresa | null>(null)
 
   const { execute: buscar, isExecuting: carregando } = useAction(
@@ -106,7 +123,7 @@ export function ValoresTab({ empresaId }: { empresaId: string }) {
         novo toda vez.
       </p>
 
-      {GRUPOS.map((grupo) => (
+      {grupos.map((grupo) => (
         <Card key={grupo.titulo} className="border-0">
           <CardHeader>
             <CardTitle className="text-base">{grupo.titulo}</CardTitle>

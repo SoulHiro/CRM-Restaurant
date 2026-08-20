@@ -48,6 +48,7 @@ import type {
   ColaboradorEmpresaItem,
   EmpresaEndereco,
   EmpresaFluxoPedido,
+  EmpresaPrecoModo,
   PedidoDoDiaItem,
 } from '../../../../lib/types'
 import {
@@ -84,12 +85,20 @@ export function PedidosTab({
   empresaEndereco,
   fluxoPedido,
   resumoMostraQuantidades,
+  precoModo,
+  pedeCafe,
+  pedeLanche,
+  pedeSuco,
 }: {
   empresaId: string
   empresaNome: string
   empresaEndereco: EmpresaEndereco
   fluxoPedido: EmpresaFluxoPedido
   resumoMostraQuantidades: boolean
+  precoModo: EmpresaPrecoModo
+  pedeCafe: boolean
+  pedeLanche: boolean
+  pedeSuco: boolean
 }) {
   const usaPesagem = fluxoPedido === 'pesagem'
 
@@ -466,6 +475,10 @@ export function PedidosTab({
             data={data}
             pedidos={pedidos ?? []}
             resumoMostraQuantidades={resumoMostraQuantidades}
+            precoModo={precoModo}
+            pedeCafe={pedeCafe}
+            pedeLanche={pedeLanche}
+            pedeSuco={pedeSuco}
             onFinalizado={() => execute({ empresaId, data })}
           />
         </div>

@@ -94,6 +94,10 @@ async function mapEmpresa(
     funcionariosRespondidos: respondidos,
     fluxoPedido: row.fluxo_pedido,
     resumoMostraQuantidades: row.resumo_mostra_quantidades,
+    precoModo: row.preco_modo,
+    pedeCafe: row.pede_cafe,
+    pedeLanche: row.pede_lanche,
+    pedeSuco: row.pede_suco,
     // Sem colaborador nenhum ainda não é "aguardando resposta" — é "nada
     // importado", mas a tela não distingue os dois hoje; tratar como
     // aguardando é o lado seguro (não esconde uma empresa sem pedidos de hoje).
@@ -291,6 +295,8 @@ function mapFechamento(
     quantidadeSuco: row.quantidade_suco,
     precoUnitarioSuco: toNumber(row.preco_unitario_suco),
     quantidadeLanche: row.quantidade_lanche,
+    quantidadeMarmitaUnica: row.quantidade_marmita_unica,
+    precoUnitarioMarmitaUnica: toNumber(row.preco_unitario_marmita_unica),
     valorTotal: toNumber(row.valor_total),
     finalizadoPor: row.finalizado_por,
     finalizadoEm: row.finalizado_em.toISOString(),
@@ -475,6 +481,7 @@ const NOME_PADRAO_POR_TIPO: Record<PrecoPadraoTipo, string> = {
   marmita_p: 'Marmita P',
   marmita_m: 'Marmita M',
   marmita_g: 'Marmita G',
+  marmita_unica: 'Marmita',
   cafe: 'Café',
   suco: 'Suco',
   lanche: 'Lanche',
@@ -482,9 +489,10 @@ const NOME_PADRAO_POR_TIPO: Record<PrecoPadraoTipo, string> = {
 }
 
 /**
- * Valores padrão da empresa (marmita P/M/G, café, suco, lanche, garrafa de
- * café adicional) — sempre devolve as 7 chaves, com nome/preço zerados pros
- * tipos ainda não configurados, pra quem usa não precisar tratar ausência.
+ * Valores padrão da empresa (marmita P/M/G, marmita única, café, suco,
+ * lanche, garrafa de café adicional) — sempre devolve todas as chaves, com
+ * nome/preço zerados pros tipos ainda não configurados, pra quem usa não
+ * precisar tratar ausência.
  */
 export function getPrecosEmpresa(
   empresaId: string

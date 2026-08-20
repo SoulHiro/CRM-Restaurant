@@ -108,6 +108,20 @@ export type AtualizarColaboradorSeparadoInput = z.infer<
   typeof atualizarColaboradorSeparadoSchema
 >
 
+export const atualizarConfiguracaoEmpresaSchema = z.object({
+  empresaId: z.string().min(1),
+  fluxoPedido: z.enum(['padrao', 'pesagem']),
+  resumoMostraQuantidades: z.boolean(),
+  precoModo: z.enum(['por_tamanho', 'unico']),
+  pedeCafe: z.boolean(),
+  pedeLanche: z.boolean(),
+  pedeSuco: z.boolean(),
+})
+
+export type AtualizarConfiguracaoEmpresaInput = z.infer<
+  typeof atualizarConfiguracaoEmpresaSchema
+>
+
 export const atualizarColaboradoresSeparadosSchema = z.object({
   atualizacoes: z
     .array(
@@ -195,6 +209,8 @@ export const finalizarDiaSchema = z.object({
   precoUnitarioP: z.number().min(0),
   precoUnitarioM: z.number().min(0),
   precoUnitarioG: z.number().min(0),
+  // Só usado quando empresa.preco_modo = 'unico' — ignorado no modo padrão.
+  precoUnitarioMarmitaUnica: z.number().min(0).default(0),
   quantidadeCafe: z.number().int().min(0),
   precoUnitarioCafe: z.number().min(0),
   quantidadeSuco: z.number().int().min(0),
@@ -289,6 +305,7 @@ const PRECO_PADRAO_TIPOS = [
   'marmita_p',
   'marmita_m',
   'marmita_g',
+  'marmita_unica',
   'cafe',
   'suco',
   'lanche',

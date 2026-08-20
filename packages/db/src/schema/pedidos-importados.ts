@@ -169,6 +169,13 @@ export const fechamento_dia_empresa = pgTable(
     preco_unitario_suco: numeric('preco_unitario_suco', PRECO).notNull().default('0'),
     quantidade_lanche: integer('quantidade_lanche').notNull().default(0),
     preco_unitario_lanche: numeric('preco_unitario_lanche', PRECO).notNull().default('0'),
+    // Só preenchido quando empresa.preco_modo = 'unico' (ex: COFEL) — todas
+    // as marmitas do dia, sem distinção de tamanho, num preço só. P/M/G
+    // ficam zerados nesse caso (ninguém marca tamanho pra essa empresa).
+    quantidade_marmita_unica: integer('quantidade_marmita_unica').notNull().default(0),
+    preco_unitario_marmita_unica: numeric('preco_unitario_marmita_unica', PRECO)
+      .notNull()
+      .default('0'),
     // Soma de tudo (itens + café + suco) no momento do fechamento — gravado
     // pra alimentar faturamento sem precisar recalcular a partir dos itens
     // toda vez que a tela de faturamento carrega.
@@ -208,6 +215,7 @@ export const precoPadraoTipoEnum = pgEnum('preco_padrao_tipo', [
   'marmita_p',
   'marmita_m',
   'marmita_g',
+  'marmita_unica',
   'cafe',
   'suco',
   'lanche',

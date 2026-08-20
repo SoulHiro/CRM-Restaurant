@@ -9,6 +9,9 @@ export type EmpresaRecordStatus = 'ativo' | 'inativo'
  */
 export type EmpresaFluxoPedido = 'padrao' | 'pesagem'
 
+/** 'unico': sem distinção de tamanho — todo mundo paga o mesmo valor (ex: COFEL). */
+export type EmpresaPrecoModo = 'por_tamanho' | 'unico'
+
 export type TurnoRefeicao =
   | 'almoco'
   | 'jantar'
@@ -32,6 +35,10 @@ export interface EmpresaListItem {
   fluxoPedido: EmpresaFluxoPedido
   /** P/M/G/Lanche/Café/Suco no resumo do dia — independente de fluxoPedido. */
   resumoMostraQuantidades: boolean
+  precoModo: EmpresaPrecoModo
+  pedeCafe: boolean
+  pedeLanche: boolean
+  pedeSuco: boolean
 }
 
 export interface EmpresaEndereco {
@@ -202,6 +209,9 @@ export interface FechamentoDia {
   quantidadeSuco: number
   precoUnitarioSuco: number
   quantidadeLanche: number
+  /** Só preenchido quando a empresa usa precoModo = 'unico' (ex: COFEL). */
+  quantidadeMarmitaUnica: number
+  precoUnitarioMarmitaUnica: number
   valorTotal: number
   finalizadoPor: string | null
   finalizadoEm: string
@@ -212,6 +222,7 @@ export type PrecoPadraoTipo =
   | 'marmita_p'
   | 'marmita_m'
   | 'marmita_g'
+  | 'marmita_unica'
   | 'cafe'
   | 'suco'
   | 'lanche'

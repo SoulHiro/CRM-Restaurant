@@ -32,6 +32,7 @@ import {
   reabrirDiaAction,
 } from '../../../../lib/actions'
 import type {
+  EmpresaPrecoModo,
   FechamentoDia,
   ItemFechamento,
   PedidoDoDiaItem,
@@ -44,6 +45,10 @@ export function FinalizarDiaDrawer({
   data,
   pedidos,
   resumoMostraQuantidades,
+  precoModo,
+  pedeCafe,
+  pedeLanche,
+  pedeSuco,
   onFinalizado,
 }: {
   empresaId: string
@@ -51,6 +56,10 @@ export function FinalizarDiaDrawer({
   data: string
   pedidos: PedidoDoDiaItem[]
   resumoMostraQuantidades: boolean
+  precoModo: EmpresaPrecoModo
+  pedeCafe: boolean
+  pedeLanche: boolean
+  pedeSuco: boolean
   onFinalizado: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -74,9 +83,12 @@ export function FinalizarDiaDrawer({
     string | null
   >(null)
 
+  const usaPrecoUnico = precoModo === 'unico'
+
   const [precoP, setPrecoP] = useState('0')
   const [precoM, setPrecoM] = useState('0')
   const [precoG, setPrecoG] = useState('0')
+  const [precoUnico, setPrecoUnico] = useState('0')
   const [quantidadeCafe, setQuantidadeCafe] = useState('0')
   const [precoCafe, setPrecoCafe] = useState('0')
   const [quantidadeSuco, setQuantidadeSuco] = useState('0')
@@ -85,9 +97,10 @@ export function FinalizarDiaDrawer({
   const pedidosMarmita = useMemo(
     () =>
       pedidos.filter(
-        (p) => p.tipo === 'marmita' && p.tamanho != null && !p.recusou
+        (p) =>
+          p.tipo === 'marmita' && (usaPrecoUnico || p.tamanho != null) && !p.recusou
       ),
-    [pedidos]
+    [pedidos, usaPrecoUnico]
   )
   const pedidosLanche = useMemo(
     () => pedidos.filter((p) => p.tipo === 'lanche' && !p.recusou),
@@ -103,7 +116,13 @@ export function FinalizarDiaDrawer({
       else if (pedido.tamanho === 'M') m++
       else if (pedido.tamanho === 'G') g++
     }
-    return { p, m, g, lanche: pedidosLanche.length }
+    return {
+      p,
+      m,
+      g,
+      marmitaUnica: pedidosMarmita.length,
+      lanche: pedidosLanche.length,
+    }
   }, [pedidosMarmita, pedidosLanche])
 
   const { executeAsync: buscarFechamento } = useAction(
@@ -178,6 +197,7 @@ export function FinalizarDiaDrawer({
             setPrecoP(String(precos.marmita_p.preco))
             setPrecoM(String(precos.marmita_m.preco))
             setPrecoG(String(precos.marmita_g.preco))
+            setPrecoUnico(String(precos.marmita_unica.preco))
             setPrecoCafe(String(precos.cafe.preco))
             setPrecoSuco(String(precos.suco.preco))
           }
@@ -238,6 +258,11 @@ export function FinalizarDiaDrawer({
     return {
       camposCabecalho,
       mostrarQuantidades: resumoMostraQuantidades,
+      precoModo,
+      quantidadeMarmitaUnica: registro.quantidadeMarmitaUnica,
+      pedeCafe,
+      pedeLanche,
+      pedeSuco,
       empresaClienteNome: empresaNome,
       impressoEm: new Date().toISOString(),
       itens,
@@ -402,58 +427,92 @@ export function FinalizarDiaDrawer({
           <>
             <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-6">
               <div className="flex justify-between rounded-lg border p-3 text-center">
-                <div>
-                  <p className="text-xs text-muted-foreground">P</p>
-                  <p className="text-2xl font-bold">{contagem.p}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">M</p>
-                  <p className="text-2xl font-bold">{contagem.m}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">G</p>
-                  <p className="text-2xl font-bold">{contagem.g}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Lanche</p>
-                  <p className="text-2xl font-bold">{contagem.lanche}</p>
-                </div>
+                {usaPrecoUnico ? (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Marmitas</p>
+                    <p className="text-2xl font-bold">{contagem.marmitaUnica}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs text-muted-foreground">P</p>
+                      <p className="text-2xl font-bold">{contagem.p}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">M</p>
+                      <p className="text-2xl font-bold">{contagem.m}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">G</p>
+                      <p className="text-2xl font-bold">{contagem.g}</p>
+                    </div>
+                  </>
+                )}
+                {pedeLanche && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Lanche</p>
+                    <p className="text-2xl font-bold">{contagem.lanche}</p>
+                  </div>
+                )}
               </div>
 
-              {[
-                { label: 'Marmita P', preco: precoP, setPreco: setPrecoP },
-                { label: 'Marmita M', preco: precoM, setPreco: setPrecoM },
-                { label: 'Marmita G', preco: precoG, setPreco: setPrecoG },
-              ].map((item) => (
-                <div key={item.label} className="flex flex-col gap-1.5">
+              {usaPrecoUnico ? (
+                <div className="flex flex-col gap-1.5">
                   <Label className="text-sm">
-                    {item.label} — valor unitário (R$)
+                    Marmita (preço único) — valor unitário (R$)
                   </Label>
                   <Input
                     type="number"
                     min="0"
                     step="0.01"
-                    value={item.preco}
-                    onChange={(e) => item.setPreco(e.target.value)}
+                    value={precoUnico}
+                    onChange={(e) => setPrecoUnico(e.target.value)}
                   />
                 </div>
-              ))}
+              ) : (
+                [
+                  { label: 'Marmita P', preco: precoP, setPreco: setPrecoP },
+                  { label: 'Marmita M', preco: precoM, setPreco: setPrecoM },
+                  { label: 'Marmita G', preco: precoG, setPreco: setPrecoG },
+                ].map((item) => (
+                  <div key={item.label} className="flex flex-col gap-1.5">
+                    <Label className="text-sm">
+                      {item.label} — valor unitário (R$)
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.preco}
+                      onChange={(e) => item.setPreco(e.target.value)}
+                    />
+                  </div>
+                ))
+              )}
 
               {[
-                {
-                  label: 'Café',
-                  qtd: quantidadeCafe,
-                  setQtd: setQuantidadeCafe,
-                  preco: precoCafe,
-                  setPreco: setPrecoCafe,
-                },
-                {
-                  label: 'Suco',
-                  qtd: quantidadeSuco,
-                  setQtd: setQuantidadeSuco,
-                  preco: precoSuco,
-                  setPreco: setPrecoSuco,
-                },
+                ...(pedeCafe
+                  ? [
+                      {
+                        label: 'Café',
+                        qtd: quantidadeCafe,
+                        setQtd: setQuantidadeCafe,
+                        preco: precoCafe,
+                        setPreco: setPrecoCafe,
+                      },
+                    ]
+                  : []),
+                ...(pedeSuco
+                  ? [
+                      {
+                        label: 'Suco',
+                        qtd: quantidadeSuco,
+                        setQtd: setQuantidadeSuco,
+                        preco: precoSuco,
+                        setPreco: setPrecoSuco,
+                      },
+                    ]
+                  : []),
               ].map((item) => (
                 <div key={item.label} className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
@@ -497,9 +556,10 @@ export function FinalizarDiaDrawer({
                     precoUnitarioP: Number(precoP) || 0,
                     precoUnitarioM: Number(precoM) || 0,
                     precoUnitarioG: Number(precoG) || 0,
-                    quantidadeCafe: Number(quantidadeCafe) || 0,
+                    precoUnitarioMarmitaUnica: Number(precoUnico) || 0,
+                    quantidadeCafe: pedeCafe ? Number(quantidadeCafe) || 0 : 0,
                     precoUnitarioCafe: Number(precoCafe) || 0,
-                    quantidadeSuco: Number(quantidadeSuco) || 0,
+                    quantidadeSuco: pedeSuco ? Number(quantidadeSuco) || 0 : 0,
                     precoUnitarioSuco: Number(precoSuco) || 0,
                   })
                 }

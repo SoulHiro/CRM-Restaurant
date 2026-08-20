@@ -28,7 +28,11 @@ import {
   listarFechamentosAction,
   obterFechamentoDoDiaAction,
 } from '../../../../lib/actions'
-import type { FechamentoDia, ItemFechamento } from '../../../../lib/types'
+import type {
+  EmpresaPrecoModo,
+  FechamentoDia,
+  ItemFechamento,
+} from '../../../../lib/types'
 import type {
   ItemResumoDia,
   ResumoDiaDados,
@@ -42,10 +46,18 @@ export function HistoricoFechamentosSection({
   empresaId,
   empresaNome,
   resumoMostraQuantidades,
+  precoModo,
+  pedeCafe,
+  pedeLanche,
+  pedeSuco,
 }: {
   empresaId: string
   empresaNome: string
   resumoMostraQuantidades: boolean
+  precoModo: EmpresaPrecoModo
+  pedeCafe: boolean
+  pedeLanche: boolean
+  pedeSuco: boolean
 }) {
   const [fechamentos, setFechamentos] = useState<FechamentoDia[] | null>(null)
   const [intervalo, setIntervalo] = useState<DateRangeValue>({
@@ -112,6 +124,11 @@ export function HistoricoFechamentosSection({
       const dados: ResumoDiaDados = {
         camposCabecalho: resultadoLayout?.data?.campos ?? CAMPOS_RESUMO_PADRAO,
         mostrarQuantidades: resumoMostraQuantidades,
+        precoModo,
+        quantidadeMarmitaUnica: fechamentoCompleto.quantidadeMarmitaUnica,
+        pedeCafe,
+        pedeLanche,
+        pedeSuco,
         empresaClienteNome: empresaNome,
         impressoEm: fechamentoCompleto.finalizadoEm,
         itens,
@@ -158,10 +175,16 @@ export function HistoricoFechamentosSection({
                 </span>
               </div>
               <span className="text-muted-foreground">
-                P {f.quantidadeP} · M {f.quantidadeM} · G {f.quantidadeG}
-                {' · '}
-                Lanche {f.quantidadeLanche} · Café {f.quantidadeCafe} · Suco{' '}
-                {f.quantidadeSuco}
+                {[
+                  precoModo === 'unico'
+                    ? `Marmitas ${f.quantidadeMarmitaUnica}`
+                    : `P ${f.quantidadeP} · M ${f.quantidadeM} · G ${f.quantidadeG}`,
+                  pedeLanche ? `Lanche ${f.quantidadeLanche}` : null,
+                  pedeCafe ? `Café ${f.quantidadeCafe}` : null,
+                  pedeSuco ? `Suco ${f.quantidadeSuco}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </span>
               <span className="font-medium">
                 {formatCurrencyBRL(f.valorTotal)}
