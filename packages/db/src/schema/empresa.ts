@@ -45,14 +45,22 @@ export const empresa = pgTable('empresa', {
   cidade: text('cidade'),
   uf: text('uf'),
   status: empresaStatusEnum('status').notNull().default('ativo'),
-  fluxo_pedido: empresaFluxoPedidoEnum('fluxo_pedido').notNull().default('padrao'),
+  // Endereço curto pra URL pública do cardápio (/cardapio/{slug}) — nulo até
+  // a empresa ter cardápio habilitado; não é o `id` interno de propósito
+  // (link mais limpo pra mandar no WhatsApp/RH).
+  slug: text('slug').unique(),
+  fluxo_pedido: empresaFluxoPedidoEnum('fluxo_pedido')
+    .notNull()
+    .default('padrao'),
   // Independente de fluxo_pedido — CANÚBIO é fluxo padrão mas também não usa
   // P/M/G/Lanche/Café/Suco no resumo do dia (só marmita simples, sem esses
   // conceitos). GPK/LNR continuam com o bloco de quantidades normal.
   resumo_mostra_quantidades: boolean('resumo_mostra_quantidades')
     .notNull()
     .default(true),
-  preco_modo: empresaPrecoModoEnum('preco_modo').notNull().default('por_tamanho'),
+  preco_modo: empresaPrecoModoEnum('preco_modo')
+    .notNull()
+    .default('por_tamanho'),
   // Ligados por padrão (comportamento de hoje) — desliga por empresa quando
   // ela nunca pede aquele item, pra sumir o campo de Finalizar dia/Valores e
   // o bloco correspondente no resumo do dia, em vez de mostrar zerado.
