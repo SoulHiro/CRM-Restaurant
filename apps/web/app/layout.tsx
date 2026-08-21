@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { Toaster } from '@repo/ui/components/sonner'
 import { ThemeProvider } from './component/theme-provider'
 import { Providers } from './providers'
 import { Geist } from 'next/font/google'
@@ -28,6 +29,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <Providers>{children}</Providers>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
