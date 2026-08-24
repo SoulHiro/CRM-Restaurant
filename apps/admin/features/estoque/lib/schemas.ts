@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
-import { CATEGORIAS_ESTOQUE, PERDA_MOTIVOS, UNIDADES } from './types'
+import {
+  CATEGORIAS_ESTOQUE,
+  INVENTARIO_TIPOS,
+  PERDA_MOTIVOS,
+  UNIDADES,
+} from './types'
 
 const quantidade = z.coerce
   .number({ invalid_type_error: 'Informe um número' })
@@ -35,6 +40,7 @@ export const createEstoqueItemSchema = z.object({
   tamanhoEmbalagem: numeroOpcional,
   pontoReposicao: quantidade,
   validade: dataOpcional,
+  preco: numeroOpcional,
 })
 
 export type CreateEstoqueItemInput = z.infer<typeof createEstoqueItemSchema>
@@ -47,6 +53,7 @@ export const createEstoqueItemDefaultValues: CreateEstoqueItemInput = {
   tamanhoEmbalagem: undefined,
   pontoReposicao: 0,
   validade: undefined,
+  preco: undefined,
 }
 
 // Editar cobre o cadastro do item (nome/unidade/embalagem/reposição/validade)
@@ -88,15 +95,6 @@ export function ajustarQuantidadeDefaultValues(
   return { estoqueItemId, quantidadeCorreta: quantidadeAtual, observacao: '' }
 }
 
-export const toggleEstoqueItemAtivoSchema = z.object({
-  id: z.string().min(1),
-  ativo: z.boolean(),
-})
-
-export type ToggleEstoqueItemAtivoInput = z.infer<
-  typeof toggleEstoqueItemAtivoSchema
->
-
 export const registrarPerdaSchema = z.object({
   estoqueItemId: z.string().min(1, 'Selecione o item'),
   quantidade: quantidadePositiva,
@@ -121,8 +119,7 @@ export function registrarPerdaDefaultValues(
 }
 
 export const iniciarInventarioSchema = z.object({
-  data: z.string().min(1, 'Informe a data'),
-  observacao: z.string().optional(),
+  tipo: z.enum(INVENTARIO_TIPOS),
 })
 
 export type IniciarInventarioInput = z.infer<typeof iniciarInventarioSchema>

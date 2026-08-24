@@ -10,6 +10,7 @@ import { FinalizarInventarioButton } from '@/features/estoque/components/inventa
 import { InventarioResumoCard } from '@/features/estoque/components/inventario/inventario-resumo-card'
 import { resumirContagem } from '@/features/estoque/lib/inventario-helpers'
 import { getInventarioDetalhe } from '@/features/estoque/lib/queries'
+import { INVENTARIO_TIPO_LABEL } from '@/features/estoque/lib/types'
 import { formatDateBR } from '@/lib/formatters'
 
 export default async function InventarioDetalhePage({
@@ -40,7 +41,7 @@ export default async function InventarioDetalhePage({
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold">
-              Contagem de {formatDateBR(resumo.data)}
+              {INVENTARIO_TIPO_LABEL[resumo.tipo]} de {formatDateBR(resumo.data)}
             </h1>
             <Badge variant={emAndamento ? 'default' : 'secondary'}>
               {emAndamento ? 'Em andamento' : 'Finalizada'}
@@ -53,7 +54,6 @@ export default async function InventarioDetalhePage({
           </p>
           <p className="text-sm text-muted-foreground">
             Responsável: {resumo.responsavel}
-            {resumo.observacao ? ` · ${resumo.observacao}` : ''}
           </p>
         </div>
 

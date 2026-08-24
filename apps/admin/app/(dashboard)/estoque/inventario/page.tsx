@@ -3,23 +3,20 @@ import { ArrowLeft } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
 
-import { IniciarInventarioDrawer } from '@/features/estoque/components/inventario/iniciar-inventario-drawer'
+import { ContagemDoDiaPanel } from '@/features/estoque/components/inventario/contagem-do-dia-panel'
 import { InventariosList } from '@/features/estoque/components/inventario/inventarios-list'
 import {
   contarItensAtivos,
+  getContagensHoje,
   getInventarios,
 } from '@/features/estoque/lib/queries'
-import { hojeISO } from '@/lib/formatters'
 
 export default async function InventarioPage() {
-  const [inventarios, itensAtivos] = await Promise.all([
-    getInventarios(),
+  const [contagensHoje, itensAtivos, inventarios] = await Promise.all([
+    getContagensHoje(),
     contarItensAtivos(),
+    getInventarios(),
   ])
-
-  const emAndamento = inventarios.find(
-    (inventario) => inventario.status === 'em_andamento'
-  )
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6">
@@ -29,42 +26,26 @@ export default async function InventarioPage() {
         </Link>
       </Button>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Inventário físico</h1>
-          <p className="text-sm text-muted-foreground">
-            A contagem na mão conferida contra o que o sistema calculou. É onde
-            erro de baixa, quebra não anotada e furto aparecem.
-          </p>
-        </div>
-
-        <IniciarInventarioDrawer
-          hoje={hojeISO()}
-          itensAtivos={itensAtivos}
-          disabled={emAndamento != null || itensAtivos === 0}
-        />
+      <div>
+        <h1 className="text-2xl font-semibold">Contagem de estoque</h1>
+        <p className="text-sm text-muted-foreground">
+          Confira o que tem na prateleira contra o que o sistema calculou —
+          uma vez na abertura, outra no fechamento.
+        </p>
       </div>
 
-      {emAndamento && (
-        <p className="text-sm text-muted-foreground">
-          Existe uma contagem em andamento —{' '}
-          <Link
-            href={`/estoque/inventario/${emAndamento.id}`}
-            className="font-medium text-foreground underline underline-offset-4"
-          >
-            continue por ela
-          </Link>{' '}
-          antes de abrir outra.
-        </p>
-      )}
+      <ContagemDoDiaPanel
+        abertura={contagensHoje.abertura}
+        fechamento={contagensHoje.fechamento}
+        itensAtivos={itensAtivos}
+      />
 
-      {itensAtivos === 0 && (
-        <p className="text-sm text-muted-foreground">
-          Cadastre pelo menos um item de estoque antes de abrir uma contagem.
-        </p>
-      )}
-
-      <InventariosList inventarios={inventarios} />
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-medium text-muted-foreground">
+          Histórico
+        </h2>
+        <InventariosList inventarios={inventarios} />
+      </div>
     </div>
   )
 }

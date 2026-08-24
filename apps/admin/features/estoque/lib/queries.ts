@@ -233,6 +233,7 @@ export async function getPrecoAtual(
 function resumirInventario(row: {
   id: string
   data: string
+  tipo: 'abertura' | 'fechamento'
   responsavel: string
   status: 'em_andamento' | 'finalizado'
   observacao: string | null
@@ -246,6 +247,7 @@ function resumirInventario(row: {
   return {
     id: row.id,
     data: row.data,
+    tipo: row.tipo,
     responsavel: row.responsavel,
     status: row.status,
     observacao: row.observacao,
@@ -272,15 +274,30 @@ export async function getInventarios(): Promise<InventarioResumo[]> {
   return rows.map(resumirInventario)
 }
 
-export async function getInventarioEmAndamento(): Promise<InventarioResumo | null> {
-  const row = await db.query.inventario_fisico.findFirst({
-    where: eq(inventario_fisico.status, 'em_andamento'),
+/**
+ * Os dois slots de contagem do dia — abertura e fechamento. `null` num slot
+ * significa "ainda não iniciado hoje", é o estado usado pelo painel de
+ * contagem para decidir entre "Fazer X" e "Continuar/Ver X".
+ */
+export async function getContagensHoje(): Promise<{
+  abertura: InventarioResumo | null
+  fechamento: InventarioResumo | null
+}> {
+  const hoje = hojeISO()
+
+  const rows = await db.query.inventario_fisico.findMany({
+    where: eq(inventario_fisico.data, hoje),
     with: {
       linhas: { columns: { quantidade_contada: true, diferenca: true } },
     },
   })
 
-  return row ? resumirInventario(row) : null
+  const resumos = rows.map(resumirInventario)
+
+  return {
+    abertura: resumos.find((r) => r.tipo === 'abertura') ?? null,
+    fechamento: resumos.find((r) => r.tipo === 'fechamento') ?? null,
+  }
 }
 
 export async function getInventarioDetalhe(

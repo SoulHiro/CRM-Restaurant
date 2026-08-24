@@ -17,6 +17,12 @@ export interface MovimentoPlanejado {
   origemId?: string
   observacao?: string
   userId?: string
+  /**
+   * `undefined` = não mexe na validade do item; `string`/`null` = grava esse
+   * valor. Quem chama já decide qual data é a mais próxima (ver
+   * `receberCompraAction`) — esta função só aplica.
+   */
+  validade?: string | null
 }
 
 export interface MovimentoAplicado {
@@ -49,7 +55,12 @@ export function planejarMovimento(
 
   const atualizarSaldo = db
     .update(estoque_item)
-    .set({ quantidade_atual: toNumericString(saldoResultante) })
+    .set({
+      quantidade_atual: toNumericString(saldoResultante),
+      ...(movimento.validade !== undefined
+        ? { validade: movimento.validade }
+        : {}),
+    })
     .where(eq(estoque_item.id, movimento.estoqueItemId))
 
   return {

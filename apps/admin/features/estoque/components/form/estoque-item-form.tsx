@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAction } from 'next-safe-action/hooks'
 import { useForm } from 'react-hook-form'
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/ui/components/select'
+import { ToggleGroup, ToggleGroupItem } from '@repo/ui/components/toggle-group'
 
 import { hojeISO } from '@/lib/formatters'
 import {
@@ -44,7 +45,6 @@ import {
   CATEGORIAS_ESTOQUE,
   UNIDADES,
 } from '../../lib/types'
-import { formatQuantidade } from '../shared/quantidade'
 
 const SEM_FORNECEDOR = 'nenhum'
 
@@ -71,6 +71,7 @@ export function EstoqueItemForm({
     tamanhoEmbalagem: undefined,
     pontoReposicao: 0,
     validade: undefined,
+    preco: undefined,
   }
 
   const defaultValuesEditar: UpdateEstoqueItemInput = {
@@ -98,37 +99,13 @@ export function EstoqueItemForm({
 
   const unidadeCriar = formCriar.watch('unidade')
 
-  // Quantidade inicial não se digita direto — a maioria dos itens chega em
-  // embalagem fechada (garrafa de 900ml, saco de 5kg), então é mais natural
-  // informar o tamanho da embalagem × quantas embalagens têm, e calcular o
-  // total sozinho. Só existe no cadastro; editar não recalcula por multiplicação.
-  const [tamanhoEmbalagemStr, setTamanhoEmbalagemStr] = useState('')
-  const [numEmbalagens, setNumEmbalagens] = useState('')
-  const totalEmbalagens =
-    (Number(tamanhoEmbalagemStr) || 0) * (Number(numEmbalagens) || 0)
-
   useEffect(() => {
     if (!open) {
       formCriar.reset(defaultValuesCriar)
       formEditar.reset(defaultValuesEditar)
-      setTamanhoEmbalagemStr('')
-      setNumEmbalagens('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
-
-  useEffect(() => {
-    if (editando) return
-    formCriar.setValue('quantidadeAtual', totalEmbalagens, {
-      shouldValidate: true,
-    })
-    formCriar.setValue(
-      'tamanhoEmbalagem',
-      tamanhoEmbalagemStr === '' ? undefined : Number(tamanhoEmbalagemStr),
-      { shouldValidate: true }
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalEmbalagens, tamanhoEmbalagemStr, editando])
 
   const criar = useAction(createEstoqueItemAction, {
     onSuccess: () => {
@@ -431,49 +408,6 @@ export function EstoqueItemForm({
               )}
             />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField
-                control={formCriar.control}
-                name="unidade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidade de medida</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 sm:h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {UNIDADES.map((unidade) => (
-                          <SelectItem key={unidade} value={unidade}>
-                            {UNIDADE_LABELS[unidade]} ({unidade})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormItem>
-                <FormLabel>Tamanho da embalagem</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    inputMode="decimal"
-                    placeholder="Ex: 900"
-                    className="h-11 sm:h-9"
-                    value={tamanhoEmbalagemStr}
-                    onChange={(e) => setTamanhoEmbalagemStr(e.target.value)}
-                  />
-                </FormControl>
-              </FormItem>
-            </div>
-
             <FormField
               control={formCriar.control}
               name="categoria"
@@ -506,57 +440,80 @@ export function EstoqueItemForm({
 
             <FormField
               control={formCriar.control}
-              name="quantidadeAtual"
-              render={() => (
+              name="unidade"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantidade inicial</FormLabel>
+                  <FormLabel>Unidade</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="1"
-                      min="0"
-                      inputMode="numeric"
-                      placeholder="Quantas embalagens você tem"
-                      className="h-11 sm:h-9"
-                      value={numEmbalagens}
-                      onChange={(e) => setNumEmbalagens(e.target.value)}
-                    />
+                    <ToggleGroup
+                      type="single"
+                      variant="outline"
+                      value={field.value}
+                      onValueChange={(valor) => valor && field.onChange(valor)}
+                      className="flex-wrap justify-start gap-1.5"
+                    >
+                      {UNIDADES.map((unidade) => (
+                        <ToggleGroupItem
+                          key={unidade}
+                          value={unidade}
+                          aria-label={UNIDADE_LABELS[unidade]}
+                          className="h-9 min-w-9 px-3 text-xs"
+                        >
+                          {unidade}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
                   </FormControl>
-                  <FormDescription>
-                    Total em estoque:{' '}
-                    <span className="font-medium text-foreground">
-                      {formatQuantidade(totalEmbalagens)} {unidadeCriar}
-                    </span>
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={formCriar.control}
-              name="pontoReposicao"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ponto de reposição</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      inputMode="decimal"
-                      className="h-11 sm:h-9"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Quando a quantidade encostar nesse número, o item aparece em
-                    &ldquo;Acabando&rdquo;. Deixe zero para não avisar.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={formCriar.control}
+                name="quantidadeAtual"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantidade inicial</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        inputMode="decimal"
+                        className="h-11 sm:h-9"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={formCriar.control}
+                name="preco"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preço por {unidadeCriar} (opcional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        inputMode="decimal"
+                        placeholder="R$"
+                        className="h-11 sm:h-9"
+                        {...field}
+                        value={field.value ?? ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={formCriar.control}

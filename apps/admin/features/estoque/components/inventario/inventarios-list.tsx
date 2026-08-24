@@ -5,10 +5,10 @@ import { EmptyState } from '@repo/ui/components/empty-state'
 import { cn } from '@repo/ui/lib/utils'
 
 import { formatDateBR } from '@/lib/formatters'
-import type { InventarioResumo } from '../../lib/types'
+import { INVENTARIO_TIPO_LABEL, type InventarioResumo } from '../../lib/types'
 import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
 
-const GRID_COLUMNS = 'sm:grid-cols-[1fr_1.4fr_1fr_1fr_1fr]'
+const GRID_COLUMNS = 'sm:grid-cols-[1fr_0.8fr_1.2fr_1fr_1fr_1fr]'
 
 export function InventariosList({
   inventarios,
@@ -35,6 +35,7 @@ export function InventariosList({
         )}
       >
         <span role="columnheader">Data</span>
+        <span role="columnheader">Tipo</span>
         <span role="columnheader">Responsável</span>
         <span role="columnheader" className="text-right">
           Contados
@@ -72,6 +73,10 @@ export function InventariosList({
                 ? 'Em andamento'
                 : 'Finalizada'}
             </Badge>
+          </span>
+
+          <span role="cell" className="truncate text-sm">
+            {INVENTARIO_TIPO_LABEL[inventario.tipo]}
           </span>
 
           <span role="cell" className="truncate text-sm">

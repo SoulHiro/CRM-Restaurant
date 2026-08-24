@@ -16,9 +16,11 @@ import { EstoqueSortMenu } from './estoque-sort-menu'
 export function EstoqueToolbar({
   filters,
   unidadesDisponiveis,
+  podeCadastrar,
 }: {
   filters: EstoqueFilters
   unidadesDisponiveis: Unidade[]
+  podeCadastrar: boolean
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
 
@@ -40,7 +42,7 @@ export function EstoqueToolbar({
           <EstoqueSortMenu />
         </div>
 
-        <CadastrarItemDrawer />
+        {podeCadastrar && <CadastrarItemDrawer />}
       </div>
 
       <EstoqueActiveFilters filters={filters} />

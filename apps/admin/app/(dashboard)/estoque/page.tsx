@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { ClipboardList } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
@@ -13,6 +14,7 @@ import {
   selecionarAlertas,
 } from '@/features/estoque/lib/estoque-helpers'
 import { getEstoqueItens } from '@/features/estoque/lib/queries'
+import { auth } from '@/lib/auth'
 import { hojeISO } from '@/lib/formatters'
 
 export default async function EstoquePage({
@@ -20,8 +22,12 @@ export default async function EstoquePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const params = await searchParams
-  const itens = await getEstoqueItens()
+  const [params, itens, session] = await Promise.all([
+    searchParams,
+    getEstoqueItens(),
+    auth.api.getSession({ headers: await headers() }),
+  ])
+  const role = (session?.user as { role?: string } | undefined)?.role
 
   const hoje = hojeISO()
   const filters = parseEstoqueFilters(params)
@@ -54,6 +60,7 @@ export default async function EstoquePage({
       <EstoqueToolbar
         filters={filters}
         unidadesDisponiveis={resultado.unidadesDisponiveis}
+        podeCadastrar={role === 'admin'}
       />
 
       <EstoqueTable

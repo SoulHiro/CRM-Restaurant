@@ -27,6 +27,12 @@ const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
   minute: '2-digit',
 })
 
+const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: FUSO_RESTAURANTE,
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
 const dateTimeSecondsFormatter = new Intl.DateTimeFormat('pt-BR', {
   timeZone: FUSO_RESTAURANTE,
   day: '2-digit',
@@ -76,6 +82,11 @@ export function formatDateTimeBR(value: string | Date): string {
   // Intl separa data e hora com vírgula ("10/08/2026, 11:32") — sem vírgula
   // fica mais limpo tanto na tela quanto impresso na comanda.
   return dateTimeFormatter.format(new Date(value)).replace(',', '')
+}
+
+/** Só a hora de um instante real — ex: "concluída às 14:32". */
+export function formatTimeBR(value: string | Date): string {
+  return timeFormatter.format(new Date(value))
 }
 
 /** Instante real com hora e segundos — carimbo de "Impresso em" na nota. */

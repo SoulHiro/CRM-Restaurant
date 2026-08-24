@@ -6,8 +6,8 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { executarLote, type Statement } from '@/lib/db-batch'
 import { hojeISO } from '@/lib/formatters'
-import { toNumber, toNumericString } from '@/lib/numeric'
-import { ActionError, authActionClient } from '@/lib/safe-action'
+import { toMoneyString, toNumber, toNumericString } from '@/lib/numeric'
+import { ActionError, adminActionClient, authActionClient } from '@/lib/safe-action'
 import {
   estoque_item,
   historico_preco_insumo,
@@ -25,7 +25,6 @@ import {
   iniciarInventarioSchema,
   registrarPerdaSchema,
   salvarContagemSchema,
-  toggleEstoqueItemAtivoSchema,
   updateEstoqueItemSchema,
 } from './schemas'
 
@@ -34,7 +33,7 @@ function revalidarEstoque(itemId?: string) {
   if (itemId) revalidatePath(`/estoque/${itemId}`)
 }
 
-export const createEstoqueItemAction = authActionClient
+export const createEstoqueItemAction = adminActionClient
   .schema(createEstoqueItemSchema)
   .action(async ({ parsedInput, ctx }) => {
     const [criado] = await db
@@ -70,11 +69,19 @@ export const createEstoqueItemAction = authActionClient
       await executarLote(statements)
     }
 
+    if (parsedInput.preco != null && parsedInput.preco > 0) {
+      await db.insert(historico_preco_insumo).values({
+        estoque_item_id: criado.id,
+        preco: toMoneyString(parsedInput.preco),
+        data_vigencia: hojeISO(),
+      })
+    }
+
     revalidarEstoque(criado.id)
     return { itemId: criado.id }
   })
 
-export const updateEstoqueItemAction = authActionClient
+export const updateEstoqueItemAction = adminActionClient
   .schema(updateEstoqueItemSchema)
   .action(async ({ parsedInput }) => {
     const statements: Statement[] = [
@@ -145,18 +152,6 @@ export const ajustarQuantidadeAction = authActionClient
     return { estoqueItemId: parsedInput.estoqueItemId, ajustado: true }
   })
 
-export const toggleEstoqueItemAtivoAction = authActionClient
-  .schema(toggleEstoqueItemAtivoSchema)
-  .action(async ({ parsedInput }) => {
-    await db
-      .update(estoque_item)
-      .set({ ativo: parsedInput.ativo })
-      .where(eq(estoque_item.id, parsedInput.id))
-
-    revalidarEstoque(parsedInput.id)
-    return { itemId: parsedInput.id }
-  })
-
 export const registrarPerdaAction = authActionClient
   .schema(registrarPerdaSchema)
   .action(async ({ parsedInput, ctx }) => {
@@ -198,18 +193,32 @@ export const registrarPerdaAction = authActionClient
     return { perdaId: perda.id }
   })
 
+const TIPO_LABEL: Record<'abertura' | 'fechamento', string> = {
+  abertura: 'Abertura',
+  fechamento: 'Fechamento',
+}
+
 export const iniciarInventarioAction = authActionClient
   .schema(iniciarInventarioSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const emAndamento = await db.query.inventario_fisico.findFirst({
-      where: eq(inventario_fisico.status, 'em_andamento'),
-      columns: { id: true },
+    const hoje = hojeISO()
+
+    const existente = await db.query.inventario_fisico.findFirst({
+      where: (inventario, { and: andOp }) =>
+        andOp(
+          eq(inventario.data, hoje),
+          eq(inventario.tipo, parsedInput.tipo)
+        ),
+      columns: { id: true, status: true },
     })
 
-    if (emAndamento) {
-      throw new ActionError(
-        'Já existe uma contagem em andamento. Finalize antes de abrir outra.'
-      )
+    if (existente) {
+      if (existente.status === 'finalizado') {
+        throw new ActionError(
+          `${TIPO_LABEL[parsedInput.tipo]} de hoje já foi finalizada.`
+        )
+      }
+      return { inventarioId: existente.id }
     }
 
     const itens = await db
@@ -229,9 +238,9 @@ export const iniciarInventarioAction = authActionClient
     const [inventario] = await db
       .insert(inventario_fisico)
       .values({
-        data: parsedInput.data,
+        data: hoje,
+        tipo: parsedInput.tipo,
         responsavel: ctx.user.name,
-        observacao: parsedInput.observacao?.trim() || null,
       })
       .returning({ id: inventario_fisico.id })
 

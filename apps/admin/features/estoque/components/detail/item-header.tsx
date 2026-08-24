@@ -9,7 +9,6 @@ import type { EstoqueItem } from '../../lib/types'
 import { AjustarQuantidadeDrawer } from '../form/ajustar-quantidade-drawer'
 import { EditarItemDrawer } from '../form/editar-item-drawer'
 import { RegistrarPerdaDrawer } from '../form/registrar-perda-drawer'
-import { DesativarItemButton } from './desativar-item-button'
 import { NivelEstoqueBadge } from '../shared/nivel-estoque-badge'
 import { formatQuantidade } from '../shared/quantidade'
 
@@ -26,10 +25,12 @@ export function ItemHeader({
   item,
   fornecedores,
   hoje,
+  isAdmin,
 }: {
   item: EstoqueItem
   fornecedores: { id: string; nome: string }[]
   hoje: string
+  isAdmin: boolean
 }) {
   const nivel = nivelEstoque(item)
   const validade = textoValidade(item.validade, hoje)
@@ -78,8 +79,9 @@ export function ItemHeader({
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <AjustarQuantidadeDrawer item={item} />
           <RegistrarPerdaDrawer item={item} hoje={hoje} />
-          <EditarItemDrawer item={item} fornecedores={fornecedores} />
-          <DesativarItemButton item={item} />
+          {isAdmin && (
+            <EditarItemDrawer item={item} fornecedores={fornecedores} />
+          )}
         </div>
       </div>
     </div>

@@ -42,6 +42,14 @@ export type PerdaMotivo = (typeof PERDA_MOTIVOS)[number]
 
 export type InventarioStatus = 'em_andamento' | 'finalizado'
 
+export const INVENTARIO_TIPOS = ['abertura', 'fechamento'] as const
+export type InventarioTipo = (typeof INVENTARIO_TIPOS)[number]
+
+export const INVENTARIO_TIPO_LABEL: Record<InventarioTipo, string> = {
+  abertura: 'Abertura',
+  fechamento: 'Fechamento',
+}
+
 export type NivelEstoque = 'zerado' | 'baixo' | 'ok'
 
 export interface EstoqueItem {
@@ -126,6 +134,7 @@ export interface AlertasEstoque {
 export interface InventarioResumo {
   id: string
   data: string
+  tipo: InventarioTipo
   responsavel: string
   status: InventarioStatus
   observacao: string | null
