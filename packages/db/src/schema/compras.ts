@@ -84,6 +84,10 @@ export const compra_item = pgTable(
     valor_unitario: numeric('valor_unitario', DINHEIRO).notNull(),
     // O total da linha é derivado (quantidade × valor unitário), nunca
     // guardado — guardar abriria espaço para os dois discordarem.
+    // Validade do lote que está chegando — opcional, só para item perecível.
+    // Aplicada em `estoque_item.validade` no recebimento, ver
+    // `receberCompraAction`.
+    validade: date('validade'),
   },
   (t) => [
     unique().on(t.compra_id, t.estoque_item_id),
