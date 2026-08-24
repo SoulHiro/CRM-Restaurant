@@ -6,6 +6,7 @@ import { cn } from '@repo/ui/lib/utils'
 
 import { formatCurrencyBRL } from '@/lib/formatters'
 import { nivelEstoque } from '../../lib/estoque-helpers'
+import { CATEGORIA_ESTOQUE_LABEL } from '../../lib/types'
 import type { EstoqueListItem } from '../../lib/types'
 import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
 import { NivelEstoqueBadge } from '../shared/nivel-estoque-badge'
@@ -47,8 +48,9 @@ export function EstoqueRow({
     >
       <span role="cell" className="flex min-w-0 flex-col">
         <span className="truncate font-medium">{item.nome}</span>
-        <span className="text-xs text-muted-foreground">
-          {item.ativo ? item.unidade : `${item.unidade} · desativado`}
+        <span className="truncate text-xs text-muted-foreground">
+          {item.unidade} · {CATEGORIA_ESTOQUE_LABEL[item.categoria]}
+          {!item.ativo && ' · desativado'}
         </span>
       </span>
 

@@ -6,7 +6,7 @@ import { EstoqueRow } from './estoque-row'
 
 const GRID_COLUMNS = 'sm:grid-cols-[2fr_1fr_1.2fr_1fr_1.2fr]'
 const ROW_LAYOUT =
-  'flex flex-col gap-2 p-4 sm:grid sm:items-center sm:gap-4 sm:py-3'
+  'flex flex-col gap-1.5 p-3 sm:grid sm:items-center sm:gap-4 sm:py-2'
 
 export function EstoqueTable({
   itens,

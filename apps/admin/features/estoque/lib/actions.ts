@@ -42,9 +42,11 @@ export const createEstoqueItemAction = authActionClient
       .values({
         nome: parsedInput.nome.trim(),
         unidade: parsedInput.unidade,
+        categoria: parsedInput.categoria,
         quantidade_atual: toNumericString(0),
         tamanho_embalagem:
-          parsedInput.tamanhoEmbalagem != null && parsedInput.tamanhoEmbalagem > 0
+          parsedInput.tamanhoEmbalagem != null &&
+          parsedInput.tamanhoEmbalagem > 0
             ? toNumericString(parsedInput.tamanhoEmbalagem)
             : null,
         ponto_reposicao: toNumericString(parsedInput.pontoReposicao),
@@ -81,6 +83,7 @@ export const updateEstoqueItemAction = authActionClient
         .set({
           nome: parsedInput.nome.trim(),
           unidade: parsedInput.unidade,
+          categoria: parsedInput.categoria,
           tamanho_embalagem:
             parsedInput.tamanhoEmbalagem != null &&
             parsedInput.tamanhoEmbalagem > 0
@@ -218,7 +221,9 @@ export const iniciarInventarioAction = authActionClient
       .where(eq(estoque_item.ativo, true))
 
     if (itens.length === 0) {
-      throw new ActionError('Cadastre pelo menos um item antes de abrir a contagem.')
+      throw new ActionError(
+        'Cadastre pelo menos um item antes de abrir a contagem.'
+      )
     }
 
     const [inventario] = await db

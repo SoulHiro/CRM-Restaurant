@@ -36,6 +36,7 @@ function mapItem(
     id: row.id,
     nome: row.nome,
     unidade: row.unidade,
+    categoria: row.categoria,
     quantidadeAtual: toNumber(row.quantidade_atual),
     pontoReposicao: toNumber(row.ponto_reposicao),
     tamanhoEmbalagem:

@@ -39,7 +39,11 @@ import {
   type UpdateEstoqueItemInput,
 } from '../../lib/schemas'
 import type { EstoqueItem } from '../../lib/types'
-import { UNIDADES } from '../../lib/types'
+import {
+  CATEGORIA_ESTOQUE_LABEL,
+  CATEGORIAS_ESTOQUE,
+  UNIDADES,
+} from '../../lib/types'
 import { formatQuantidade } from '../shared/quantidade'
 
 const SEM_FORNECEDOR = 'nenhum'
@@ -62,6 +66,7 @@ export function EstoqueItemForm({
   const defaultValuesCriar: CreateEstoqueItemInput = {
     nome: '',
     unidade: 'un',
+    categoria: 'comestivel',
     quantidadeAtual: 0,
     tamanhoEmbalagem: undefined,
     pontoReposicao: 0,
@@ -72,6 +77,7 @@ export function EstoqueItemForm({
     id: item?.id ?? '',
     nome: item?.nome ?? '',
     unidade: item?.unidade ?? 'un',
+    categoria: item?.categoria ?? 'comestivel',
     tamanhoEmbalagem: item?.tamanhoEmbalagem ?? undefined,
     pontoReposicao: item?.pontoReposicao ?? 0,
     validade: item?.validade ?? undefined,
@@ -230,6 +236,36 @@ export function EstoqueItemForm({
 
             <FormField
               control={formEditar.control}
+              name="categoria"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="h-11 sm:h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CATEGORIAS_ESTOQUE.map((categoria) => (
+                        <SelectItem key={categoria} value={categoria}>
+                          {CATEGORIA_ESTOQUE_LABEL[categoria]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Comestível/preparo entram na ficha técnica de um produto
+                    como ingrediente; embalagem entra como custo por unidade
+                    vendida.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={formEditar.control}
               name="pontoReposicao"
               render={({ field }) => (
                 <FormItem>
@@ -245,8 +281,8 @@ export function EstoqueItemForm({
                     />
                   </FormControl>
                   <FormDescription>
-                    Quando a quantidade encostar nesse número, o item aparece
-                    em &ldquo;Acabando&rdquo;. Deixe zero para não avisar.
+                    Quando a quantidade encostar nesse número, o item aparece em
+                    &ldquo;Acabando&rdquo;. Deixe zero para não avisar.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -297,9 +333,7 @@ export function EstoqueItemForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={SEM_FORNECEDOR}>
-                          Nenhum
-                        </SelectItem>
+                        <SelectItem value={SEM_FORNECEDOR}>Nenhum</SelectItem>
                         {fornecedores.map((fornecedor) => (
                           <SelectItem key={fornecedor.id} value={fornecedor.id}>
                             {fornecedor.nome}
@@ -442,6 +476,36 @@ export function EstoqueItemForm({
 
             <FormField
               control={formCriar.control}
+              name="categoria"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="h-11 sm:h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CATEGORIAS_ESTOQUE.map((categoria) => (
+                        <SelectItem key={categoria} value={categoria}>
+                          {CATEGORIA_ESTOQUE_LABEL[categoria]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Comestível/preparo entram na ficha técnica de um produto
+                    como ingrediente; embalagem entra como custo por unidade
+                    vendida.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={formCriar.control}
               name="quantidadeAtual"
               render={() => (
                 <FormItem>
@@ -486,8 +550,8 @@ export function EstoqueItemForm({
                     />
                   </FormControl>
                   <FormDescription>
-                    Quando a quantidade encostar nesse número, o item aparece
-                    em &ldquo;Acabando&rdquo;. Deixe zero para não avisar.
+                    Quando a quantidade encostar nesse número, o item aparece em
+                    &ldquo;Acabando&rdquo;. Deixe zero para não avisar.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -529,7 +593,11 @@ export function EstoqueItemForm({
           className="w-full"
           disabled={salvando}
         >
-          {salvando ? 'Salvando...' : editando ? 'Salvar item' : 'Cadastrar item'}
+          {salvando
+            ? 'Salvando...'
+            : editando
+              ? 'Salvar item'
+              : 'Cadastrar item'}
         </Button>
         <Button
           type="button"

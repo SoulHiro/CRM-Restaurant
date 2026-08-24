@@ -1,6 +1,28 @@
 export const UNIDADES = ['un', 'kg', 'g', 'l', 'ml', 'cx', 'pct'] as const
 export type Unidade = (typeof UNIDADES)[number]
 
+/**
+ * O que o item vira quando entra numa ficha técnica de produto (ver
+ * features/catalogo) — comestível/preparo pesam na receita como
+ * quantidade×custo; embalagem também entra na ficha técnica, só que
+ * tipicamente como "1 por unidade vendida"; "outro" não entra em ficha
+ * técnica nenhuma.
+ */
+export const CATEGORIAS_ESTOQUE = [
+  'comestivel',
+  'preparo',
+  'embalagem',
+  'outro',
+] as const
+export type CategoriaEstoque = (typeof CATEGORIAS_ESTOQUE)[number]
+
+export const CATEGORIA_ESTOQUE_LABEL: Record<CategoriaEstoque, string> = {
+  comestivel: 'Comestível',
+  preparo: 'Preparo',
+  embalagem: 'Embalagem',
+  outro: 'Outro',
+}
+
 export const MOVIMENTO_TIPOS = [
   'entrada_compra',
   'perda',
@@ -26,6 +48,7 @@ export interface EstoqueItem {
   id: string
   nome: string
   unidade: Unidade
+  categoria: CategoriaEstoque
   quantidadeAtual: number
   pontoReposicao: number
   tamanhoEmbalagem: number | null

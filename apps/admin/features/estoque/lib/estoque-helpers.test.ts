@@ -15,6 +15,7 @@ function item(overrides: Partial<EstoqueItem> = {}): EstoqueItem {
     id: 'i1',
     nome: 'Arroz',
     unidade: 'kg',
+    categoria: 'comestivel',
     quantidadeAtual: 20,
     pontoReposicao: 5,
     tamanhoEmbalagem: null,
@@ -41,7 +42,9 @@ describe('nivelEstoque', () => {
   })
 
   it('marca baixo quando encosta no ponto de reposição', () => {
-    expect(nivelEstoque({ quantidadeAtual: 5, pontoReposicao: 5 })).toBe('baixo')
+    expect(nivelEstoque({ quantidadeAtual: 5, pontoReposicao: 5 })).toBe(
+      'baixo'
+    )
   })
 
   it('marca ok acima do ponto de reposição', () => {
@@ -282,7 +285,11 @@ describe('filterEstoque', () => {
   })
 
   it('pagina e devolve as unidades disponíveis do conjunto completo', () => {
-    const result = filterEstoque(itens, { ...base, pageSize: 10, page: 1 }, hoje)
+    const result = filterEstoque(
+      itens,
+      { ...base, pageSize: 10, page: 1 },
+      hoje
+    )
     expect(result.unidadesDisponiveis).toEqual(['kg', 'l', 'un'])
 
     const pagina2 = filterEstoque(
