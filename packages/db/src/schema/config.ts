@@ -1,4 +1,12 @@
-import { boolean, jsonb, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  jsonb,
+  numeric,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
 
 export const impressoraTipoEnum = pgEnum('impressora_tipo', [
@@ -68,5 +76,59 @@ export const configuracaoPesagem = pgTable('configuracao_pesagem', {
   impressora_id: text('impressora_id').references(() => impressora.id, {
     onDelete: 'set null',
   }),
+  updated_at: timestamp('updated_at').notNull().defaultNow(),
+})
+
+/**
+ * Singleton — horários de funcionamento do restaurante. `HH:mm` em texto
+ * (não `time`) pra ficar direto pra comparar/exibir sem lidar com fuso; a
+ * validação de formato fica na Server Action, não no banco. Usado pelo
+ * toggle rápido "aparece no almoço/janta" de `produto` (catalogo.ts) e,
+ * futuramente, pra abrir/fechar automaticamente o delivery/salão.
+ */
+export const configuracaoHorarioFuncionamento = pgTable(
+  'configuracao_horario_funcionamento',
+  {
+    id: text('id').primaryKey().default('default'),
+    almoco_inicio: text('almoco_inicio'),
+    almoco_fim: text('almoco_fim'),
+    janta_inicio: text('janta_inicio'),
+    janta_fim: text('janta_fim'),
+    delivery_abre: text('delivery_abre'),
+    delivery_fecha: text('delivery_fecha'),
+    local_abre: text('local_abre'),
+    local_fecha: text('local_fecha'),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
+  }
+)
+
+/**
+ * Singleton — os números que alimentam o cálculo de preço sugerido e a cor
+ * de margem do catálogo (ver features/catalogo/lib/precificacao-helpers.ts).
+ * Os 4 limiares nascem com um padrão razoável e ficam editáveis aqui, sem
+ * precisar mexer em código pra ajustar a faixa de cada cor.
+ */
+export const configuracaoPrecificacao = pgTable('configuracao_precificacao', {
+  id: text('id').primaryKey().default('default'),
+  custo_operacional_por_minuto: numeric('custo_operacional_por_minuto', {
+    precision: 12,
+    scale: 2,
+  })
+    .notNull()
+    .default('0'),
+  // Percentual de margem sobre o custo de produção — abaixo de amarelo é
+  // vermelho (prejuízo), acima de roxo é lucro excessivo demais.
+  limiar_amarelo_pct: numeric('limiar_amarelo_pct', { precision: 6, scale: 2 })
+    .notNull()
+    .default('0'),
+  limiar_verde_pct: numeric('limiar_verde_pct', { precision: 6, scale: 2 })
+    .notNull()
+    .default('30'),
+  limiar_azul_pct: numeric('limiar_azul_pct', { precision: 6, scale: 2 })
+    .notNull()
+    .default('100'),
+  limiar_roxo_pct: numeric('limiar_roxo_pct', { precision: 6, scale: 2 })
+    .notNull()
+    .default('200'),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 })

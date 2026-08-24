@@ -25,6 +25,16 @@ export const unidadeEstoqueEnum = pgEnum('unidade_estoque', [
   'pct',
 ])
 
+// Distingue o que vira linha de ficha técnica (comestível/preparo) do que
+// só entra como custo de embalagem — ver features/catalogo/lib/
+// precificacao-helpers.ts.
+export const categoriaEstoqueEnum = pgEnum('categoria_estoque', [
+  'comestivel',
+  'preparo',
+  'embalagem',
+  'outro',
+])
+
 export const movimentoEstoqueTipoEnum = pgEnum('movimento_estoque_tipo', [
   'entrada_compra',
   'perda',
@@ -56,6 +66,9 @@ export const estoque_item = pgTable(
       .$defaultFn(() => createId()),
     nome: text('nome').notNull(),
     unidade: unidadeEstoqueEnum('unidade').notNull(),
+    categoria: categoriaEstoqueEnum('categoria')
+      .notNull()
+      .default('comestivel'),
     quantidade_atual: numeric('quantidade_atual', QUANTIDADE)
       .notNull()
       .default('0'),
@@ -104,7 +117,10 @@ export const estoque_movimento = pgTable(
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [
-    index('estoque_movimento_item_data_idx').on(t.estoque_item_id, t.created_at),
+    index('estoque_movimento_item_data_idx').on(
+      t.estoque_item_id,
+      t.created_at
+    ),
   ]
 )
 
