@@ -20,16 +20,26 @@ export interface NavItem {
   icon?: LucideIcon
   /** Não navega — só troca a lista do sidebar pra `configItems`. */
   abreConfig?: boolean
+  /** Não navega — só troca a lista do sidebar pra `catalogoItems`. */
+  abreCatalogo?: boolean
 }
 
-type Modo = 'main' | 'config'
+type Modo = 'main' | 'config' | 'catalogo'
 type Fase = 'idle' | 'saindo' | 'entrando'
 
 const STAGGER_MS = 55
 const DURACAO_MS = 220
 
+/** Label do cabeçalho "← Voltar" de cada seção que não é a principal. */
+const SECAO_LABEL: Record<Exclude<Modo, 'main'>, string> = {
+  config: 'Configurações',
+  catalogo: 'Catálogo',
+}
+
 function modoDe(pathname: string): Modo {
-  return pathname.startsWith('/configuracoes') ? 'config' : 'main'
+  if (pathname.startsWith('/configuracoes')) return 'config'
+  if (pathname.startsWith('/catalogo')) return 'catalogo'
+  return 'main'
 }
 
 function tempoTotal(quantidade: number) {
@@ -37,21 +47,29 @@ function tempoTotal(quantidade: number) {
 }
 
 /**
- * Trocar de seção (ex: entrar em Configurações) troca a lista inteira do
- * sidebar, sem navegar — os itens atuais saem em escada (um por um, de
- * cima pra baixo) e só depois os da nova seção entram, também em escada,
- * com fade + slide da esquerda. A troca de rota real só acontece quando o
- * usuário clica num item de destino (ex: "Impressão"); "Configurações" e o
- * botão de voltar só trocam a lista, nunca a página.
+ * Trocar de seção (ex: entrar em Configurações ou Catálogo) troca a lista
+ * inteira do sidebar, sem navegar — os itens atuais saem em escada (um por
+ * um, de cima pra baixo) e só depois os da nova seção entram, também em
+ * escada, com fade + slide da esquerda. A troca de rota real só acontece
+ * quando o usuário clica num item de destino (ex: "Impressão"); os botões
+ * de seção e o de voltar só trocam a lista, nunca a página.
  */
 export function SidebarNav({
   items,
   configItems,
+  catalogoItems,
 }: {
   items: NavItem[]
   configItems: NavItem[]
+  catalogoItems: NavItem[]
 }) {
   const pathname = usePathname()
+
+  function itensDoModo(alvo: Modo): NavItem[] {
+    if (alvo === 'config') return configItems
+    if (alvo === 'catalogo') return catalogoItems
+    return items
+  }
 
   const [modo, setModo] = useState<Modo>(() => modoDe(pathname))
   const [fase, setFase] = useState<Fase>('idle')
@@ -65,15 +83,15 @@ export function SidebarNav({
   }
 
   // Só reage a navegação que aconteceu por fora do nosso controle (link
-  // direto pra dentro/fora de /configuracoes, voltar do navegador) — nunca
-  // é o que dispara a troca quando o clique já veio do próprio sidebar.
+  // direto pra dentro/fora de uma seção, voltar do navegador) — nunca é o
+  // que dispara a troca quando o clique já veio do próprio sidebar.
   useEffect(() => {
     iniciarTransicao(modoDe(pathname))
   }, [pathname])
 
   useEffect(() => {
     if (fase !== 'saindo') return
-    const atuais = modo === 'main' ? items : configItems
+    const atuais = itensDoModo(modo)
     const t = setTimeout(() => {
       setModo(modoAlvoRef.current)
       setEntrouVisivel(false)
@@ -86,7 +104,7 @@ export function SidebarNav({
   useEffect(() => {
     if (fase !== 'entrando') return
     const id = requestAnimationFrame(() => setEntrouVisivel(true))
-    const novos = modo === 'main' ? items : configItems
+    const novos = itensDoModo(modo)
     const t = setTimeout(() => setFase('idle'), tempoTotal(novos.length))
     return () => {
       cancelAnimationFrame(id)
@@ -95,14 +113,14 @@ export function SidebarNav({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fase, modo])
 
-  const itensVisiveis = modo === 'main' ? items : configItems
+  const itensVisiveis = itensDoModo(modo)
   const saindo = fase === 'saindo'
   const cabecalhoVisivel = !saindo && entrouVisivel
 
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
-        {modo === 'config' && (
+        {modo !== 'main' && (
           <button
             type="button"
             onClick={() => iniciarTransicao('main')}
@@ -115,7 +133,7 @@ export function SidebarNav({
           >
             <ArrowLeft className="size-4 shrink-0 text-sidebar-foreground/70" />
             <span className="text-xs font-medium text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
-              Configurações
+              {SECAO_LABEL[modo]}
             </span>
           </button>
         )}
@@ -136,12 +154,17 @@ export function SidebarNav({
                 transitionDelay: `${indice * STAGGER_MS}ms`,
               }}
             >
-              {item.abreConfig ? (
+              {item.abreConfig || item.abreCatalogo ? (
                 <SidebarMenuButton
                   type="button"
-                  isActive={modo === 'config'}
+                  isActive={
+                    (item.abreConfig && modo === 'config') ||
+                    (item.abreCatalogo && modo === 'catalogo')
+                  }
                   tooltip={item.title}
-                  onClick={() => iniciarTransicao('config')}
+                  onClick={() =>
+                    iniciarTransicao(item.abreConfig ? 'config' : 'catalogo')
+                  }
                 >
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>

@@ -5,7 +5,10 @@ import {
   UtensilsCrossed,
   BookOpen,
   Building2,
+  LayoutGrid,
   Package,
+  Package2,
+  ShoppingBag,
   ShoppingCart,
   Wallet,
   Users,
@@ -38,10 +41,11 @@ const NAV_ITEMS = [
     roles: ['admin', 'caixa', 'cozinha'],
   },
   {
-    title: 'Cardápio',
+    title: 'Catálogo',
     url: '/cardapio',
-    icon: BookOpen,
+    icon: LayoutGrid,
     roles: ['admin', 'caixa'],
+    abreCatalogo: true,
   },
   {
     title: 'Empresas',
@@ -110,6 +114,17 @@ const CONFIG_NAV_ITEMS: NavItem[] = [
   },
 ]
 
+const CATALOGO_NAV_ITEMS: NavItem[] = [
+  { title: 'Cardápio das empresas', url: '/cardapio', icon: BookOpen },
+  {
+    title: 'Cardápio de delivery',
+    url: '/catalogo/delivery',
+    icon: ShoppingBag,
+  },
+  { title: 'Insumos', url: '/estoque', icon: Package },
+  { title: 'Produtos', url: '/catalogo/produtos', icon: Package2 },
+]
+
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User
   role?: string
@@ -133,7 +148,11 @@ export function AppSidebar({ user, role, ...props }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarNav items={visibleItems} configItems={CONFIG_NAV_ITEMS} />
+        <SidebarNav
+          items={visibleItems}
+          configItems={CONFIG_NAV_ITEMS}
+          catalogoItems={CATALOGO_NAV_ITEMS}
+        />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={{ name: user.name, email: user.email }} />

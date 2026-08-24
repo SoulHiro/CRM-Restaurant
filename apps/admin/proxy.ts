@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth'
 const ROUTE_ROLES: Record<string, string[]> = {
   '/caixa': ['admin', 'caixa', 'cozinha'],
   '/cardapio': ['admin', 'caixa'],
+  '/catalogo': ['admin'],
   '/empresas': ['admin', 'caixa'],
   '/estoque': ['admin', 'cozinha', 'estoquista'],
   '/financeiro': ['admin', 'financeiro', 'tesoureiro'],
