@@ -1,6 +1,7 @@
 import {
   boolean,
   date,
+  integer,
   numeric,
   pgEnum,
   pgTable,
@@ -67,6 +68,12 @@ export const empresa = pgTable('empresa', {
   pede_cafe: boolean('pede_cafe').notNull().default(true),
   pede_lanche: boolean('pede_lanche').notNull().default(true),
   pede_suco: boolean('pede_suco').notNull().default(true),
+  // O cardápio (prato do dia + alternativas) é o mesmo gerado pro
+  // restaurante inteiro — isso só corta quantas alternativas essa empresa
+  // enxerga na página pública, não troca quais são.
+  cardapio_qtd_alternativas: integer('cardapio_qtd_alternativas')
+    .notNull()
+    .default(5),
   created_at: timestamp('created_at').notNull().defaultNow(),
 })
 

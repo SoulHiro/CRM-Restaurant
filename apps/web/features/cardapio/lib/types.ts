@@ -2,6 +2,7 @@ export interface EmpresaCardapioInfo {
   id: string
   nome: string
   precoModo: 'por_tamanho' | 'unico'
+  cardapioQtdAlternativas: number
 }
 
 export interface ColaboradorOption {

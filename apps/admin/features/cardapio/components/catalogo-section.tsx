@@ -23,7 +23,7 @@ import {
 } from '../lib/actions'
 import type { PratoCatalogoItem } from '../lib/types'
 
-export function CatalogoSection({ empresaId }: { empresaId: string }) {
+export function CatalogoSection() {
   const [pratos, setPratos] = useState<PratoCatalogoItem[] | null>(null)
   const [nomeNovo, setNomeNovo] = useState('')
 
@@ -36,29 +36,28 @@ export function CatalogoSection({ empresaId }: { empresaId: string }) {
   )
 
   useEffect(() => {
-    setPratos(null)
-    buscar({ empresaId })
+    buscar({})
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId])
+  }, [])
 
   const { execute: criar, isExecuting: criando } = useAction(criarPratoAction, {
     onSuccess: () => {
       toast.success('Prato adicionado')
       setNomeNovo('')
-      buscar({ empresaId })
+      buscar({})
     },
     onError: ({ error }) =>
       toast.error(error.serverError ?? 'Não foi possível adicionar o prato'),
   })
 
   const { execute: atualizar } = useAction(atualizarPratoAction, {
-    onSuccess: () => buscar({ empresaId }),
+    onSuccess: () => buscar({}),
     onError: () => toast.error('Não foi possível atualizar o prato'),
   })
 
   function adicionar() {
     if (!nomeNovo.trim()) return
-    criar({ empresaId, nome: nomeNovo.trim() })
+    criar({ nome: nomeNovo.trim() })
   }
 
   return (
@@ -68,9 +67,10 @@ export function CatalogoSection({ empresaId }: { empresaId: string }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          O pool de pratos dessa empresa — quanto mais pratos, menos repete o
-          &quot;prato do dia&quot; ao longo do mês. Desativar um prato tira ele
-          do próximo sorteio, sem apagar o histórico.
+          Pool único do restaurante — o prato do dia e as alternativas são os
+          mesmos pra todas as empresas, só a quantidade de alternativas exibida
+          muda de empresa pra empresa. Desativar um prato tira ele do próximo
+          sorteio, sem apagar o histórico.
         </p>
 
         <div className="flex items-center gap-2">

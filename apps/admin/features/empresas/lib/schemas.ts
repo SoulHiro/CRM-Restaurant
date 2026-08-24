@@ -116,6 +116,7 @@ export const atualizarConfiguracaoEmpresaSchema = z.object({
   pedeCafe: z.boolean(),
   pedeLanche: z.boolean(),
   pedeSuco: z.boolean(),
+  cardapioQtdAlternativas: z.number().int().min(0).max(30),
 })
 
 export type AtualizarConfiguracaoEmpresaInput = z.infer<

@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@repo/ui/components/card'
 import { Checkbox } from '@repo/ui/components/checkbox'
+import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 import {
   Select,
@@ -41,6 +42,9 @@ export function ConfiguracoesTab({ empresa }: { empresa: EmpresaListItem }) {
   const [pedeCafe, setPedeCafe] = useState(empresa.pedeCafe)
   const [pedeLanche, setPedeLanche] = useState(empresa.pedeLanche)
   const [pedeSuco, setPedeSuco] = useState(empresa.pedeSuco)
+  const [cardapioQtdAlternativas, setCardapioQtdAlternativas] = useState(
+    String(empresa.cardapioQtdAlternativas)
+  )
 
   const { execute, isExecuting } = useAction(
     atualizarConfiguracaoEmpresaAction,
@@ -59,14 +63,15 @@ export function ConfiguracoesTab({ empresa }: { empresa: EmpresaListItem }) {
       pedeCafe,
       pedeLanche,
       pedeSuco,
+      cardapioQtdAlternativas: Number(cardapioQtdAlternativas) || 0,
     })
   }
 
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">
-        Como essa empresa funciona no dia a dia — muda o que aparece em
-        Valores, Finalizar dia e no resumo impresso.
+        Como essa empresa funciona no dia a dia — muda o que aparece em Valores,
+        Finalizar dia e no resumo impresso.
       </p>
 
       <Card className="border-0">
@@ -127,6 +132,32 @@ export function ConfiguracoesTab({ empresa }: { empresa: EmpresaListItem }) {
                 </SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0">
+        <CardHeader>
+          <CardTitle className="text-base">Cardápio</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-sm">
+              Quantas alternativas mostrar na página pública
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              O prato do dia e as alternativas são gerados uma vez só pro
+              restaurante inteiro — isso aqui só corta quantas dessas
+              alternativas essa empresa enxerga.
+            </p>
+            <Input
+              type="number"
+              min="0"
+              max="30"
+              className="max-w-32"
+              value={cardapioQtdAlternativas}
+              onChange={(e) => setCardapioQtdAlternativas(e.target.value)}
+            />
           </div>
         </CardContent>
       </Card>

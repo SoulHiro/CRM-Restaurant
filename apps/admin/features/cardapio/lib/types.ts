@@ -9,6 +9,7 @@ export interface CardapioDiaPrato {
   nome: string
 }
 
+/** `alternativas` já vem ordenado — é essa ordem que decide quem entra nas "N primeiras" de cada empresa. */
 export interface CardapioDiaItem {
   data: string
   destaque: CardapioDiaPrato | null

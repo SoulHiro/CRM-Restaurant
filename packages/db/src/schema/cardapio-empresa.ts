@@ -2,6 +2,7 @@ import { relations } from 'drizzle-orm'
 import {
   boolean,
   date,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -9,19 +10,18 @@ import {
 } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
 
-import { empresa } from './empresa'
-
 /**
- * Cardápio semanal por empresa-cliente (GPK, CANÚBIO, COFEL...) — domínio
- * distinto do `cardapio_dia`/`prato`/`item_adicional` já existentes em
- * `cardapio.ts`/`pedido.ts` (aquilo é o esqueleto ainda não usado de um
- * cardápio de delivery/PDV, single-tenant, com ficha técnica e adicionais;
- * este aqui é multi-tenant, um "prato do dia" + alternativas por empresa,
- * pensado pra substituir os Google Forms semanais).
+ * Cardápio semanal do restaurante — domínio distinto do `cardapio_dia`/
+ * `prato`/`item_adicional` já existentes em `cardapio.ts`/`pedido.ts`
+ * (aquilo é o esqueleto ainda não usado de um cardápio de delivery/PDV,
+ * single-tenant, com ficha técnica e adicionais; este aqui é pensado pra
+ * substituir os Google Forms semanais das empresas-cliente).
  *
- * Pool de pratos de uma empresa (~20, o suficiente pra um mês inteiro sem
- * repetir "prato do dia") — o catálogo em si não muda semana a semana, só a
- * escolha de quem vira destaque/alternativa em cada dia (`cardapio_semana_dia`).
+ * Único pro restaurante inteiro, não por empresa: o prato do dia é o mesmo
+ * pra todo mundo (é a mesma cozinha), e as alternativas também vêm do mesmo
+ * conjunto gerado por dia — o que muda de empresa pra empresa é só quantas
+ * dessas alternativas aparecem pra ela (`empresa.cardapio_qtd_alternativas`),
+ * não quais são.
  */
 export const pratoCardapio = pgTable(
   'prato_cardapio',
@@ -29,14 +29,11 @@ export const pratoCardapio = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId()),
-    empresa_id: text('empresa_id')
-      .notNull()
-      .references(() => empresa.id, { onDelete: 'cascade' }),
     nome: text('nome').notNull(),
     ativo: boolean('ativo').notNull().default(true),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
-  (t) => [unique().on(t.empresa_id, t.nome)]
+  (t) => [unique().on(t.nome)]
 )
 
 /** Um dia de calendário do cardápio gerado — a lista de pratos daquele dia mora em `cardapio_semana_dia_item`. */
@@ -46,15 +43,17 @@ export const cardapioSemanaDia = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId()),
-    empresa_id: text('empresa_id')
-      .notNull()
-      .references(() => empresa.id, { onDelete: 'cascade' }),
     data: date('data').notNull(),
   },
-  (t) => [unique().on(t.empresa_id, t.data)]
+  (t) => [unique().on(t.data)]
 )
 
-/** `destaque = true` é o "prato do dia" — só um por `cardapio_semana_dia`, os demais são alternativa. */
+/**
+ * `destaque = true` é o "prato do dia" (só um por dia). Os demais são
+ * alternativa, com `ordem` marcando a posição — cada empresa mostra só as
+ * `N` primeiras (`empresa.cardapio_qtd_alternativas`), então a ordem é o que
+ * decide quem "sobra de fora" pras empresas com menos vagas.
+ */
 export const cardapioSemanaDiaItem = pgTable(
   'cardapio_semana_dia_item',
   {
@@ -68,24 +67,14 @@ export const cardapioSemanaDiaItem = pgTable(
       .notNull()
       .references(() => pratoCardapio.id, { onDelete: 'cascade' }),
     destaque: boolean('destaque').notNull().default(false),
+    ordem: integer('ordem').notNull().default(0),
   },
   (t) => [unique().on(t.cardapio_semana_dia_id, t.prato_catalogo_id)]
 )
 
-export const pratoCardapioRelations = relations(pratoCardapio, ({ one }) => ({
-  empresa: one(empresa, {
-    fields: [pratoCardapio.empresa_id],
-    references: [empresa.id],
-  }),
-}))
-
 export const cardapioSemanaDiaRelations = relations(
   cardapioSemanaDia,
-  ({ one, many }) => ({
-    empresa: one(empresa, {
-      fields: [cardapioSemanaDia.empresa_id],
-      references: [empresa.id],
-    }),
+  ({ many }) => ({
     itens: many(cardapioSemanaDiaItem),
   })
 )

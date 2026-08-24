@@ -15,7 +15,11 @@ export default async function CardapioPage() {
       </div>
 
       <CardapioShell
-        empresas={empresas.map((e) => ({ id: e.id, nome: e.nome }))}
+        empresas={empresas.map((e) => ({
+          id: e.id,
+          nome: e.nome,
+          cardapioQtdAlternativas: e.cardapioQtdAlternativas,
+        }))}
       />
     </div>
   )

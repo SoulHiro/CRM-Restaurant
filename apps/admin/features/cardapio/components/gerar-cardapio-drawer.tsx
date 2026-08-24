@@ -43,16 +43,14 @@ interface DiaProposto {
 const SEM_FEIJOADA = '__sem_feijoada__'
 
 export function GerarCardapioDrawer({
-  empresaId,
   onConfirmado,
 }: {
-  empresaId: string
   onConfirmado: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
-  const [itensPorDia, setItensPorDia] = useState('6')
+  const [itensPorDia, setItensPorDia] = useState('13')
   const [pratoFeijoadaId, setPratoFeijoadaId] = useState(SEM_FEIJOADA)
   const [catalogo, setCatalogo] = useState<PratoCatalogoItem[]>([])
   const [proposta, setProposta] = useState<DiaProposto[] | null>(null)
@@ -63,9 +61,9 @@ export function GerarCardapioDrawer({
 
   useEffect(() => {
     if (!open) return
-    buscarCatalogo({ empresaId })
+    buscarCatalogo({})
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, empresaId])
+  }, [open])
 
   const catalogoAtivo = catalogo.filter((p) => p.ativo)
   const nomePorId = new Map(catalogo.map((p) => [p.id, p.nome]))
@@ -106,7 +104,6 @@ export function GerarCardapioDrawer({
   function gerarPreview() {
     if (!from || !to) return
     gerar({
-      empresaId,
       from,
       to,
       itensPorDia: Number(itensPorDia) || 1,
@@ -170,8 +167,9 @@ export function GerarCardapioDrawer({
         <DrawerHeader>
           <DrawerTitle>Gerar cardápio</DrawerTitle>
           <DrawerDescription>
-            Sorteia o prato do dia e as alternativas pro período — revise e
-            ajuste cada dia antes de confirmar.
+            Um cardápio só pro restaurante inteiro — cada empresa mostra na
+            página dela só as N primeiras alternativas (configurável na aba
+            Configurações de cada empresa). Revise e ajuste antes de confirmar.
           </DrawerDescription>
         </DrawerHeader>
 
@@ -199,12 +197,16 @@ export function GerarCardapioDrawer({
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-sm">
-                  Quantos pratos mostrar por dia (destaque + alternativas)
+                  Quantos pratos gerar por dia (destaque + alternativas)
                 </Label>
+                <p className="text-xs text-muted-foreground">
+                  Use o maior número entre as empresas — cada uma corta pra
+                  quantas ela precisa na hora de mostrar.
+                </p>
                 <Input
                   type="number"
                   min="1"
-                  max="20"
+                  max="30"
                   value={itensPorDia}
                   onChange={(e) => setItensPorDia(e.target.value)}
                 />
@@ -278,9 +280,17 @@ export function GerarCardapioDrawer({
 
                   <div className="mt-2 flex flex-col gap-1">
                     <Label className="text-xs text-muted-foreground">
-                      Alternativas
+                      Alternativas (ordem = quem entra primeiro nas empresas com
+                      menos vagas)
                     </Label>
                     <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                      {dia.alternativaIds.map((id, indice) => (
+                        <span key={id} className="text-sm">
+                          {indice + 1}. {nomePorId.get(id)}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
                       {catalogoAtivo
                         .filter((p) => p.id !== dia.destaqueId)
                         .map((prato) => (
@@ -321,7 +331,7 @@ export function GerarCardapioDrawer({
           {proposta && (
             <Button
               disabled={confirmando}
-              onClick={() => confirmar({ empresaId, dias: proposta })}
+              onClick={() => confirmar({ dias: proposta })}
             >
               {confirmando ? 'Confirmando...' : 'Confirmar cardápio'}
             </Button>

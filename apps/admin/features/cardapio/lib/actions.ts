@@ -11,16 +11,16 @@ import {
   pratoCardapio,
 } from '@repo/db'
 import { eq } from 'drizzle-orm'
+import { z } from 'zod'
 
-import { tagCardapioCatalogo, tagCardapioDias } from './cache-tags'
-import { getCardapioIntervalo, getCatalogoEmpresa } from './queries'
+import { TAG_CARDAPIO_CATALOGO, TAG_CARDAPIO_DIAS } from './cache-tags'
+import { getCardapioIntervalo, getCatalogo } from './queries'
 import {
   atualizarPratoSchema,
   confirmarCardapioMesSchema,
   criarPratoSchema,
   gerarPreviewCardapioSchema,
   listarCardapioIntervaloSchema,
-  listarCatalogoSchema,
 } from './schemas'
 import {
   diasFixosFeijoada,
@@ -30,9 +30,9 @@ import {
 import type { CardapioDiaPropostoInput } from './types'
 
 export const listarCatalogoAction = authActionClient
-  .schema(listarCatalogoSchema)
-  .action(async ({ parsedInput }) => {
-    const catalogo = await getCatalogoEmpresa(parsedInput.empresaId)
+  .schema(z.object({}))
+  .action(async () => {
+    const catalogo = await getCatalogo()
     return { catalogo }
   })
 
@@ -40,45 +40,33 @@ export const criarPratoAction = authActionClient
   .schema(criarPratoSchema)
   .action(async ({ parsedInput }) => {
     const existente = await db.query.pratoCardapio.findFirst({
-      where: (p, { and, eq: eqOp }) =>
-        and(
-          eqOp(p.empresa_id, parsedInput.empresaId),
-          eqOp(p.nome, parsedInput.nome.trim())
-        ),
+      where: (p, { eq: eqOp }) => eqOp(p.nome, parsedInput.nome.trim()),
       columns: { id: true },
     })
     if (existente) {
       throw new ActionError('Já existe um prato com esse nome.')
     }
 
-    await db.insert(pratoCardapio).values({
-      empresa_id: parsedInput.empresaId,
-      nome: parsedInput.nome.trim(),
-    })
+    await db.insert(pratoCardapio).values({ nome: parsedInput.nome.trim() })
 
-    updateTag(tagCardapioCatalogo(parsedInput.empresaId))
+    updateTag(TAG_CARDAPIO_CATALOGO)
   })
 
 export const atualizarPratoAction = authActionClient
   .schema(atualizarPratoSchema)
   .action(async ({ parsedInput }) => {
-    const [atualizado] = await db
+    await db
       .update(pratoCardapio)
       .set({ nome: parsedInput.nome.trim(), ativo: parsedInput.ativo })
       .where(eq(pratoCardapio.id, parsedInput.pratoId))
-      .returning({ empresa_id: pratoCardapio.empresa_id })
 
-    if (atualizado) updateTag(tagCardapioCatalogo(atualizado.empresa_id))
+    updateTag(TAG_CARDAPIO_CATALOGO)
   })
 
 export const listarCardapioIntervaloAction = authActionClient
   .schema(listarCardapioIntervaloSchema)
   .action(async ({ parsedInput }) => {
-    const dias = await getCardapioIntervalo(
-      parsedInput.empresaId,
-      parsedInput.from,
-      parsedInput.to
-    )
+    const dias = await getCardapioIntervalo(parsedInput.from, parsedInput.to)
     return { dias }
   })
 
@@ -89,7 +77,7 @@ export const listarCardapioIntervaloAction = authActionClient
 export const gerarPreviewCardapioAction = authActionClient
   .schema(gerarPreviewCardapioSchema)
   .action(async ({ parsedInput }) => {
-    const catalogo = await getCatalogoEmpresa(parsedInput.empresaId)
+    const catalogo = await getCatalogo()
     const ativos = catalogo.filter((p) => p.ativo)
 
     if (ativos.length === 0) {
@@ -131,7 +119,9 @@ export const gerarPreviewCardapioAction = authActionClient
  * Grava a proposta (já revisada/editada no preview). Sempre substitui: apaga
  * os itens que já existiam pra cada dia e recria do zero — mais simples que
  * diffar, e "gerar de novo" é justamente pra sobrescrever uma versão
- * anterior (ex: o admin ajustou um prato e quer regenerar o mês).
+ * anterior (ex: o admin ajustou um prato e quer regenerar o mês). A ordem
+ * das alternativas no array vira a coluna `ordem` — é ela que decide quais
+ * "sobram de fora" quando uma empresa mostra menos que o total gerado.
  *
  * Duas idas ao banco em vez de uma: `db.batch` do neon-http não deixa um
  * statement ler o resultado do anterior no mesmo lote, então primeiro
@@ -147,19 +137,16 @@ export const confirmarCardapioMesAction = authActionClient
       dias.map((dia) =>
         db
           .insert(cardapioSemanaDia)
-          .values({ empresa_id: parsedInput.empresaId, data: dia.data })
+          .values({ data: dia.data })
           .onConflictDoNothing()
       )
     )
 
     const diasGravados = await db.query.cardapioSemanaDia.findMany({
-      where: (d, { and, eq: eqOp, inArray }) =>
-        and(
-          eqOp(d.empresa_id, parsedInput.empresaId),
-          inArray(
-            d.data,
-            dias.map((dia) => dia.data)
-          )
+      where: (d, { inArray }) =>
+        inArray(
+          d.data,
+          dias.map((dia) => dia.data)
         ),
       columns: { id: true, data: true },
     })
@@ -182,11 +169,13 @@ export const confirmarCardapioMesAction = authActionClient
             cardapio_semana_dia_id: diaId,
             prato_catalogo_id: dia.destaqueId,
             destaque: true,
+            ordem: 0,
           },
-          ...dia.alternativaIds.map((id) => ({
+          ...dia.alternativaIds.map((id, indice) => ({
             cardapio_semana_dia_id: diaId,
             prato_catalogo_id: id,
             destaque: false,
+            ordem: indice + 1,
           })),
         ])
       )
@@ -194,5 +183,5 @@ export const confirmarCardapioMesAction = authActionClient
 
     await executarLote(statements)
 
-    updateTag(tagCardapioDias(parsedInput.empresaId))
+    updateTag(TAG_CARDAPIO_DIAS)
   })

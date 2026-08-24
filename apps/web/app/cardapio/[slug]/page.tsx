@@ -29,10 +29,17 @@ export default async function CardapioSlugPage({
   const from = inicioDaSemana()
   const to = somarDiasISO(from, 5) // segunda a sábado
 
-  const [colaboradores, cardapio] = await Promise.all([
+  const [colaboradores, cardapioCompleto] = await Promise.all([
     getColaboradoresAtivos(empresa.id),
-    getCardapioSemana(empresa.id, from, to),
+    getCardapioSemana(from, to),
   ])
+
+  // O cardápio é gerado uma vez só pro restaurante inteiro — cada empresa
+  // só enxerga as N primeiras alternativas dela.
+  const cardapio = cardapioCompleto.map((dia) => ({
+    ...dia,
+    alternativas: dia.alternativas.slice(0, empresa.cardapioQtdAlternativas),
+  }))
 
   return (
     <CardapioPublico

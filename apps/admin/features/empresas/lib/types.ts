@@ -36,6 +36,8 @@ export interface EmpresaListItem {
   /** P/M/G/Lanche/Café/Suco no resumo do dia — independente de fluxoPedido. */
   resumoMostraQuantidades: boolean
   precoModo: EmpresaPrecoModo
+  /** Quantas alternativas do cardápio (gerado só uma vez pro restaurante inteiro) essa empresa mostra na página pública. */
+  cardapioQtdAlternativas: number
   pedeCafe: boolean
   pedeLanche: boolean
   pedeSuco: boolean

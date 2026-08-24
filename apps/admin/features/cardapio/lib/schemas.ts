@@ -1,11 +1,6 @@
 import { z } from 'zod'
 
-export const listarCatalogoSchema = z.object({
-  empresaId: z.string().min(1),
-})
-
 export const criarPratoSchema = z.object({
-  empresaId: z.string().min(1),
   nome: z.string().min(1, 'Informe o nome do prato'),
 })
 
@@ -16,7 +11,6 @@ export const atualizarPratoSchema = z.object({
 })
 
 export const listarCardapioIntervaloSchema = z.object({
-  empresaId: z.string().min(1),
   from: z.string().min(1),
   to: z.string().min(1),
 })
@@ -26,10 +20,11 @@ export type ListarCardapioIntervaloInput = z.infer<
 >
 
 export const gerarPreviewCardapioSchema = z.object({
-  empresaId: z.string().min(1),
   from: z.string().min(1),
   to: z.string().min(1),
-  itensPorDia: z.number().int().min(1).max(20),
+  // Total gerado por dia (destaque + alternativas) — cobre a maior
+  // necessidade entre as empresas; cada uma mostra só as N primeiras dela.
+  itensPorDia: z.number().int().min(1).max(30),
   pratoFeijoadaId: z.string().min(1).nullable(),
 })
 
@@ -44,7 +39,6 @@ const cardapioDiaPropostoSchema = z.object({
 })
 
 export const confirmarCardapioMesSchema = z.object({
-  empresaId: z.string().min(1),
   dias: z.array(cardapioDiaPropostoSchema).min(1),
 })
 

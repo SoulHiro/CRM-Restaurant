@@ -120,6 +120,7 @@ export const atualizarConfiguracaoEmpresaAction = authActionClient
         pede_cafe: parsedInput.pedeCafe,
         pede_lanche: parsedInput.pedeLanche,
         pede_suco: parsedInput.pedeSuco,
+        cardapio_qtd_alternativas: parsedInput.cardapioQtdAlternativas,
       })
       .where(eq(empresa.id, parsedInput.empresaId))
 

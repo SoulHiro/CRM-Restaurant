@@ -13,6 +13,13 @@ import {
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@repo/ui/components/select'
 import { Skeleton } from '@repo/ui/components/skeleton'
 import {
   Table,
@@ -36,12 +43,13 @@ function inicioDaSemana(): string {
 }
 
 export function CardapioTabela({
-  empresaId,
+  empresas,
   atualizarKey,
 }: {
-  empresaId: string
+  empresas: { id: string; nome: string; cardapioQtdAlternativas: number }[]
   atualizarKey: number
 }) {
+  const [empresaId, setEmpresaId] = useState(empresas[0]?.id ?? '')
   const [from, setFrom] = useState(inicioDaSemana)
   const [to, setTo] = useState(() => somarDiasISO(inicioDaSemana(), 5))
   const [dias, setDias] = useState<CardapioDiaItem[] | null>(null)
@@ -56,20 +64,43 @@ export function CardapioTabela({
 
   useEffect(() => {
     setDias(null)
-    buscar({ empresaId, from, to })
+    buscar({ from, to })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresaId, from, to, atualizarKey])
+  }, [from, to, atualizarKey])
+
+  const qtdAlternativas =
+    empresas.find((e) => e.id === empresaId)?.cardapioQtdAlternativas ?? 5
+
+  const diasCortados = (dias ?? []).map((dia) => ({
+    ...dia,
+    alternativas: dia.alternativas.slice(0, qtdAlternativas),
+  }))
 
   const maxAlternativas = Math.max(
     0,
-    ...(dias ?? []).map((d) => d.alternativas.length)
+    ...diasCortados.map((d) => d.alternativas.length)
   )
 
   return (
     <Card className="border-0">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-        <CardTitle className="text-base">Cardápio gerado</CardTitle>
+        <CardTitle className="text-base">
+          Cardápio gerado — como{' '}
+          {empresas.find((e) => e.id === empresaId)?.nome ?? 'a empresa'} vê
+        </CardTitle>
         <div className="flex items-center gap-2">
+          <Select value={empresaId} onValueChange={setEmpresaId}>
+            <SelectTrigger className="h-8 w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {empresas.map((empresa) => (
+                <SelectItem key={empresa.id} value={empresa.id}>
+                  {empresa.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">De</Label>
             <Input
@@ -93,7 +124,7 @@ export function CardapioTabela({
       <CardContent>
         {carregando || !dias ? (
           <Skeleton className="h-40 w-full" />
-        ) : dias.length === 0 ? (
+        ) : diasCortados.length === 0 ? (
           <EmptyState message="Nenhum cardápio gerado nesse período ainda." />
         ) : (
           <div className="overflow-x-auto">
@@ -101,7 +132,7 @@ export function CardapioTabela({
               <TableHeader>
                 <TableRow>
                   <TableHead />
-                  {dias.map((dia) => (
+                  {diasCortados.map((dia) => (
                     <TableHead key={dia.data} className="text-center">
                       {formatShortDateBR(dia.data)}
                     </TableHead>
@@ -111,7 +142,7 @@ export function CardapioTabela({
               <TableBody>
                 <TableRow>
                   <TableCell className="font-semibold">Prato do dia</TableCell>
-                  {dias.map((dia) => (
+                  {diasCortados.map((dia) => (
                     <TableCell
                       key={dia.data}
                       className="text-center font-semibold text-primary"
@@ -123,7 +154,7 @@ export function CardapioTabela({
                 {Array.from({ length: maxAlternativas }, (_, indice) => (
                   <TableRow key={indice}>
                     <TableCell />
-                    {dias.map((dia) => (
+                    {diasCortados.map((dia) => (
                       <TableCell key={dia.data} className="text-center">
                         {dia.alternativas[indice]?.nome ?? ''}
                       </TableCell>

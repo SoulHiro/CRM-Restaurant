@@ -14,10 +14,22 @@ export async function getEmpresaPorSlug(
 ): Promise<EmpresaCardapioInfo | null> {
   const row = await db.query.empresa.findFirst({
     where: (e, { eq }) => eq(e.slug, slug),
-    columns: { id: true, nome: true, preco_modo: true },
+    columns: {
+      id: true,
+      nome: true,
+      preco_modo: true,
+      cardapio_qtd_alternativas: true,
+    },
   })
 
-  return row ? { id: row.id, nome: row.nome, precoModo: row.preco_modo } : null
+  return row
+    ? {
+        id: row.id,
+        nome: row.nome,
+        precoModo: row.preco_modo,
+        cardapioQtdAlternativas: row.cardapio_qtd_alternativas,
+      }
+    : null
 }
 
 /** Só funcionário ativo — mesma regra do combobox do admin, sem opção de criar nome novo aqui (ver contexto do plano). */
@@ -36,16 +48,24 @@ export async function getColaboradoresAtivos(
   })
 }
 
+/**
+ * O cardápio é único pro restaurante — prato do dia e alternativas (já
+ * ordenadas) vêm inteiros aqui; quem chama corta pra quantas alternativas a
+ * empresa mostra (`empresa.cardapioQtdAlternativas`).
+ */
 export async function getCardapioSemana(
-  empresaId: string,
   from: string,
   to: string
 ): Promise<CardapioDiaPublico[]> {
   const dias = await db.query.cardapioSemanaDia.findMany({
-    where: (d, { and, eq, gte, lte }) =>
-      and(eq(d.empresa_id, empresaId), gte(d.data, from), lte(d.data, to)),
+    where: (d, { and, gte, lte }) => and(gte(d.data, from), lte(d.data, to)),
     orderBy: (d, { asc }) => [asc(d.data)],
-    with: { itens: { with: { prato: true } } },
+    with: {
+      itens: {
+        orderBy: (i, { asc }) => [asc(i.ordem)],
+        with: { prato: true },
+      },
+    },
   })
 
   return dias.map((dia) => {

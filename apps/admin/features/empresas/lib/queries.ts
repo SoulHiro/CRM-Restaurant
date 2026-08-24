@@ -95,6 +95,7 @@ async function mapEmpresa(
     fluxoPedido: row.fluxo_pedido,
     resumoMostraQuantidades: row.resumo_mostra_quantidades,
     precoModo: row.preco_modo,
+    cardapioQtdAlternativas: row.cardapio_qtd_alternativas,
     pedeCafe: row.pede_cafe,
     pedeLanche: row.pede_lanche,
     pedeSuco: row.pede_suco,
@@ -348,7 +349,12 @@ export function listarFechamentosDaEmpresa(
 
       return rows.map(mapFechamento)
     },
-    ['fechamentos-da-empresa', empresaId, intervalo?.from ?? '', intervalo?.to ?? ''],
+    [
+      'fechamentos-da-empresa',
+      empresaId,
+      intervalo?.from ?? '',
+      intervalo?.to ?? '',
+    ],
     { tags: [tagEmpresaFechamentos(empresaId)] }
   )()
 }
@@ -409,7 +415,12 @@ export function getFaturamentoMensal(
         .slice(-12)
         .map(({ mes, valor }) => ({ mes, valor }))
     },
-    ['faturamento-mensal', empresaId, intervalo?.from ?? '', intervalo?.to ?? ''],
+    [
+      'faturamento-mensal',
+      empresaId,
+      intervalo?.from ?? '',
+      intervalo?.to ?? '',
+    ],
     { tags: [tagEmpresaFechamentos(empresaId)] }
   )()
 }
