@@ -55,6 +55,11 @@ export const inventarioStatusEnum = pgEnum('inventario_status', [
   'finalizado',
 ])
 
+export const inventarioTipoEnum = pgEnum('inventario_tipo', [
+  'abertura',
+  'fechamento',
+])
+
 const QUANTIDADE = { precision: 12, scale: 3 } as const
 const PRECO = { precision: 12, scale: 2 } as const
 
@@ -176,13 +181,17 @@ export const inventario_fisico = pgTable(
       .primaryKey()
       .$defaultFn(() => createId()),
     data: date('data').notNull(),
+    tipo: inventarioTipoEnum('tipo').notNull(),
     responsavel: text('responsavel').notNull(),
     status: inventarioStatusEnum('status').notNull().default('em_andamento'),
     observacao: text('observacao'),
     created_at: timestamp('created_at').notNull().defaultNow(),
     finalizado_em: timestamp('finalizado_em'),
   },
-  (t) => [index('inventario_fisico_data_idx').on(t.data)]
+  (t) => [
+    index('inventario_fisico_data_idx').on(t.data),
+    unique().on(t.data, t.tipo),
+  ]
 )
 
 export const inventario_fisico_item = pgTable(
