@@ -86,3 +86,43 @@ export const CAMPOS_RESUMO_PADRAO: CampoResumoKey[] = [
 export interface ConfiguracaoLayoutResumo {
   campos: CampoResumoKey[]
 }
+
+/** Horários em texto 'HH:mm' — não são timestamp, são hora de todo dia. */
+export interface ConfiguracaoHorarioFuncionamento {
+  almocoInicio: string
+  almocoFim: string
+  jantaInicio: string
+  jantaFim: string
+  deliveryAbre: string
+  deliveryFecha: string
+  localAbre: string
+  localFecha: string
+}
+
+export interface ConfiguracaoPrecificacao {
+  custoOperacionalPorMinuto: number
+  limiarAmareloPct: number
+  limiarVerdePct: number
+  limiarAzulPct: number
+  limiarRoxoPct: number
+}
+
+export const HORARIO_FUNCIONAMENTO_PADRAO: ConfiguracaoHorarioFuncionamento = {
+  almocoInicio: '11:00',
+  almocoFim: '14:00',
+  jantaInicio: '18:00',
+  jantaFim: '22:00',
+  deliveryAbre: '11:00',
+  deliveryFecha: '22:00',
+  localAbre: '11:00',
+  localFecha: '22:00',
+}
+
+/** Mesmos números do default da coluna no banco — ver docs/rules e o schema. */
+export const PRECIFICACAO_PADRAO: ConfiguracaoPrecificacao = {
+  custoOperacionalPorMinuto: 0,
+  limiarAmareloPct: 0,
+  limiarVerdePct: 30,
+  limiarAzulPct: 100,
+  limiarRoxoPct: 200,
+}

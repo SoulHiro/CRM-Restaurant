@@ -1,17 +1,22 @@
 import 'server-only'
 
 import { db } from '@/lib/db'
+import { toNumber } from '@/lib/numeric'
 
 import {
   CAMPOS_COMANDA_PADRAO,
   CAMPOS_RESUMO_PADRAO,
+  HORARIO_FUNCIONAMENTO_PADRAO,
+  PRECIFICACAO_PADRAO,
   TODOS_CAMPOS_COMANDA,
   TODOS_CAMPOS_RESUMO,
   type CampoComandaKey,
   type CampoResumoKey,
   type ConfiguracaoComanda,
+  type ConfiguracaoHorarioFuncionamento,
   type ConfiguracaoLayoutResumo,
   type ConfiguracaoPesagem,
+  type ConfiguracaoPrecificacao,
   type ConfiguracaoResumoDia,
   type ImpressoraOption,
 } from './types'
@@ -97,4 +102,42 @@ export async function getConfiguracaoLayoutResumo(): Promise<ConfiguracaoLayoutR
 
   const campos = row.layout_campos.filter(ehCampoResumoValido)
   return { campos: campos.length > 0 ? campos : CAMPOS_RESUMO_PADRAO }
+}
+
+export async function getConfiguracaoHorarioFuncionamento(): Promise<ConfiguracaoHorarioFuncionamento> {
+  const row = await db.query.configuracaoHorarioFuncionamento.findFirst({
+    where: (c, { eq }) => eq(c.id, 'default'),
+  })
+
+  if (!row) return HORARIO_FUNCIONAMENTO_PADRAO
+
+  return {
+    almocoInicio:
+      row.almoco_inicio ?? HORARIO_FUNCIONAMENTO_PADRAO.almocoInicio,
+    almocoFim: row.almoco_fim ?? HORARIO_FUNCIONAMENTO_PADRAO.almocoFim,
+    jantaInicio: row.janta_inicio ?? HORARIO_FUNCIONAMENTO_PADRAO.jantaInicio,
+    jantaFim: row.janta_fim ?? HORARIO_FUNCIONAMENTO_PADRAO.jantaFim,
+    deliveryAbre:
+      row.delivery_abre ?? HORARIO_FUNCIONAMENTO_PADRAO.deliveryAbre,
+    deliveryFecha:
+      row.delivery_fecha ?? HORARIO_FUNCIONAMENTO_PADRAO.deliveryFecha,
+    localAbre: row.local_abre ?? HORARIO_FUNCIONAMENTO_PADRAO.localAbre,
+    localFecha: row.local_fecha ?? HORARIO_FUNCIONAMENTO_PADRAO.localFecha,
+  }
+}
+
+export async function getConfiguracaoPrecificacao(): Promise<ConfiguracaoPrecificacao> {
+  const row = await db.query.configuracaoPrecificacao.findFirst({
+    where: (c, { eq }) => eq(c.id, 'default'),
+  })
+
+  if (!row) return PRECIFICACAO_PADRAO
+
+  return {
+    custoOperacionalPorMinuto: toNumber(row.custo_operacional_por_minuto),
+    limiarAmareloPct: toNumber(row.limiar_amarelo_pct),
+    limiarVerdePct: toNumber(row.limiar_verde_pct),
+    limiarAzulPct: toNumber(row.limiar_azul_pct),
+    limiarRoxoPct: toNumber(row.limiar_roxo_pct),
+  }
 }

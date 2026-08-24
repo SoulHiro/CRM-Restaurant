@@ -5,6 +5,8 @@ import {
   UtensilsCrossed,
   BookOpen,
   Building2,
+  Clock,
+  DollarSign,
   LayoutGrid,
   Package,
   Package2,
@@ -111,6 +113,12 @@ const CONFIG_NAV_ITEMS: NavItem[] = [
     title: 'Dados da empresa',
     url: '/configuracoes/dados-empresa',
     icon: Building2,
+  },
+  { title: 'Funcionamento', url: '/configuracoes/funcionamento', icon: Clock },
+  {
+    title: 'Precificação',
+    url: '/configuracoes/precificacao',
+    icon: DollarSign,
   },
 ]
 

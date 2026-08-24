@@ -59,3 +59,54 @@ export const salvarLayoutResumoSchema = z.object({
 })
 
 export type SalvarLayoutResumoInput = z.infer<typeof salvarLayoutResumoSchema>
+
+const horaHHmm = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use o formato HH:mm')
+
+export const obterConfiguracaoHorarioFuncionamentoSchema = z.object({})
+
+export const salvarConfiguracaoHorarioFuncionamentoSchema = z.object({
+  almocoInicio: horaHHmm,
+  almocoFim: horaHHmm,
+  jantaInicio: horaHHmm,
+  jantaFim: horaHHmm,
+  deliveryAbre: horaHHmm,
+  deliveryFecha: horaHHmm,
+  localAbre: horaHHmm,
+  localFecha: horaHHmm,
+})
+
+export type SalvarConfiguracaoHorarioFuncionamentoInput = z.infer<
+  typeof salvarConfiguracaoHorarioFuncionamentoSchema
+>
+
+const percentual = z.coerce
+  .number({ invalid_type_error: 'Informe um número' })
+  .min(0, 'Não pode ser negativo')
+  .max(9999, 'Valor alto demais')
+
+export const obterConfiguracaoPrecificacaoSchema = z.object({})
+
+export const salvarConfiguracaoPrecificacaoSchema = z
+  .object({
+    custoOperacionalPorMinuto: percentual,
+    limiarAmareloPct: percentual,
+    limiarVerdePct: percentual,
+    limiarAzulPct: percentual,
+    limiarRoxoPct: percentual,
+  })
+  .refine(
+    (v) =>
+      v.limiarAmareloPct <= v.limiarVerdePct &&
+      v.limiarVerdePct <= v.limiarAzulPct &&
+      v.limiarAzulPct <= v.limiarRoxoPct,
+    {
+      message: 'Os limiares precisam estar em ordem crescente',
+      path: ['limiarVerdePct'],
+    }
+  )
+
+export type SalvarConfiguracaoPrecificacaoInput = z.infer<
+  typeof salvarConfiguracaoPrecificacaoSchema
+>

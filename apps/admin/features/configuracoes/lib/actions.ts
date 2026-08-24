@@ -6,7 +6,9 @@ import { db } from '@/lib/db'
 import { authActionClient } from '@/lib/safe-action'
 import {
   configuracaoComanda,
+  configuracaoHorarioFuncionamento,
   configuracaoPesagem,
+  configuracaoPrecificacao,
   configuracaoResumoDia,
   impressora,
 } from '@repo/db'
@@ -17,8 +19,10 @@ import {
 } from '@/features/empresas/lib/cache-tags'
 import {
   getConfiguracaoComanda,
+  getConfiguracaoHorarioFuncionamento,
   getConfiguracaoLayoutResumo,
   getConfiguracaoPesagem,
+  getConfiguracaoPrecificacao,
   getConfiguracaoResumoDia,
   listarImpressorasComanda,
   listarImpressorasPesagem,
@@ -28,11 +32,15 @@ import {
   listarImpressorasComandaSchema,
   listarImpressorasPesagemSchema,
   obterConfiguracaoComandaSchema,
+  obterConfiguracaoHorarioFuncionamentoSchema,
   obterConfiguracaoLayoutResumoSchema,
   obterConfiguracaoPesagemSchema,
+  obterConfiguracaoPrecificacaoSchema,
   obterConfiguracaoResumoDiaSchema,
   salvarConfiguracaoComandaSchema,
+  salvarConfiguracaoHorarioFuncionamentoSchema,
   salvarConfiguracaoPesagemSchema,
+  salvarConfiguracaoPrecificacaoSchema,
   salvarConfiguracaoResumoDiaSchema,
   salvarLayoutResumoSchema,
 } from './schemas'
@@ -123,7 +131,10 @@ export const salvarConfiguracaoComandaAction = authActionClient
 
     revalidatePath('/configuracoes/impressao')
     updateTag(TAG_CONFIGURACAO_IMPRESSAO)
-    return { campos: parsedInput.campos, impressoraId: parsedInput.impressoraId }
+    return {
+      campos: parsedInput.campos,
+      impressoraId: parsedInput.impressoraId,
+    }
   })
 
 export const obterConfiguracaoResumoDiaAction = authActionClient
@@ -180,4 +191,73 @@ export const salvarLayoutResumoAction = authActionClient
 
     revalidatePath('/configuracoes/impressao')
     return { campos: parsedInput.campos }
+  })
+
+export const obterConfiguracaoHorarioFuncionamentoAction = authActionClient
+  .schema(obterConfiguracaoHorarioFuncionamentoSchema)
+  .action(async () => {
+    return getConfiguracaoHorarioFuncionamento()
+  })
+
+export const salvarConfiguracaoHorarioFuncionamentoAction = authActionClient
+  .schema(salvarConfiguracaoHorarioFuncionamentoSchema)
+  .action(async ({ parsedInput }) => {
+    const valores = {
+      almoco_inicio: parsedInput.almocoInicio,
+      almoco_fim: parsedInput.almocoFim,
+      janta_inicio: parsedInput.jantaInicio,
+      janta_fim: parsedInput.jantaFim,
+      delivery_abre: parsedInput.deliveryAbre,
+      delivery_fecha: parsedInput.deliveryFecha,
+      local_abre: parsedInput.localAbre,
+      local_fecha: parsedInput.localFecha,
+    }
+
+    await db
+      .insert(configuracaoHorarioFuncionamento)
+      .values({ id: 'default', ...valores })
+      .onConflictDoUpdate({
+        target: configuracaoHorarioFuncionamento.id,
+        set: { ...valores, updated_at: new Date() },
+      })
+
+    revalidatePath('/configuracoes/funcionamento')
+    return parsedInput
+  })
+
+export const obterConfiguracaoPrecificacaoAction = authActionClient
+  .schema(obterConfiguracaoPrecificacaoSchema)
+  .action(async () => {
+    return getConfiguracaoPrecificacao()
+  })
+
+export const salvarConfiguracaoPrecificacaoAction = authActionClient
+  .schema(salvarConfiguracaoPrecificacaoSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .insert(configuracaoPrecificacao)
+      .values({
+        id: 'default',
+        custo_operacional_por_minuto:
+          parsedInput.custoOperacionalPorMinuto.toFixed(2),
+        limiar_amarelo_pct: parsedInput.limiarAmareloPct.toFixed(2),
+        limiar_verde_pct: parsedInput.limiarVerdePct.toFixed(2),
+        limiar_azul_pct: parsedInput.limiarAzulPct.toFixed(2),
+        limiar_roxo_pct: parsedInput.limiarRoxoPct.toFixed(2),
+      })
+      .onConflictDoUpdate({
+        target: configuracaoPrecificacao.id,
+        set: {
+          custo_operacional_por_minuto:
+            parsedInput.custoOperacionalPorMinuto.toFixed(2),
+          limiar_amarelo_pct: parsedInput.limiarAmareloPct.toFixed(2),
+          limiar_verde_pct: parsedInput.limiarVerdePct.toFixed(2),
+          limiar_azul_pct: parsedInput.limiarAzulPct.toFixed(2),
+          limiar_roxo_pct: parsedInput.limiarRoxoPct.toFixed(2),
+          updated_at: new Date(),
+        },
+      })
+
+    revalidatePath('/configuracoes/precificacao')
+    return parsedInput
   })
