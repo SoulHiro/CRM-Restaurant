@@ -30,6 +30,20 @@ import {
   upsertFornecedorSchema,
 } from './schemas'
 
+/**
+ * Validade mais próxima entre a que o item já tinha e a do lote que está
+ * chegando — nunca a mais distante, porque o que vence primeiro é o que
+ * importa pro alerta. `null` de qualquer lado não restringe.
+ */
+function validadeMaisProxima(
+  atual: string | null,
+  nova: string | null
+): string | null {
+  if (!atual) return nova
+  if (!nova) return atual
+  return atual < nova ? atual : nova
+}
+
 function revalidarCompras() {
   revalidatePath('/compras')
   revalidatePath('/financeiro')
@@ -91,6 +105,7 @@ export const createCompraAction = authActionClient
           estoque_item_id: linha.estoqueItemId,
           quantidade: toNumericString(linha.quantidade),
           valor_unitario: toMoneyString(linha.valorUnitario),
+          validade: linha.validade ?? null,
         }))
       ),
       planejarContaPagar({
@@ -139,10 +154,13 @@ export const receberCompraAction = authActionClient
         estoque_item.id,
         row.itens.map((linha) => linha.estoque_item_id)
       ),
-      columns: { id: true, quantidade_atual: true },
+      columns: { id: true, quantidade_atual: true, validade: true },
     })
     const saldoPorItem = new Map(
       saldos.map((item) => [item.id, toNumber(item.quantidade_atual)])
+    )
+    const validadePorItem = new Map(
+      saldos.map((item) => [item.id, item.validade])
     )
 
     const statements: Statement[] = [
@@ -158,6 +176,8 @@ export const receberCompraAction = authActionClient
         throw new ActionError('Algum item da nota não existe mais no estoque')
       }
 
+      const validadeAtual = validadePorItem.get(linha.estoque_item_id) ?? null
+
       const { statements: movimento, resultado } = planejarMovimento(
         {
           estoqueItemId: linha.estoque_item_id,
@@ -166,6 +186,7 @@ export const receberCompraAction = authActionClient
           origemTipo: 'compra',
           origemId: row.id,
           userId: ctx.user.id,
+          validade: validadeMaisProxima(validadeAtual, linha.validade),
         },
         saldoAnterior
       )

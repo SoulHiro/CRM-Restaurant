@@ -26,7 +26,12 @@ import { formatCurrencyBRL } from '@/lib/formatters'
 import { totalCompra, totalLinha } from '../../lib/compra-helpers'
 import type { CreateCompraInput } from '../../lib/schemas'
 
-const LINHA_VAZIA = { estoqueItemId: '', quantidade: 1, valorUnitario: 0 }
+const LINHA_VAZIA = {
+  estoqueItemId: '',
+  quantidade: 1,
+  valorUnitario: 0,
+  validade: undefined,
+}
 
 export function CompraLinhasEditor({
   itens,
@@ -212,6 +217,30 @@ export function CompraLinhasEditor({
                     <Trash2 className="size-4" />
                   </Button>
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name={`linhas.${indice}.validade`}
+                  render={({ field: campo }) => (
+                    <FormItem className="sm:col-span-3">
+                      <FormLabel className="text-xs text-muted-foreground">
+                        Validade do lote (opcional)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          className="h-11 w-full sm:h-9 sm:max-w-48"
+                          value={campo.value ?? ''}
+                          onChange={campo.onChange}
+                          onBlur={campo.onBlur}
+                          name={campo.name}
+                          ref={campo.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             )
           })}

@@ -17,10 +17,19 @@ const quantidade = z.coerce
 export const idSchema = z.object({ id: z.string().min(1) })
 export type IdInput = z.infer<typeof idSchema>
 
+// '' = não informado — o input date manda string vazia quando limpo, e
+// validade é opcional (só item perecível costuma ter).
+const dataOpcional = z
+  .string()
+  .optional()
+  .or(z.literal(''))
+  .transform((value) => (value ? value : undefined))
+
 export const compraLinhaSchema = z.object({
   estoqueItemId: z.string().min(1, 'Escolha o item'),
   quantidade,
   valorUnitario: dinheiro.refine((v) => v > 0, 'Informe o valor unitário'),
+  validade: dataOpcional,
 })
 
 export type CompraLinhaInput = z.infer<typeof compraLinhaSchema>
