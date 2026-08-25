@@ -1,23 +1,16 @@
-import { ProdutosTable } from '@/features/catalogo/components/list/produtos-table'
-import { getProdutosDelivery } from '@/features/catalogo/lib/queries'
+import { EmptyState } from '@repo/ui/components/empty-state'
 
-export default async function DeliveryPage() {
-  const produtos = await getProdutosDelivery()
-
+export default function DeliveryPage() {
   return (
     <div className="flex flex-col gap-4 p-6">
       <div>
         <h1 className="text-xl font-semibold">Cardápio de delivery</h1>
         <p className="text-sm text-muted-foreground">
-          Prévia administrativa dos produtos disponíveis pra delivery — sem
-          pedido, é só a lista que vai aparecer na vitrine quando ela existir.
+          Vitrine do cliente pra delivery — ainda não existe.
         </p>
       </div>
 
-      <ProdutosTable
-        produtos={produtos}
-        vazioMensagem="Nenhum produto disponível pra delivery ainda."
-      />
+      <EmptyState message="Em breve." />
     </div>
   )
 }
