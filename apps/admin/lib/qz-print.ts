@@ -14,12 +14,21 @@ function configurarAssinatura(qz: Awaited<typeof import('qz-tray')>['default']) 
 
   qz.security.setCertificatePromise(async () => {
     const resposta = await fetch('/api/qz/cert')
-    return resposta.text()
+    const texto = await resposta.text()
+    // `fetch` não rejeita em 4xx/5xx — sem checar `ok`, um 500 (env não
+    // configurada em produção, por exemplo) vira "certificado" e o QZ Tray
+    // falha calado, sem nenhum aviso na tela.
+    if (!resposta.ok) throw new Error(`Certificado QZ: ${texto}`)
+    return texto
   })
 
   qz.security.setSignaturePromise((paraAssinar) => (resolve, reject) => {
     fetch('/api/qz/sign', { method: 'POST', body: paraAssinar })
-      .then((resposta) => resposta.text())
+      .then(async (resposta) => {
+        const texto = await resposta.text()
+        if (!resposta.ok) throw new Error(`Assinatura QZ: ${texto}`)
+        return texto
+      })
       .then(resolve)
       .catch(reject)
   })
