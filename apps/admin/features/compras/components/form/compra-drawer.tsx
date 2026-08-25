@@ -127,7 +127,7 @@ export function CompraDrawer({
       <DrawerContent
         direction={direction}
         variant={variant}
-        className="flex max-h-[90vh] w-full flex-col gap-0 overflow-y-auto sm:max-h-none sm:max-w-2xl"
+        className="flex w-full flex-col gap-0 overflow-y-auto sm:max-h-none sm:max-w-2xl"
       >
         <DrawerHeader>
           <DrawerTitle>Nova compra</DrawerTitle>

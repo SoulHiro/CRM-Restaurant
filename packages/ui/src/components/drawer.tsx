@@ -3,15 +3,27 @@
 import * as React from 'react'
 import { Drawer as DrawerPrimitive } from 'vaul'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { X } from 'lucide-react'
 
 import { cn } from '@repo/ui/lib/utils'
 
+/**
+ * Direção 'bottom' é sempre o bottom sheet mobile (ver `useDrawerDirection`)
+ * — arrastar pra fechar sem querer enquanto rola um formulário longo é o bug
+ * relatado, então esse caso só fecha por gesto/clique fora se o consumidor
+ * pedir explicitamente. Outras direções (o painel flutuante do desktop)
+ * continuam dismissible por padrão.
+ */
 const Drawer = ({
   shouldScaleBackground = true,
+  dismissible,
+  direction = 'bottom',
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root
     shouldScaleBackground={shouldScaleBackground}
+    direction={direction}
+    dismissible={dismissible ?? direction !== 'bottom'}
     {...props}
   />
 )
@@ -46,6 +58,7 @@ const drawerVariants = cva('fixed z-50 flex flex-col bg-background', {
     variant: {
       default: 'border',
       float: 'm-4 rounded-[10px] border shadow-2xl',
+      fullscreen: '',
     },
   },
   compoundVariants: [
@@ -62,6 +75,15 @@ const drawerVariants = cva('fixed z-50 flex flex-col bg-background', {
       direction: ['top', 'bottom'],
       variant: 'float',
       class: 'w-[calc(100%-2rem)]',
+    },
+    {
+      // Bottom sheet ganha a tela inteira no mobile — sem a margem
+      // reservada do padrão (`mt-24`) e sem cantos arredondados. `h-dvh`,
+      // não `h-full`/100vh: a barra de endereço do navegador mobile muda de
+      // altura e cortava o conteúdo com viewport unit fixa.
+      direction: 'bottom',
+      variant: 'fullscreen',
+      class: 'mt-0 h-dvh rounded-none border-0',
     },
   ],
   defaultVariants: {
@@ -96,8 +118,16 @@ const DrawerContent = React.forwardRef<
         className={cn(drawerVariants({ direction, variant }), className)}
         {...props}
       >
-        {direction === 'bottom' && (
+        {direction === 'bottom' && variant !== 'fullscreen' && (
           <div className="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted" />
+        )}
+        {variant === 'fullscreen' && (
+          <DrawerPrimitive.Close
+            className="absolute right-4 top-4 z-10 flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-accent"
+            aria-label="Fechar"
+          >
+            <X className="size-4" />
+          </DrawerPrimitive.Close>
         )}
         {children}
       </DrawerPrimitive.Content>

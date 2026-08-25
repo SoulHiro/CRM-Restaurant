@@ -103,7 +103,7 @@ export function FornecedorDrawer({
       <DrawerContent
         direction={direction}
         variant={variant}
-        className="flex max-h-[85vh] w-full flex-col gap-0 overflow-y-auto sm:max-h-none sm:max-w-lg"
+        className="flex w-full flex-col gap-0 overflow-y-auto sm:max-h-none sm:max-w-lg"
       >
         <DrawerHeader>
           <DrawerTitle>
