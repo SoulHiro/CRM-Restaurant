@@ -8,41 +8,29 @@ export const TIPO_PRODUTO_LABEL: Record<TipoProduto, string> = {
   bebida: 'Bebida',
 }
 
-export const DISPONIBILIDADE_STATUS = [
-  'disponivel',
-  'pausado',
-  'personalizado',
-] as const
-export type DisponibilidadeStatus = (typeof DISPONIBILIDADE_STATUS)[number]
-
-export const DISPONIBILIDADE_STATUS_LABEL: Record<
-  DisponibilidadeStatus,
-  string
-> = {
-  disponivel: 'Disponível',
-  pausado: 'Pausado',
-  personalizado: 'Horário personalizado',
-}
-
-export const APLICA_A = ['comida', 'bebida', 'ambos'] as const
-export type AplicaA = (typeof APLICA_A)[number]
-
 export interface CategoriaProdutoOption {
   id: string
   nome: string
 }
 
-export interface ClassificacaoOption {
+export interface AdicionalItemOption {
   id: string
-  nome: string
-  aplicaA: AplicaA
-}
-
-export interface AdicionalOption {
-  id: string
+  grupoId: string
   nome: string
   preco: number
+  fotoUrl: string | null
+  quantidadeMinima: number
+  quantidadeMaxima: number
   ativo: boolean
+}
+
+export interface GrupoAdicionalOption {
+  id: string
+  nome: string
+  disponivelAlmoco: boolean
+  disponivelJanta: boolean
+  ativo: boolean
+  itens: AdicionalItemOption[]
 }
 
 /** Insumo elegível pra ficha técnica — só comestível/preparo/embalagem entram. */
@@ -62,12 +50,6 @@ export interface FichaTecnicaItemInput {
   custoUnitario: number
 }
 
-export interface DisponibilidadeJanelaInput {
-  diaSemana: number
-  horaInicio: string
-  horaFim: string
-}
-
 export interface CriarProdutoInput {
   nome: string
   categoriaId: string | null
@@ -81,23 +63,29 @@ export interface CriarProdutoInput {
   descontoPercentual: number | null
   disponivelDelivery: boolean
   disponivelLocal: boolean
-  disponibilidadeStatus: DisponibilidadeStatus
+  /** Pausa é sempre "por hoje" — ver `produto.pausado_em` no schema. */
+  pausadoHoje: boolean
   apareceAlmoco: boolean
   apareceJanta: boolean
-  janelas: DisponibilidadeJanelaInput[]
-  classificacaoIds: string[]
-  adicionalIds: string[]
+  /** Em quais dias da semana (0=domingo...6=sábado) aparece. Vazio = todo dia. */
+  diasSemana: number[]
+  /** Chaves fixas de `lib/classificacoes.ts` — sem entidade de banco. */
+  classificacoes: string[]
+  grupoAdicionalIds: string[]
 }
 
 export interface ProdutoListItem {
   id: string
   nome: string
+  categoriaId: string | null
   categoriaNome: string | null
   tipo: TipoProduto
   precoVenda: number | null
-  disponibilidadeStatus: DisponibilidadeStatus
+  pausadoHoje: boolean
   disponivelDelivery: boolean
   disponivelLocal: boolean
+  apareceAlmoco: boolean
+  apareceJanta: boolean
   fotoUrl: string | null
   ativo: boolean
 }

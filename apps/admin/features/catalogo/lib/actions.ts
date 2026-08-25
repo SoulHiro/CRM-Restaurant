@@ -4,23 +4,23 @@ import { revalidatePath } from 'next/cache'
 
 import { db } from '@/lib/db'
 import { executarLote, type Statement } from '@/lib/db-batch'
+import { hojeISO } from '@/lib/formatters'
 import { toMoneyString, toNumericString } from '@/lib/numeric'
 import { ActionError, authActionClient } from '@/lib/safe-action'
 import {
   adicional,
   categoria_produto,
-  classificacao,
+  grupo_adicional,
   produto,
-  produto_adicional,
-  produto_classificacao,
-  produto_disponibilidade_janela,
+  produto_dia_semana,
   produto_ficha_tecnica_item,
+  produto_grupo_adicional,
 } from '@repo/db'
 
 import {
-  criarAdicionalSchema,
+  criarAdicionalItemSchema,
   criarCategoriaProdutoSchema,
-  criarClassificacaoSchema,
+  criarGrupoAdicionalSchema,
   criarProdutoSchema,
 } from './schemas'
 
@@ -44,9 +44,10 @@ export const criarProdutoAction = authActionClient
         video_url: parsedInput.videoUrl?.trim() || null,
         disponivel_delivery: parsedInput.disponivelDelivery,
         disponivel_local: parsedInput.disponivelLocal,
-        disponibilidade_status: parsedInput.disponibilidadeStatus,
+        pausado_em: parsedInput.pausadoHoje ? hojeISO() : null,
         aparece_almoco: parsedInput.apareceAlmoco,
         aparece_janta: parsedInput.apareceJanta,
+        classificacoes: parsedInput.classificacoes,
         tempo_medio_preparo_minutos: parsedInput.tempoMedioPreparoMinutos,
         preco_venda: toMoneyString(parsedInput.precoVenda),
         desconto_percentual:
@@ -72,36 +73,23 @@ export const criarProdutoAction = authActionClient
       )
     }
 
-    if (parsedInput.disponibilidadeStatus === 'personalizado') {
+    if (parsedInput.diasSemana.length > 0) {
       statements.push(
-        db.insert(produto_disponibilidade_janela).values(
-          parsedInput.janelas.map((janela) => ({
+        db.insert(produto_dia_semana).values(
+          parsedInput.diasSemana.map((diaSemana) => ({
             produto_id: criado.id,
-            dia_semana: janela.diaSemana,
-            hora_inicio: janela.horaInicio,
-            hora_fim: janela.horaFim,
+            dia_semana: diaSemana,
           }))
         )
       )
     }
 
-    if (parsedInput.classificacaoIds.length > 0) {
+    if (parsedInput.grupoAdicionalIds.length > 0) {
       statements.push(
-        db.insert(produto_classificacao).values(
-          parsedInput.classificacaoIds.map((classificacaoId) => ({
+        db.insert(produto_grupo_adicional).values(
+          parsedInput.grupoAdicionalIds.map((grupoId) => ({
             produto_id: criado.id,
-            classificacao_id: classificacaoId,
-          }))
-        )
-      )
-    }
-
-    if (parsedInput.adicionalIds.length > 0) {
-      statements.push(
-        db.insert(produto_adicional).values(
-          parsedInput.adicionalIds.map((adicionalId) => ({
-            produto_id: criado.id,
-            adicional_id: adicionalId,
+            grupo_id: grupoId,
           }))
         )
       )
@@ -127,41 +115,41 @@ export const criarCategoriaProdutoAction = authActionClient
     return criada
   })
 
-export const criarClassificacaoAction = authActionClient
-  .schema(criarClassificacaoSchema)
+export const criarGrupoAdicionalAction = authActionClient
+  .schema(criarGrupoAdicionalSchema)
   .action(async ({ parsedInput }) => {
-    const [criada] = await db
-      .insert(classificacao)
-      .values({ nome: parsedInput.nome.trim(), aplica_a: parsedInput.aplicaA })
-      .returning({
-        id: classificacao.id,
-        nome: classificacao.nome,
-        aplica_a: classificacao.aplica_a,
+    const [criado] = await db
+      .insert(grupo_adicional)
+      .values({
+        nome: parsedInput.nome.trim(),
+        disponivel_almoco: parsedInput.disponivelAlmoco,
+        disponivel_janta: parsedInput.disponivelJanta,
       })
+      .returning({ id: grupo_adicional.id })
 
-    if (!criada) throw new ActionError('Não foi possível criar a classificação')
+    if (!criado) throw new ActionError('Não foi possível criar o grupo')
 
-    revalidarCatalogo()
-    return { id: criada.id, nome: criada.nome, aplicaA: criada.aplica_a }
+    revalidatePath('/catalogo/adicionais')
+    return { grupoId: criado.id }
   })
 
-export const criarAdicionalAction = authActionClient
-  .schema(criarAdicionalSchema)
+export const criarAdicionalItemAction = authActionClient
+  .schema(criarAdicionalItemSchema)
   .action(async ({ parsedInput }) => {
     const [criado] = await db
       .insert(adicional)
       .values({
+        grupo_id: parsedInput.grupoId,
         nome: parsedInput.nome.trim(),
         preco: toMoneyString(parsedInput.preco),
+        foto_url: parsedInput.fotoUrl?.trim() || null,
+        quantidade_minima: parsedInput.quantidadeMinima,
+        quantidade_maxima: parsedInput.quantidadeMaxima,
       })
-      .returning({
-        id: adicional.id,
-        nome: adicional.nome,
-        preco: adicional.preco,
-      })
+      .returning({ id: adicional.id })
 
-    if (!criado) throw new ActionError('Não foi possível criar o adicional')
+    if (!criado) throw new ActionError('Não foi possível criar o item')
 
-    revalidarCatalogo()
-    return criado
+    revalidatePath(`/catalogo/adicionais/${parsedInput.grupoId}`)
+    return { adicionalId: criado.id }
   })

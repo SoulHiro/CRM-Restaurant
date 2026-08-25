@@ -1,40 +1,45 @@
-import { ProdutoWizard } from '@/features/catalogo/components/form/produto-wizard'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+
+import { Button } from '@repo/ui/components/button'
+
+import { ProdutoForm } from '@/features/catalogo/components/form/produto-form'
 import {
-  getAdicionais,
   getCategoriasProduto,
-  getClassificacoes,
+  getGruposAdicionais,
   getInsumosDisponiveis,
 } from '@/features/catalogo/lib/queries'
-import {
-  getConfiguracaoHorarioFuncionamento,
-  getConfiguracaoPrecificacao,
-} from '@/features/configuracoes/lib/queries'
+import { getConfiguracaoPrecificacao } from '@/features/configuracoes/lib/queries'
 
 export default async function NovoProdutoPage() {
-  const [
-    categorias,
-    insumos,
-    classificacoes,
-    adicionais,
-    horarioFuncionamento,
-    configuracaoPrecificacao,
-  ] = await Promise.all([
-    getCategoriasProduto(),
-    getInsumosDisponiveis(),
-    getClassificacoes(),
-    getAdicionais(),
-    getConfiguracaoHorarioFuncionamento(),
-    getConfiguracaoPrecificacao(),
-  ])
+  const [categorias, insumos, grupos, configuracaoPrecificacao] =
+    await Promise.all([
+      getCategoriasProduto(),
+      getInsumosDisponiveis(),
+      getGruposAdicionais(),
+      getConfiguracaoPrecificacao(),
+    ])
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-2xl flex-col p-6">
-      <ProdutoWizard
+    <div className="flex flex-col gap-6 p-4 sm:p-6">
+      <Button variant="ghost" size="icon" aria-label="Voltar" asChild>
+        <Link href="/catalogo/produtos">
+          <ArrowLeft className="size-4" />
+        </Link>
+      </Button>
+
+      <div>
+        <h1 className="text-2xl font-semibold">Novo produto</h1>
+        <p className="text-sm text-muted-foreground">
+          Preencha o que for necessário — o resumo ao lado já mostra preço e
+          margem em tempo real.
+        </p>
+      </div>
+
+      <ProdutoForm
         categorias={categorias}
         insumos={insumos}
-        classificacoes={classificacoes}
-        adicionais={adicionais}
-        horarioFuncionamento={horarioFuncionamento}
+        grupos={grupos}
         configuracaoPrecificacao={configuracaoPrecificacao}
       />
     </div>

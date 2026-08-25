@@ -19,6 +19,7 @@ import {
   Bike,
   Printer,
   Settings,
+  Tag,
   UserCog,
 } from 'lucide-react'
 
@@ -131,6 +132,7 @@ const CATALOGO_NAV_ITEMS: NavItem[] = [
   },
   { title: 'Insumos', url: '/estoque', icon: Package },
   { title: 'Produtos', url: '/catalogo/produtos', icon: Package2 },
+  { title: 'Adicionais', url: '/catalogo/adicionais', icon: Tag },
 ]
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {

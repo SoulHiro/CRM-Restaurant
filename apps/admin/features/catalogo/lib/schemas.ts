@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { UNIDADES } from '@/features/estoque/lib/types'
-import { APLICA_A, DISPONIBILIDADE_STATUS, TIPOS_PRODUTO } from './types'
+import { TIPOS_PRODUTO } from './types'
 
 const percentualOpcional = z.coerce
   .number()
@@ -19,14 +19,6 @@ export const fichaTecnicaItemSchema = z.object({
   custoUnitario: z.coerce.number().min(0),
 })
 
-export const disponibilidadeJanelaSchema = z.object({
-  diaSemana: z.coerce.number().int().min(0).max(6),
-  horaInicio: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use o formato HH:mm'),
-  horaFim: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use o formato HH:mm'),
-})
-
 export const criarProdutoSchema = z
   .object({
     nome: z.string().min(1, 'Informe o nome do produto'),
@@ -41,24 +33,21 @@ export const criarProdutoSchema = z
     descontoPercentual: percentualOpcional,
     disponivelDelivery: z.boolean(),
     disponivelLocal: z.boolean(),
-    disponibilidadeStatus: z.enum(DISPONIBILIDADE_STATUS),
+    pausadoHoje: z.boolean(),
     apareceAlmoco: z.boolean(),
     apareceJanta: z.boolean(),
-    janelas: z.array(disponibilidadeJanelaSchema),
-    classificacaoIds: z.array(z.string()),
-    adicionalIds: z.array(z.string()),
+    diasSemana: z.array(z.number().int().min(0).max(6)),
+    classificacoes: z.array(z.string()),
+    grupoAdicionalIds: z.array(z.string()),
   })
   .refine((v) => v.disponivelDelivery || v.disponivelLocal, {
     message: 'Escolha pelo menos um canal — delivery ou local',
     path: ['disponivelDelivery'],
   })
-  .refine(
-    (v) => v.disponibilidadeStatus !== 'personalizado' || v.janelas.length > 0,
-    {
-      message: 'Adicione pelo menos uma janela de horário personalizado',
-      path: ['janelas'],
-    }
-  )
+  .refine((v) => v.apareceAlmoco || v.apareceJanta, {
+    message: 'Escolha pelo menos um turno — almoço ou janta',
+    path: ['apareceAlmoco'],
+  })
 
 export type CriarProdutoSchemaInput = z.infer<typeof criarProdutoSchema>
 
@@ -66,12 +55,22 @@ export const criarCategoriaProdutoSchema = z.object({
   nome: z.string().min(1, 'Informe o nome da categoria'),
 })
 
-export const criarClassificacaoSchema = z.object({
-  nome: z.string().min(1, 'Informe o nome da classificação'),
-  aplicaA: z.enum(APLICA_A),
+export const criarGrupoAdicionalSchema = z.object({
+  nome: z.string().min(1, 'Informe o nome do grupo'),
+  disponivelAlmoco: z.boolean(),
+  disponivelJanta: z.boolean(),
 })
 
-export const criarAdicionalSchema = z.object({
-  nome: z.string().min(1, 'Informe o nome do adicional'),
-  preco: z.coerce.number().min(0),
-})
+export const criarAdicionalItemSchema = z
+  .object({
+    grupoId: z.string().min(1),
+    nome: z.string().min(1, 'Informe o nome do item'),
+    preco: z.coerce.number().min(0),
+    fotoUrl: z.string().optional(),
+    quantidadeMinima: z.coerce.number().int().min(0),
+    quantidadeMaxima: z.coerce.number().int().min(1),
+  })
+  .refine((v) => v.quantidadeMaxima >= v.quantidadeMinima, {
+    message: 'A quantidade máxima não pode ser menor que a mínima',
+    path: ['quantidadeMaxima'],
+  })

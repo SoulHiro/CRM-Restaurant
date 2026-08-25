@@ -1,15 +1,14 @@
 import { Badge } from '@repo/ui/components/badge'
 
 import { formatCurrencyBRL } from '@/lib/formatters'
-import {
-  DISPONIBILIDADE_STATUS_LABEL,
-  TIPO_PRODUTO_LABEL,
-} from '../../lib/types'
+import { TIPO_PRODUTO_LABEL } from '../../lib/types'
 import type { ProdutoListItem } from '../../lib/types'
 
 export function ProdutoRow({ produto }: { produto: ProdutoListItem }) {
+  const soUmTurno = produto.apareceAlmoco !== produto.apareceJanta
+
   return (
-    <div className="flex items-center gap-4 rounded-lg border bg-card p-3">
+    <div className="flex items-center gap-4 rounded-lg bg-card p-3">
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-medium">{produto.nome}</span>
         <span className="truncate text-xs text-muted-foreground">
@@ -29,17 +28,14 @@ export function ProdutoRow({ produto }: { produto: ProdutoListItem }) {
           <Badge variant="outline">Delivery</Badge>
         )}
         {produto.disponivelLocal && <Badge variant="outline">Local</Badge>}
+        {soUmTurno && (
+          <Badge variant="outline">
+            Só {produto.apareceAlmoco ? 'almoço' : 'janta'}
+          </Badge>
+        )}
       </div>
 
-      <Badge
-        variant={
-          produto.disponibilidadeStatus === 'disponivel'
-            ? 'default'
-            : 'secondary'
-        }
-      >
-        {DISPONIBILIDADE_STATUS_LABEL[produto.disponibilidadeStatus]}
-      </Badge>
+      {produto.pausadoHoje && <Badge variant="secondary">Pausado hoje</Badge>}
 
       {!produto.ativo && <Badge variant="destructive">Inativo</Badge>}
     </div>
