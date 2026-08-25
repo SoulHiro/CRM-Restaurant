@@ -1,4 +1,5 @@
 import type { CategoriaEstoque, Unidade } from '@/features/estoque/lib/types'
+import type { TipoDesconto } from './precificacao-helpers'
 
 export const TIPOS_PRODUTO = ['comida', 'bebida'] as const
 export type TipoProduto = (typeof TIPOS_PRODUTO)[number]
@@ -42,12 +43,42 @@ export interface InsumoOption {
   custoUnitario: number
 }
 
+export type TipoEscalaFichaTecnica = 'proporcional' | 'fixo'
+
+/**
+ * Override de uma linha "fixo" pra um tamanho específico (ex: embalagem G
+ * em vez de P) — chaveado pela `key` client-side do tamanho, não por um id
+ * de banco que ainda não existe no formulário. `estoqueItemId: null` = usa
+ * o mesmo insumo da linha, só quantidade diferente.
+ */
+export interface FichaTecnicaOverrideTamanho {
+  tamanhoKey: string
+  estoqueItemId: string | null
+  quantidade: number
+}
+
 export interface FichaTecnicaItemInput {
   estoqueItemId: string
   nome: string
   unidade: Unidade
   quantidade: number
   custoUnitario: number
+  tipoEscala: TipoEscalaFichaTecnica
+  /** Só relevante quando `tipoEscala === 'fixo'` e o produto tem tamanhos. */
+  overridesPorTamanho: FichaTecnicaOverrideTamanho[]
+}
+
+/**
+ * Um tamanho (P/M/G) de um produto com `temTamanhos = true`. `key` é um id
+ * só do formulário (o registro real ainda não existe no banco) — usado pra
+ * casar com `FichaTecnicaOverrideTamanho.tamanhoKey` e como React key.
+ */
+export interface TamanhoInput {
+  key: string
+  nome: string
+  pesoGramas: number
+  precoVenda: number
+  ehBase: boolean
 }
 
 export interface CriarProdutoInput {
@@ -59,8 +90,13 @@ export interface CriarProdutoInput {
   videoUrl: string
   fichaTecnica: FichaTecnicaItemInput[]
   tempoMedioPreparoMinutos: number
+  temTamanhos: boolean
+  tamanhos: TamanhoInput[]
+  /** Ignorado quando `temTamanhos` — nesse caso o preço vive em `tamanhos[].precoVenda`. */
   precoVenda: number
-  descontoPercentual: number | null
+  /** Um desconto só pro produto inteiro — aplicado igual em cada tamanho quando `temTamanhos`. */
+  descontoTipo: TipoDesconto
+  descontoValor: number | null
   disponivelDelivery: boolean
   disponivelLocal: boolean
   /** Pausa é sempre "por hoje" — ver `produto.pausado_em` no schema. */
@@ -80,7 +116,11 @@ export interface ProdutoListItem {
   categoriaId: string | null
   categoriaNome: string | null
   tipo: TipoProduto
+  /** Preço único — null quando `temTamanhos` (usar `precoMinimo` pra exibir "a partir de"). */
   precoVenda: number | null
+  temTamanhos: boolean
+  /** Menor `preco_venda` entre os tamanhos — null quando não tem tamanhos ou nenhum tamanho tem preço. */
+  precoMinimo: number | null
   pausadoHoje: boolean
   disponivelDelivery: boolean
   disponivelLocal: boolean
@@ -88,4 +128,9 @@ export interface ProdutoListItem {
   apareceJanta: boolean
   fotoUrl: string | null
   ativo: boolean
+}
+
+/** Dados completos de um produto pra editar — mesma forma de `CriarProdutoInput`, com id. */
+export interface EditarProdutoInput extends CriarProdutoInput {
+  id: string
 }

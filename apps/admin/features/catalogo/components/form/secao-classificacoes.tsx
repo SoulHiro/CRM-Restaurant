@@ -1,11 +1,20 @@
 'use client'
 
+import { CupSoda, UtensilsCrossed } from 'lucide-react'
+
 import { Card, CardContent } from '@repo/ui/components/card'
+import { Label } from '@repo/ui/components/label'
 
 import { CLASSIFICACAO_ICON_MAP } from '../../lib/classificacao-icons'
 import { classificacoesPorTipo } from '../../lib/classificacoes'
-import type { CriarProdutoInput } from '../../lib/types'
+import { TIPO_PRODUTO_LABEL, TIPOS_PRODUTO } from '../../lib/types'
+import type { CriarProdutoInput, TipoProduto } from '../../lib/types'
 import { SelectableCard } from '../shared/selectable-card'
+
+const TIPO_ICON: Record<TipoProduto, typeof UtensilsCrossed> = {
+  comida: UtensilsCrossed,
+  bebida: CupSoda,
+}
 
 export function SecaoClassificacoes({
   dados,
@@ -27,8 +36,23 @@ export function SecaoClassificacoes({
 
   return (
     <Card className="border-0">
-      <CardContent className="p-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <CardContent className="flex flex-col gap-4 p-6">
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-sm">Tipo</Label>
+          <div className="grid grid-cols-2 gap-3">
+            {TIPOS_PRODUTO.map((t) => (
+              <SelectableCard
+                key={t}
+                icon={TIPO_ICON[t]}
+                label={TIPO_PRODUTO_LABEL[t]}
+                selected={dados.tipo === t}
+                onClick={() => onChange({ tipo: t as TipoProduto })}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 pt-2 sm:grid-cols-3">
           {classificacoesDisponiveis.map((c) => (
             <SelectableCard
               key={c.key}

@@ -14,6 +14,43 @@ export function calcularCustoInsumos(
 }
 
 /**
+ * Nunca é digitado — sempre derivado do peso. A ficha técnica principal
+ * representa o peso do tamanho-base; os outros escalam por essa razão.
+ */
+export function multiplicadorPorPeso(
+  pesoGramas: number,
+  pesoBaseGramas: number
+): number {
+  if (pesoBaseGramas <= 0) return 1
+  return pesoGramas / pesoBaseGramas
+}
+
+export interface ItemFichaTecnicaCustoTamanho extends ItemFichaTecnicaCusto {
+  tipoEscala: 'proporcional' | 'fixo'
+  /** Override 'fixo' já resolvido pro tamanho em questão — undefined = linha proporcional. */
+  quantidadeFixaTamanho?: number
+}
+
+/**
+ * Mesmo cálculo de `calcularCustoInsumos`, mas por tamanho: linha
+ * `proporcional` usa `quantidade × multiplicador`; linha `fixo` usa a
+ * quantidade própria daquele tamanho (embalagem, tempero fixo), ignorando o
+ * multiplicador — uma marmita G não leva "1,5 embalagem".
+ */
+export function calcularCustoInsumosTamanho(
+  itens: readonly ItemFichaTecnicaCustoTamanho[],
+  multiplicador: number
+): number {
+  return itens.reduce((soma, item) => {
+    const quantidade =
+      item.tipoEscala === 'fixo' && item.quantidadeFixaTamanho != null
+        ? item.quantidadeFixaTamanho
+        : item.quantidade * multiplicador
+    return soma + quantidade * item.custoUnitario
+  }, 0)
+}
+
+/**
  * Custo de insumos + custo operacional (gás/energia/mão de obra, resumidos
  * num único "custo por minuto" configurável) proporcional ao tempo médio de
  * preparo do prato.
@@ -72,6 +109,26 @@ export function calcularMargemPercentual(
 ): number {
   if (custoProducao <= 0) return 0
   return ((precoVenda - custoProducao) / custoProducao) * 100
+}
+
+export type TipoDesconto = 'percentual' | 'valorFixo'
+
+/**
+ * Um desconto só por produto, aplicado igual em cada tamanho quando o
+ * produto tem tamanhos — 'percentual' tira uma fração do preço, 'valorFixo'
+ * tira um valor em R$ fixo (nunca deixa o preço negativo).
+ */
+export function calcularPrecoComDesconto(
+  precoVenda: number,
+  descontoTipo: TipoDesconto,
+  descontoValor: number | null
+): number {
+  if (descontoValor == null || descontoValor <= 0) return precoVenda
+  const precoFinal =
+    descontoTipo === 'percentual'
+      ? precoVenda * (1 - descontoValor / 100)
+      : precoVenda - descontoValor
+  return Math.max(0, precoFinal)
 }
 
 export function corMargem(

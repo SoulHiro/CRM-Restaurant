@@ -19,6 +19,25 @@ const QUANTIDADE = { precision: 12, scale: 3 } as const
 
 export const tipoProdutoEnum = pgEnum('tipo_produto', ['comida', 'bebida'])
 
+/**
+ * Linha de ficha técnica "proporcional" escala pelo peso do tamanho (ver
+ * `produto_tamanho.peso_gramas`) em relação ao tamanho-base — cobre
+ * arroz/feijão/proteína, que crescem junto com a porção. "fixo" tem
+ * quantidade (e, se precisar, insumo) própria por tamanho, via
+ * `produto_ficha_tecnica_tamanho_override` — cobre embalagem (P e G usam
+ * SKUs diferentes, não "a mesma embalagem só que 1.4x") e tempero em
+ * quantidade fixa.
+ */
+export const tipoEscalaFichaTecnicaEnum = pgEnum('tipo_escala_ficha_tecnica', [
+  'proporcional',
+  'fixo',
+])
+
+export const tipoDescontoEnum = pgEnum('tipo_desconto', [
+  'percentual',
+  'valor_fixo',
+])
+
 export const categoria_produto = pgTable('categoria_produto', {
   id: text('id')
     .primaryKey()
@@ -64,11 +83,16 @@ export const produto = pgTable('produto', {
   // produto, então vive como array na própria linha, sem tabela de apoio.
   classificacoes: text('classificacoes').array(),
   tempo_medio_preparo_minutos: integer('tempo_medio_preparo_minutos'),
+  // Marmita P/M/G: quando true, `preco_venda` fica null aqui — o preço (e o
+  // peso) vive em `produto_tamanho`, um por tamanho. Tempo de preparo
+  // continua único: é sobre o processo, não sobre a porção.
+  tem_tamanhos: boolean('tem_tamanhos').notNull().default(false),
   preco_venda: numeric('preco_venda', PRECO),
-  desconto_percentual: numeric('desconto_percentual', {
-    precision: 5,
-    scale: 2,
-  }),
+  // Tipo decide como `desconto_valor` é lido: percentual (ex: 10 = 10%) ou
+  // valor_fixo (ex: 5 = R$5,00 de desconto). Um desconto só, pro produto
+  // inteiro — aplicado igual em todos os tamanhos quando `tem_tamanhos`.
+  desconto_tipo: tipoDescontoEnum('desconto_tipo').notNull().default('percentual'),
+  desconto_valor: numeric('desconto_valor', PRECO),
   ativo: boolean('ativo').notNull().default(true),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at')
@@ -98,6 +122,35 @@ export const produto_dia_semana = pgTable(
   (t) => [unique().on(t.produto_id, t.dia_semana)]
 )
 
+/**
+ * Um tamanho de um produto com `tem_tamanhos = true` (P/M/G de uma marmita).
+ * `peso_gramas` é o que a pessoa realmente sabe de cabeça (350/500/750) — o
+ * multiplicador de escala das linhas "proporcional" da ficha técnica nunca é
+ * digitado, é sempre `peso_gramas ÷ peso_gramas do tamanho-base` (ver
+ * `is_base` e `features/catalogo/lib/precificacao-helpers.ts`).
+ */
+export const produto_tamanho = pgTable(
+  'produto_tamanho',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    produto_id: text('produto_id')
+      .notNull()
+      .references(() => produto.id, { onDelete: 'cascade' }),
+    nome: text('nome').notNull(),
+    peso_gramas: integer('peso_gramas').notNull(),
+    preco_venda: numeric('preco_venda', PRECO).notNull(),
+    // Exatamente um tamanho por produto é a base — a ficha técnica principal
+    // representa o peso desse tamanho. Regra de "só um true" é aplicada na
+    // action, não é constraint de banco (mesmo padrão de outras regras de
+    // negócio deste app).
+    is_base: boolean('is_base').notNull().default(false),
+    ordem: integer('ordem').notNull().default(0),
+  },
+  (t) => [unique().on(t.produto_id, t.nome)]
+)
+
 /** Ficha técnica — referencia o insumo real do Estoque, nunca texto livre. */
 export const produto_ficha_tecnica_item = pgTable(
   'produto_ficha_tecnica_item',
@@ -112,8 +165,37 @@ export const produto_ficha_tecnica_item = pgTable(
       .notNull()
       .references(() => estoque_item.id),
     quantidade: numeric('quantidade', QUANTIDADE).notNull(),
+    tipo_escala: tipoEscalaFichaTecnicaEnum('tipo_escala')
+      .notNull()
+      .default('proporcional'),
   },
   (t) => [unique().on(t.produto_id, t.estoque_item_id)]
+)
+
+/**
+ * Override de uma linha `fixo` para um tamanho específico — só existe pra
+ * linhas que não escalam pelo peso (embalagem, tempero fixo). Ausência de
+ * override para um (linha, tamanho) não deveria acontecer para linha `fixo`
+ * em produto com tamanhos — a UI sempre cria um ao marcar a linha como fixa.
+ */
+export const produto_ficha_tecnica_tamanho_override = pgTable(
+  'produto_ficha_tecnica_tamanho_override',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    ficha_tecnica_item_id: text('ficha_tecnica_item_id')
+      .notNull()
+      .references(() => produto_ficha_tecnica_item.id, { onDelete: 'cascade' }),
+    produto_tamanho_id: text('produto_tamanho_id')
+      .notNull()
+      .references(() => produto_tamanho.id, { onDelete: 'cascade' }),
+    // null = mesmo insumo da linha base, só quantidade própria. Preenchido =
+    // este tamanho usa um SKU diferente (ex: embalagem G em vez de P).
+    estoque_item_id: text('estoque_item_id').references(() => estoque_item.id),
+    quantidade: numeric('quantidade', QUANTIDADE).notNull(),
+  },
+  (t) => [unique().on(t.ficha_tecnica_item_id, t.produto_tamanho_id)]
 )
 
 /**
@@ -172,19 +254,50 @@ export const produtoRelations = relations(produto, ({ one, many }) => ({
     references: [categoria_produto.id],
   }),
   fichaTecnica: many(produto_ficha_tecnica_item),
+  tamanhos: many(produto_tamanho),
   diasSemana: many(produto_dia_semana),
   grupoAdicionais: many(produto_grupo_adicional),
 }))
 
+export const produtoTamanhoRelations = relations(
+  produto_tamanho,
+  ({ one, many }) => ({
+    produto: one(produto, {
+      fields: [produto_tamanho.produto_id],
+      references: [produto.id],
+    }),
+    overrides: many(produto_ficha_tecnica_tamanho_override),
+  })
+)
+
 export const produtoFichaTecnicaItemRelations = relations(
   produto_ficha_tecnica_item,
-  ({ one }) => ({
+  ({ one, many }) => ({
     produto: one(produto, {
       fields: [produto_ficha_tecnica_item.produto_id],
       references: [produto.id],
     }),
     insumo: one(estoque_item, {
       fields: [produto_ficha_tecnica_item.estoque_item_id],
+      references: [estoque_item.id],
+    }),
+    overridesPorTamanho: many(produto_ficha_tecnica_tamanho_override),
+  })
+)
+
+export const produtoFichaTecnicaTamanhoOverrideRelations = relations(
+  produto_ficha_tecnica_tamanho_override,
+  ({ one }) => ({
+    linha: one(produto_ficha_tecnica_item, {
+      fields: [produto_ficha_tecnica_tamanho_override.ficha_tecnica_item_id],
+      references: [produto_ficha_tecnica_item.id],
+    }),
+    tamanho: one(produto_tamanho, {
+      fields: [produto_ficha_tecnica_tamanho_override.produto_tamanho_id],
+      references: [produto_tamanho.id],
+    }),
+    insumo: one(estoque_item, {
+      fields: [produto_ficha_tecnica_tamanho_override.estoque_item_id],
       references: [estoque_item.id],
     }),
   })

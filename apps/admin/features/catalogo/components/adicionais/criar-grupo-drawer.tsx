@@ -21,9 +21,15 @@ import { Label } from '@repo/ui/components/label'
 
 import { useDrawerDirection } from '@/hooks/use-drawer-direction'
 import { criarGrupoAdicionalAction } from '../../lib/actions'
+import type { GrupoAdicionalOption } from '../../lib/types'
 import { SelectableCard } from '../shared/selectable-card'
 
-export function CriarGrupoDrawer() {
+export function CriarGrupoDrawer({
+  onCriado,
+}: {
+  /** Quando informado, não navega — devolve o grupo pronto pra uso imediato (ex: seleção no formulário de produto). */
+  onCriado?: (grupo: GrupoAdicionalOption) => void
+} = {}) {
   const [open, setOpen] = useState(false)
   const [nome, setNome] = useState('')
   const [disponivelAlmoco, setDisponivelAlmoco] = useState(true)
@@ -36,10 +42,21 @@ export function CriarGrupoDrawer() {
       if (!data) return
       toast.success('Grupo criado')
       setOpen(false)
+      if (onCriado) {
+        onCriado({
+          id: data.grupoId,
+          nome: nome.trim(),
+          disponivelAlmoco,
+          disponivelJanta,
+          ativo: true,
+          itens: [],
+        })
+      } else {
+        router.push(`/catalogo/adicionais/${data.grupoId}`)
+      }
       setNome('')
       setDisponivelAlmoco(true)
       setDisponivelJanta(true)
-      router.push(`/catalogo/adicionais/${data.grupoId}`)
     },
     onError: () => toast.error('Não foi possível criar o grupo'),
   })
@@ -57,7 +74,7 @@ export function CriarGrupoDrawer() {
       <DrawerContent
         direction={direction}
         variant={variant}
-        className="flex max-h-[85vh] w-full flex-col gap-0 overflow-y-auto sm:max-h-none sm:max-w-lg"
+        className="flex w-full flex-col gap-0 overflow-y-auto sm:max-h-none sm:max-w-lg"
       >
         <DrawerHeader>
           <DrawerTitle>Novo grupo de adicionais</DrawerTitle>

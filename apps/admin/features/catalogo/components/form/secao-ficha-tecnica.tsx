@@ -1,30 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Carrot, ChefHat, ChevronRight, CircleHelp, Package } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-import { Button } from '@repo/ui/components/button'
 import { Card, CardContent } from '@repo/ui/components/card'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@repo/ui/components/command'
 import { Input } from '@repo/ui/components/input'
-import { Label } from '@repo/ui/components/label'
-import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-} from '@repo/ui/components/popover'
+import { cn } from '@repo/ui/lib/utils'
 
 import { formatCurrencyBRL } from '@/lib/formatters'
-import { CATEGORIA_ESTOQUE_LABEL } from '@/features/estoque/lib/types'
+import type { CategoriaEstoque } from '@/features/estoque/lib/types'
 import { calcularCustoInsumos } from '../../lib/precificacao-helpers'
 import type { CriarProdutoInput, InsumoOption } from '../../lib/types'
+import { FichaTecnicaLinha, fichaTecnicaGridCols } from './ficha-tecnica-linha'
+
+const CATEGORIA_ICONE: Record<CategoriaEstoque, LucideIcon> = {
+  comestivel: Carrot,
+  preparo: ChefHat,
+  embalagem: Package,
+  outro: CircleHelp,
+}
 
 export function SecaoFichaTecnica({
   dados,
@@ -36,7 +31,6 @@ export function SecaoFichaTecnica({
   insumos: InsumoOption[]
 }) {
   const [busca, setBusca] = useState('')
-  const [open, setOpen] = useState(false)
 
   const fichaTecnica = dados.fichaTecnica
   const jaAdicionados = new Set(fichaTecnica.map((item) => item.estoqueItemId))
@@ -56,13 +50,16 @@ export function SecaoFichaTecnica({
           estoqueItemId: insumo.id,
           nome: insumo.nome,
           unidade: insumo.unidade,
-          quantidade: 1,
+          // Nasce zerado (input começa vazio) — a pessoa digita a
+          // quantidade real da receita em vez de sobrescrever um valor
+          // pré-preenchido.
+          quantidade: 0,
           custoUnitario: insumo.custoUnitario,
+          tipoEscala: 'proporcional',
+          overridesPorTamanho: [],
         },
       ],
     })
-    setBusca('')
-    setOpen(false)
   }
 
   function atualizarQuantidade(estoqueItemId: string, quantidade: number) {
@@ -81,99 +78,138 @@ export function SecaoFichaTecnica({
     })
   }
 
+  function alternarTipoEscala(estoqueItemId: string) {
+    onChange({
+      fichaTecnica: fichaTecnica.map((item) => {
+        if (item.estoqueItemId !== estoqueItemId) return item
+        if (item.tipoEscala === 'fixo') {
+          return { ...item, tipoEscala: 'proporcional', overridesPorTamanho: [] }
+        }
+        return {
+          ...item,
+          tipoEscala: 'fixo',
+          overridesPorTamanho: dados.tamanhos.map((tamanho) => ({
+            tamanhoKey: tamanho.key,
+            estoqueItemId: null,
+            quantidade: item.quantidade,
+          })),
+        }
+      }),
+    })
+  }
+
+  function atualizarOverride(
+    estoqueItemId: string,
+    tamanhoKey: string,
+    quantidade: number
+  ) {
+    onChange({
+      fichaTecnica: fichaTecnica.map((item) => {
+        if (item.estoqueItemId !== estoqueItemId) return item
+        const existe = item.overridesPorTamanho.some(
+          (o) => o.tamanhoKey === tamanhoKey
+        )
+        return {
+          ...item,
+          overridesPorTamanho: existe
+            ? item.overridesPorTamanho.map((o) =>
+                o.tamanhoKey === tamanhoKey ? { ...o, quantidade } : o
+              )
+            : [
+                ...item.overridesPorTamanho,
+                { tamanhoKey, estoqueItemId: null, quantidade },
+              ],
+        }
+      }),
+    })
+  }
+
   return (
     <Card className="border-0">
       <CardContent className="flex flex-col gap-4 p-6">
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-sm">Adicionar insumo</Label>
-          <Popover open={open} onOpenChange={setOpen}>
-            <Command
-              shouldFilter={false}
-              className="overflow-visible bg-transparent"
-            >
-              <PopoverAnchor asChild>
-                <CommandInput
-                  value={busca}
-                  onValueChange={(v) => {
-                    setBusca(v)
-                    setOpen(true)
-                  }}
-                  onFocus={() => setOpen(true)}
-                  placeholder="Buscar insumo do estoque..."
-                  wrapperClassName="h-9 rounded-md border border-input shadow-sm"
-                />
-              </PopoverAnchor>
-              <PopoverContent
-                className="w-(--radix-popover-trigger-width) p-0"
-                align="start"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-              >
-                <CommandList>
-                  <CommandEmpty>Nenhum insumo encontrado.</CommandEmpty>
-                  <CommandGroup>
-                    {filtrados.map((insumo) => (
-                      <CommandItem
-                        key={insumo.id}
-                        value={insumo.id}
-                        onSelect={() => adicionar(insumo)}
-                      >
-                        <span className="flex-1">{insumo.nome}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {CATEGORIA_ESTOQUE_LABEL[insumo.categoria]}
-                        </span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </PopoverContent>
-            </Command>
-          </Popover>
-        </div>
-
-        {fichaTecnica.length === 0 ? (
-          <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-            Nenhum insumo adicionado ainda.
-          </p>
-        ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2">
-            {fichaTecnica.map((item) => (
-              <div
-                key={item.estoqueItemId}
-                className="flex items-center gap-2 rounded-md bg-muted/50 p-2"
-              >
-                <span className="flex-1 truncate text-sm">{item.nome}</span>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.001"
-                  value={item.quantidade}
-                  onChange={(e) =>
-                    atualizarQuantidade(
-                      item.estoqueItemId,
-                      Number(e.target.value)
-                    )
-                  }
-                  className="h-8 w-24"
-                />
-                <span className="w-8 text-xs text-muted-foreground">
-                  {item.unidade}
-                </span>
-                <span className="w-20 text-right text-xs tabular-nums text-muted-foreground">
-                  {formatCurrencyBRL(item.quantidade * item.custoUnitario)}
-                </span>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="size-8 shrink-0"
-                  onClick={() => remover(item.estoqueItemId)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-            ))}
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar insumo do estoque..."
+              className="h-9"
+            />
+
+            <div className="flex max-h-80 flex-col gap-1 overflow-y-auto p-1">
+              {filtrados.length === 0 ? (
+                <p className="p-3 text-center text-sm text-muted-foreground">
+                  Nenhum insumo encontrado.
+                </p>
+              ) : (
+                filtrados.map((insumo) => {
+                  const Icone = CATEGORIA_ICONE[insumo.categoria]
+                  return (
+                    <button
+                      key={insumo.id}
+                      type="button"
+                      onClick={() => adicionar(insumo)}
+                      className="group flex cursor-pointer items-center gap-2 rounded-md p-2 text-left hover:bg-accent"
+                    >
+                      <Icone className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="flex-1 truncate text-sm">
+                        {insumo.nome}
+                      </span>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+                    </button>
+                  )
+                })
+              )}
+            </div>
           </div>
-        )}
+
+          <div className="flex flex-col gap-1">
+            {fichaTecnica.length === 0 ? (
+              <p className="flex h-full items-center justify-center rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                Nenhum insumo adicionado ainda.
+              </p>
+            ) : (
+              <>
+                <div
+                  className={cn(
+                    'grid gap-2 px-2 text-xs text-muted-foreground',
+                    fichaTecnicaGridCols(dados.temTamanhos)
+                  )}
+                >
+                  <span />
+                  <span>Insumo</span>
+                  <span className="text-right">Qtd.</span>
+                  <span className="text-center">Unidade</span>
+                  <span className="text-right">Custo</span>
+                  {dados.temTamanhos && <span />}
+                </div>
+                <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+                  {fichaTecnica.map((item) => (
+                    <FichaTecnicaLinha
+                      key={item.estoqueItemId}
+                      item={item}
+                      tamanhos={dados.temTamanhos ? dados.tamanhos : null}
+                      onChange={(quantidade) =>
+                        atualizarQuantidade(item.estoqueItemId, quantidade)
+                      }
+                      onRemover={() => remover(item.estoqueItemId)}
+                      onAlternarTipoEscala={() =>
+                        alternarTipoEscala(item.estoqueItemId)
+                      }
+                      onChangeOverride={(tamanhoKey, quantidade) =>
+                        atualizarOverride(
+                          item.estoqueItemId,
+                          tamanhoKey,
+                          quantidade
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
         <div className="flex items-center justify-between rounded-md bg-muted/50 p-3 text-sm">
           <span className="text-muted-foreground">Custo de insumos</span>

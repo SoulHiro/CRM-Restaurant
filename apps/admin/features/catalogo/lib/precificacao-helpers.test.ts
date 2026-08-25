@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import {
   calcularCustoInsumos,
+  calcularCustoInsumosTamanho,
   calcularCustoProducao,
   calcularFaixasPreco,
   calcularMargemPercentual,
+  calcularPrecoComDesconto,
   corMargem,
+  multiplicadorPorPeso,
 } from './precificacao-helpers'
 
 const LIMIARES = { amareloPct: 0, verdePct: 30, azulPct: 100, roxoPct: 200 }
@@ -63,6 +66,84 @@ describe('calcularMargemPercentual', () => {
 
   it('custo de produção zero não divide por zero', () => {
     expect(calcularMargemPercentual(10, 0)).toBe(0)
+  })
+})
+
+describe('multiplicadorPorPeso', () => {
+  it('deriva o multiplicador da razão de peso — P (350g) sobre base M (500g)', () => {
+    expect(multiplicadorPorPeso(350, 500)).toBeCloseTo(0.7)
+  })
+
+  it('G (750g) sobre base M (500g) escala pra cima', () => {
+    expect(multiplicadorPorPeso(750, 500)).toBeCloseTo(1.5)
+  })
+
+  it('tamanho-base sobre si mesmo é sempre 1×', () => {
+    expect(multiplicadorPorPeso(500, 500)).toBe(1)
+  })
+
+  it('peso base zero não divide por zero', () => {
+    expect(multiplicadorPorPeso(500, 0)).toBe(1)
+  })
+})
+
+describe('calcularCustoInsumosTamanho', () => {
+  it('linha proporcional escala pelo multiplicador', () => {
+    const custo = calcularCustoInsumosTamanho(
+      [{ quantidade: 0.3, custoUnitario: 10, tipoEscala: 'proporcional' }],
+      0.7
+    )
+    expect(custo).toBeCloseTo(2.1) // 0.3 * 0.7 * 10
+  })
+
+  it('linha fixa usa a quantidade própria do tamanho, ignora o multiplicador', () => {
+    const custo = calcularCustoInsumosTamanho(
+      [
+        {
+          quantidade: 1,
+          custoUnitario: 0.5,
+          tipoEscala: 'fixo',
+          quantidadeFixaTamanho: 1,
+        },
+      ],
+      1.5 // marmita G — embalagem continua sendo 1, não 1.5
+    )
+    expect(custo).toBeCloseTo(0.5)
+  })
+
+  it('combina linhas proporcionais e fixas na mesma ficha técnica', () => {
+    const custo = calcularCustoInsumosTamanho(
+      [
+        { quantidade: 0.3, custoUnitario: 10, tipoEscala: 'proporcional' }, // 0.3*1.5*10 = 4.5
+        {
+          quantidade: 1,
+          custoUnitario: 0.5,
+          tipoEscala: 'fixo',
+          quantidadeFixaTamanho: 1,
+        }, // 0.5
+      ],
+      1.5
+    )
+    expect(custo).toBeCloseTo(5)
+  })
+})
+
+describe('calcularPrecoComDesconto', () => {
+  it('percentual tira a fração do preço', () => {
+    expect(calcularPrecoComDesconto(100, 'percentual', 10)).toBeCloseTo(90)
+  })
+
+  it('valorFixo tira um valor em R$ fixo', () => {
+    expect(calcularPrecoComDesconto(100, 'valorFixo', 15)).toBeCloseTo(85)
+  })
+
+  it('valorFixo nunca deixa o preço negativo', () => {
+    expect(calcularPrecoComDesconto(10, 'valorFixo', 50)).toBe(0)
+  })
+
+  it('sem desconto (null ou zero) devolve o preço original', () => {
+    expect(calcularPrecoComDesconto(100, 'percentual', null)).toBe(100)
+    expect(calcularPrecoComDesconto(100, 'percentual', 0)).toBe(100)
   })
 })
 
