@@ -13,17 +13,29 @@ import { cn } from '@repo/ui/lib/utils'
  * relatado, então esse caso só fecha por gesto/clique fora se o consumidor
  * pedir explicitamente. Outras direções (o painel flutuante do desktop)
  * continuam dismissible por padrão.
+ *
+ * `repositionInputs={false}`: o próprio vaul empurra o drawer pra cima via
+ * VisualViewport quando um input ganha foco no mobile — em cima do nosso
+ * bottom sheet já `h-dvh` (que o navegador redimensiona sozinho com
+ * `interactive-widget=resizes-content` no viewport, ver app/layout.tsx),
+ * as duas correções brigam e distorcem a tela inteira ao abrir o teclado.
+ * Reportado e confirmado pelo autor do vaul como o workaround oficial:
+ * github.com/emilkowalski/vaul/issues/255#issuecomment (mantenedor recomenda
+ * `repositionInputs={false}` quando o reposicionamento embutido não bate
+ * com o layout da página).
  */
 const Drawer = ({
   shouldScaleBackground = true,
   dismissible,
   direction = 'bottom',
+  repositionInputs = false,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root
     shouldScaleBackground={shouldScaleBackground}
     direction={direction}
     dismissible={dismissible ?? direction !== 'bottom'}
+    repositionInputs={repositionInputs}
     {...props}
   />
 )

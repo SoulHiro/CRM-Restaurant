@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { ThemeProvider } from './component/theme-provider'
 import { Providers } from './providers'
@@ -12,6 +12,14 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: 'Admin — Nosso Quintal',
   description: 'Painel administrativo do Nosso Quintal',
+}
+
+// Sem isso, o teclado virtual no mobile só sobrepõe a página (`h-dvh` não
+// encolhe) — o app teria que adivinhar via VisualViewport. Com
+// `resizes-content`, o navegador encolhe o viewport de layout de verdade
+// quando o teclado abre, e todo `h-dvh`/`100dvh` do app já acompanha sozinho.
+export const viewport: Viewport = {
+  interactiveWidget: 'resizes-content',
 }
 
 export default function RootLayout({
