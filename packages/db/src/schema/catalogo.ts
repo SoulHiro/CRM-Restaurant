@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm'
 import {
   boolean,
+  date,
   integer,
   numeric,
   pgEnum,
@@ -17,20 +18,6 @@ const PRECO = { precision: 12, scale: 2 } as const
 const QUANTIDADE = { precision: 12, scale: 3 } as const
 
 export const tipoProdutoEnum = pgEnum('tipo_produto', ['comida', 'bebida'])
-
-// 'personalizado': usa produto_disponibilidade_janela (dia/hora específicos)
-// em vez dos toggles rápidos aparece_almoco/aparece_janta.
-export const disponibilidadeStatusEnum = pgEnum('disponibilidade_status', [
-  'disponivel',
-  'pausado',
-  'personalizado',
-])
-
-export const aplicaAEnum = pgEnum('classificacao_aplica_a', [
-  'comida',
-  'bebida',
-  'ambos',
-])
 
 export const categoria_produto = pgTable('categoria_produto', {
   id: text('id')
@@ -64,13 +51,18 @@ export const produto = pgTable('produto', {
   video_url: text('video_url'),
   disponivel_delivery: boolean('disponivel_delivery').notNull().default(true),
   disponivel_local: boolean('disponivel_local').notNull().default(true),
-  disponibilidade_status: disponibilidadeStatusEnum('disponibilidade_status')
-    .notNull()
-    .default('disponivel'),
-  // Toggle rápido — só usado quando disponibilidade_status !== 'personalizado'.
+  // Pausa é sempre "por hoje" — nunca permanente. `null` = nunca pausado;
+  // igual a hoje = pausado agora; qualquer data passada é lida como "não
+  // pausado mais" na hora de exibir (sem job pra limpar, só comparação em
+  // queries.ts — mesmo princípio de nivelEstoque/diasAteVencer no estoque).
+  pausado_em: date('pausado_em'),
   // Referencia os horários de almoço/janta de configuracao_horario_funcionamento.
   aparece_almoco: boolean('aparece_almoco').notNull().default(true),
   aparece_janta: boolean('aparece_janta').notNull().default(true),
+  // Chaves fixas de features/catalogo/lib/classificacoes.ts (vegano, sem
+  // glúten, gelada...) — não é entidade de banco, é rótulo fixo por tipo de
+  // produto, então vive como array na própria linha, sem tabela de apoio.
+  classificacoes: text('classificacoes').array(),
   tempo_medio_preparo_minutos: integer('tempo_medio_preparo_minutos'),
   preco_venda: numeric('preco_venda', PRECO),
   desconto_percentual: numeric('desconto_percentual', {
@@ -85,9 +77,14 @@ export const produto = pgTable('produto', {
     .$onUpdate(() => new Date()),
 })
 
-/** Só existe linha aqui quando produto.disponibilidade_status = 'personalizado'. */
-export const produto_disponibilidade_janela = pgTable(
-  'produto_disponibilidade_janela',
+/**
+ * Em quais dias da semana o produto normalmente entra no cardápio (ex:
+ * feijoada = quarta e sábado). Sem linha nenhuma = todo dia. Sem hora —
+ * hora vem de aparece_almoco/aparece_janta + horário de funcionamento
+ * (configuração ainda não existe, fica pra depois).
+ */
+export const produto_dia_semana = pgTable(
+  'produto_dia_semana',
   {
     id: text('id')
       .primaryKey()
@@ -97,9 +94,8 @@ export const produto_disponibilidade_janela = pgTable(
       .references(() => produto.id, { onDelete: 'cascade' }),
     // 0 = domingo ... 6 = sábado
     dia_semana: integer('dia_semana').notNull(),
-    hora_inicio: text('hora_inicio').notNull(),
-    hora_fim: text('hora_fim').notNull(),
-  }
+  },
+  (t) => [unique().on(t.produto_id, t.dia_semana)]
 )
 
 /** Ficha técnica — referencia o insumo real do Estoque, nunca texto livre. */
@@ -120,17 +116,42 @@ export const produto_ficha_tecnica_item = pgTable(
   (t) => [unique().on(t.produto_id, t.estoque_item_id)]
 )
 
+/**
+ * Grupo reutilizável de adicionais (ex: "Molhos", "Bacon e queijos") —
+ * cadastrado em /catalogo/adicionais, escolhido por um ou mais produtos.
+ * Disponibilidade por turno aqui, não por item: um item dentro de um grupo
+ * de almoço não existe fora do almoço.
+ */
+export const grupo_adicional = pgTable('grupo_adicional', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  nome: text('nome').notNull(),
+  disponivel_almoco: boolean('disponivel_almoco').notNull().default(true),
+  disponivel_janta: boolean('disponivel_janta').notNull().default(true),
+  ativo: boolean('ativo').notNull().default(true),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+})
+
 export const adicional = pgTable('adicional', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => createId()),
+  grupo_id: text('grupo_id')
+    .notNull()
+    .references(() => grupo_adicional.id, { onDelete: 'cascade' }),
   nome: text('nome').notNull(),
   preco: numeric('preco', PRECO).notNull().default('0'),
+  foto_url: text('foto_url'),
+  // Quantidade máxima/mínima é por item, não por grupo — ex: "Bacon extra,
+  // até 3 unidades".
+  quantidade_minima: integer('quantidade_minima').notNull().default(0),
+  quantidade_maxima: integer('quantidade_maxima').notNull().default(1),
   ativo: boolean('ativo').notNull().default(true),
 })
 
-export const produto_adicional = pgTable(
-  'produto_adicional',
+export const produto_grupo_adicional = pgTable(
+  'produto_grupo_adicional',
   {
     id: text('id')
       .primaryKey()
@@ -138,39 +159,11 @@ export const produto_adicional = pgTable(
     produto_id: text('produto_id')
       .notNull()
       .references(() => produto.id, { onDelete: 'cascade' }),
-    adicional_id: text('adicional_id')
+    grupo_id: text('grupo_id')
       .notNull()
-      .references(() => adicional.id, { onDelete: 'cascade' }),
+      .references(() => grupo_adicional.id, { onDelete: 'cascade' }),
   },
-  (t) => [unique().on(t.produto_id, t.adicional_id)]
-)
-
-// Ex: "Vegetariano", "Vegano", "Orgânico", "Sem glúten", "Sem açúcar",
-// "Zero lactose" (comida); "Diet/Zero", "Gelada", "Alcoólica", "Natural"
-// (bebida) — cadastro livre em vez de enum fixo, pra não precisar de
-// migration toda vez que surgir uma classificação nova.
-export const classificacao = pgTable('classificacao', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  nome: text('nome').notNull(),
-  aplica_a: aplicaAEnum('aplica_a').notNull().default('ambos'),
-})
-
-export const produto_classificacao = pgTable(
-  'produto_classificacao',
-  {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    produto_id: text('produto_id')
-      .notNull()
-      .references(() => produto.id, { onDelete: 'cascade' }),
-    classificacao_id: text('classificacao_id')
-      .notNull()
-      .references(() => classificacao.id, { onDelete: 'cascade' }),
-  },
-  (t) => [unique().on(t.produto_id, t.classificacao_id)]
+  (t) => [unique().on(t.produto_id, t.grupo_id)]
 )
 
 export const produtoRelations = relations(produto, ({ one, many }) => ({
@@ -179,9 +172,8 @@ export const produtoRelations = relations(produto, ({ one, many }) => ({
     references: [categoria_produto.id],
   }),
   fichaTecnica: many(produto_ficha_tecnica_item),
-  janelasDisponibilidade: many(produto_disponibilidade_janela),
-  adicionais: many(produto_adicional),
-  classificacoes: many(produto_classificacao),
+  diasSemana: many(produto_dia_semana),
+  grupoAdicionais: many(produto_grupo_adicional),
 }))
 
 export const produtoFichaTecnicaItemRelations = relations(
@@ -198,40 +190,41 @@ export const produtoFichaTecnicaItemRelations = relations(
   })
 )
 
-export const produtoDisponibilidadeJanelaRelations = relations(
-  produto_disponibilidade_janela,
+export const produtoDiaSemanaRelations = relations(
+  produto_dia_semana,
   ({ one }) => ({
     produto: one(produto, {
-      fields: [produto_disponibilidade_janela.produto_id],
+      fields: [produto_dia_semana.produto_id],
       references: [produto.id],
     }),
   })
 )
 
-export const produtoAdicionalRelations = relations(
-  produto_adicional,
-  ({ one }) => ({
-    produto: one(produto, {
-      fields: [produto_adicional.produto_id],
-      references: [produto.id],
-    }),
-    adicional: one(adicional, {
-      fields: [produto_adicional.adicional_id],
-      references: [adicional.id],
-    }),
+export const grupoAdicionalRelations = relations(
+  grupo_adicional,
+  ({ many }) => ({
+    itens: many(adicional),
+    produtos: many(produto_grupo_adicional),
   })
 )
 
-export const produtoClassificacaoRelations = relations(
-  produto_classificacao,
+export const adicionalRelations = relations(adicional, ({ one }) => ({
+  grupo: one(grupo_adicional, {
+    fields: [adicional.grupo_id],
+    references: [grupo_adicional.id],
+  }),
+}))
+
+export const produtoGrupoAdicionalRelations = relations(
+  produto_grupo_adicional,
   ({ one }) => ({
     produto: one(produto, {
-      fields: [produto_classificacao.produto_id],
+      fields: [produto_grupo_adicional.produto_id],
       references: [produto.id],
     }),
-    classificacao: one(classificacao, {
-      fields: [produto_classificacao.classificacao_id],
-      references: [classificacao.id],
+    grupo: one(grupo_adicional, {
+      fields: [produto_grupo_adicional.grupo_id],
+      references: [grupo_adicional.id],
     }),
   })
 )
