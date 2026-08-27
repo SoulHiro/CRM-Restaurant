@@ -9,7 +9,7 @@ import { CLASSIFICACAO_ICON_MAP } from '../../lib/classificacao-icons'
 import { classificacoesPorTipo } from '../../lib/classificacoes'
 import { TIPO_PRODUTO_LABEL, TIPOS_PRODUTO } from '../../lib/types'
 import type { CriarProdutoInput, TipoProduto } from '../../lib/types'
-import { SelectableCard } from '../shared/selectable-card'
+import { SelectableCard } from '@repo/ui/components/selectable-card'
 
 const TIPO_ICON: Record<TipoProduto, typeof UtensilsCrossed> = {
   comida: UtensilsCrossed,

@@ -11,7 +11,7 @@ import { Label } from '@repo/ui/components/label'
 
 import { CriarGrupoDrawer } from '../adicionais/criar-grupo-drawer'
 import type { CriarProdutoInput, GrupoAdicionalOption } from '../../lib/types'
-import { SelectableCard } from '../shared/selectable-card'
+import { SelectableCard } from '@repo/ui/components/selectable-card'
 
 export function SecaoAdicionais({
   dados,

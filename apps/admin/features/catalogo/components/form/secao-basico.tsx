@@ -16,7 +16,7 @@ import { Textarea } from '@repo/ui/components/textarea'
 
 import type { CategoriaProdutoOption, CriarProdutoInput } from '../../lib/types'
 import { SecaoPrecificacao } from './secao-precificacao'
-import { SelectableCard } from '../shared/selectable-card'
+import { SelectableCard } from '@repo/ui/components/selectable-card'
 import { ResumoTamanhosPadrao, tamanhosPadrao } from './tamanhos-editor'
 import { UploadMidia } from './upload-midia'
 

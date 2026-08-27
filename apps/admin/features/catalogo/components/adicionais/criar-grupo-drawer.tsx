@@ -22,7 +22,7 @@ import { Label } from '@repo/ui/components/label'
 import { useDrawerDirection } from '@/hooks/use-drawer-direction'
 import { criarGrupoAdicionalAction } from '../../lib/actions'
 import type { GrupoAdicionalOption } from '../../lib/types'
-import { SelectableCard } from '../shared/selectable-card'
+import { SelectableCard } from '@repo/ui/components/selectable-card'
 
 export function CriarGrupoDrawer({
   onCriado,

@@ -1,14 +1,13 @@
-'use client'
-
 import type { LucideIcon } from 'lucide-react'
 import { Check } from 'lucide-react'
 
 import { cn } from '@repo/ui/lib/utils'
 
 /**
- * Card de seleção reutilizado em canais de venda, turno, status e
- * classificações — ícone + nome + descrição opcional, círculo de seleção
- * no canto superior direito. Quem chama decide single/multi-select; este
+ * Card de seleção reutilizado em canais de venda, turno, status,
+ * classificações e escolhas rápidas fora do catálogo (ex: consumo de
+ * funcionário) — ícone + nome + descrição opcional, círculo de seleção no
+ * canto superior direito. Quem chama decide single/multi-select; este
  * componente só sabe "selecionado ou não".
  */
 export function SelectableCard({

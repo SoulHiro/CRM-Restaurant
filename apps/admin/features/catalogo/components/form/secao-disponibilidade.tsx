@@ -7,7 +7,7 @@ import { Label } from '@repo/ui/components/label'
 
 import type { CriarProdutoInput } from '../../lib/types'
 import { DiaSemanaPicker } from '../shared/dia-semana-picker'
-import { SelectableCard } from '../shared/selectable-card'
+import { SelectableCard } from '@repo/ui/components/selectable-card'
 
 export function SecaoDisponibilidade({
   dados,
