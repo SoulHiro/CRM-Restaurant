@@ -10,7 +10,7 @@ import { StatCard } from '@repo/ui/components/stat-card'
 import { formatCurrencyBRL, formatShortDateBR } from '@/lib/formatters'
 import type { EmpresaPausa } from '../../../../lib/types'
 import { HeroStatPanel } from '../../../shared/hero-stat-panel'
-import { TrendBadge } from '../../../shared/trend-badge'
+import { TrendBadge } from '@repo/ui/components/trend-badge'
 
 export function ResumoSemanaCard({
   funcionariosAtivos,
