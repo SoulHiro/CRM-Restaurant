@@ -1,167 +1,92 @@
+import { Landmark } from 'lucide-react'
+
 import { EmptyState } from '@repo/ui/components/empty-state'
-import { MobileCellLabel } from '@repo/ui/components/mobile-cell-label'
-import { cn } from '@repo/ui/lib/utils'
+import { PersonAvatar } from '@repo/ui/components/person-avatar'
 
-import { formatCurrencyBRL, formatDateBR } from '@/lib/formatters'
-import {
-  filtrarContas,
-  ordenarPorUrgencia,
-  rotuloPrazo,
-  statusConta,
-  type ContaFiltro,
-} from '../../lib/conta-helpers'
-import { formatMes } from '../../lib/dre-helpers'
-import type { ContaReceber } from '../../lib/types'
-import { ContaReceberDrawer } from '../form/conta-receber-drawer'
-import { StatusContaBadge } from '../shared/status-conta-badge'
-import { ContasFiltro } from './contas-filtro'
-import { QuitarContaButton } from './quitar-conta-button'
+import { formatCurrencyBRL } from '@/lib/formatters'
+import type { FaturamentoEmpresaPeriodo } from '@/features/empresas/lib/types'
+import { resumoQuinzenaFinanceiro, type Quinzena } from '../../lib/quinzena-helpers'
+import { ResumoPeriodoSidebar } from '../shared/resumo-periodo-sidebar'
+import { SeletorQuinzena } from '../shared/seletor-quinzena'
 
-const GRID_COLUMNS = 'sm:grid-cols-[2.2fr_1.2fr_1.2fr_1fr_8rem_3rem]'
-const ROW_LAYOUT =
-  'flex flex-col gap-2 p-4 sm:grid sm:items-center sm:gap-4 sm:py-3'
+const GRID_COLUMNS = 'sm:grid-cols-[1fr_10rem]'
 
 export function ContasReceberTab({
-  contas,
-  filtro,
-  mes,
-  hoje,
+  quinzena,
+  faturamentoPorEmpresa,
+  faturamentoDiario,
 }: {
-  contas: ContaReceber[]
-  filtro: ContaFiltro
-  mes: string
-  hoje: string
+  quinzena: Quinzena
+  faturamentoPorEmpresa: FaturamentoEmpresaPeriodo[]
+  faturamentoDiario: { dataVencimento: string; valor: number }[]
 }) {
-  const visiveis = ordenarPorUrgencia(filtrarContas(contas, filtro, hoje))
+  const resumo = resumoQuinzenaFinanceiro(faturamentoDiario, quinzena)
+  const breakdown = faturamentoPorEmpresa.map((item) => ({
+    label: item.empresaNome,
+    valor: item.valor,
+  }))
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <ContasFiltro filtro={filtro} />
-        <ContaReceberDrawer hoje={hoje} periodo={mes} />
-      </div>
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Apurado pelo fechamento diário de cada empresa — vai somando até
+            fechar a quinzena.
+          </p>
+          <SeletorQuinzena quinzena={quinzena} />
+        </div>
 
-      {visiveis.length === 0 ? (
-        <EmptyState
-          message={
-            contas.length === 0
-              ? 'Nenhuma cobrança cadastrada. Registre o que as empresas ainda devem.'
-              : 'Nenhuma cobrança com esse filtro.'
-          }
-        />
-      ) : (
-        <div
-          role="table"
-          aria-label="Contas a receber"
-          className="flex flex-col gap-2"
-        >
+        {faturamentoPorEmpresa.length === 0 ? (
+          <EmptyState message="Nenhum dia fechado nesta quinzena ainda." />
+        ) : (
           <div
-            role="row"
-            className={cn(
-              'hidden items-center gap-4 px-4 py-3 text-xs font-medium text-muted-foreground sm:grid',
-              GRID_COLUMNS
-            )}
+            role="table"
+            aria-label="Faturamento por empresa"
+            className="flex flex-col gap-2"
           >
-            <span role="columnheader">Empresa</span>
-            <span role="columnheader">Situação</span>
-            <span role="columnheader">Vencimento</span>
-            <span role="columnheader" className="text-right">
-              Valor
-            </span>
-            <span role="columnheader" className="sr-only">
-              Receber
-            </span>
-            <span role="columnheader" className="sr-only">
-              Editar
-            </span>
-          </div>
+            <div
+              role="row"
+              className={`hidden items-center gap-4 px-4 py-3 text-xs font-medium text-muted-foreground sm:grid ${GRID_COLUMNS}`}
+            >
+              <span role="columnheader">Empresa</span>
+              <span role="columnheader" className="text-right">
+                Apurado nesta quinzena
+              </span>
+            </div>
 
-          {visiveis.map((conta) => {
-            const status = statusConta(conta, hoje)
-
-            return (
+            {faturamentoPorEmpresa.map((item) => (
               <div
-                key={conta.id}
+                key={item.empresaId}
                 role="row"
-                className={cn(
-                  'rounded-lg bg-card',
-                  ROW_LAYOUT,
-                  GRID_COLUMNS,
-                  conta.status === 'pago' && 'opacity-60'
-                )}
+                className={`flex items-center gap-3 rounded-lg bg-card p-3 sm:grid sm:gap-4 ${GRID_COLUMNS}`}
               >
-                <span role="cell" className="flex min-w-0 flex-col">
-                  <span className="truncate font-medium">
-                    {conta.empresaNome}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Referente a {formatMes(conta.periodo)}
-                  </span>
+                <span role="cell" className="flex min-w-0 items-center gap-2.5">
+                  <PersonAvatar name={item.empresaNome} className="size-8 shrink-0" />
+                  <span className="truncate font-medium">{item.empresaNome}</span>
                 </span>
-
                 <span
                   role="cell"
-                  className="flex items-center justify-between gap-2 sm:block"
+                  className="text-right text-sm font-semibold tabular-nums"
                 >
-                  <MobileCellLabel>Situação</MobileCellLabel>
-                  <StatusContaBadge status={status} />
-                </span>
-
-                <span
-                  role="cell"
-                  className="flex items-center justify-between gap-2 sm:flex-col sm:items-start sm:gap-0.5"
-                >
-                  <MobileCellLabel>Vencimento</MobileCellLabel>
-                  <span className="flex flex-col items-end sm:items-start">
-                    <span className="text-sm tabular-nums">
-                      {formatDateBR(conta.dataVencimento)}
-                    </span>
-                    {conta.status === 'pendente' && (
-                      <span
-                        className={cn(
-                          'text-xs',
-                          status === 'atrasado'
-                            ? 'font-medium text-destructive'
-                            : 'text-muted-foreground'
-                        )}
-                      >
-                        {rotuloPrazo(conta.dataVencimento, hoje)}
-                      </span>
-                    )}
-                  </span>
-                </span>
-
-                <span
-                  role="cell"
-                  className="flex items-center justify-between gap-2 text-sm font-medium tabular-nums sm:block sm:text-right"
-                >
-                  <MobileCellLabel>Valor</MobileCellLabel>
-                  {formatCurrencyBRL(conta.valor)}
-                </span>
-
-                <span role="cell">
-                  <QuitarContaButton
-                    id={conta.id}
-                    tipo="receber"
-                    status={conta.status}
-                    valor={conta.valor}
-                    descricao={conta.empresaNome}
-                    hoje={hoje}
-                  />
-                </span>
-
-                <span role="cell" className="flex justify-end">
-                  <ContaReceberDrawer
-                    hoje={hoje}
-                    periodo={mes}
-                    conta={conta}
-                  />
+                  {formatCurrencyBRL(item.valor)}
                 </span>
               </div>
-            )
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="lg:sticky lg:top-6">
+        <ResumoPeriodoSidebar
+          titulo="A receber"
+          legendaPeriodo="nesta quinzena"
+          icon={<Landmark className="size-4 text-muted-foreground" />}
+          resumo={resumo}
+          breakdown={breakdown}
+          breakdownLabel="Por empresa nesta quinzena"
+        />
+      </div>
     </div>
   )
 }

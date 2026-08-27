@@ -158,6 +158,13 @@ export interface EmpresaFaturamentoMensal {
   valor: number
 }
 
+/** Faturamento apurado (via fechamento diário) de uma empresa num intervalo arbitrário — não é bucket de mês. */
+export interface FaturamentoEmpresaPeriodo {
+  empresaId: string
+  empresaNome: string
+  valor: number
+}
+
 export interface EmpresaComparativoSemanal {
   funcionariosAtivos: number
   taxaResposta: number

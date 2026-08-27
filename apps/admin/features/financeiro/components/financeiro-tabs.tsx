@@ -5,8 +5,11 @@ import {
   TabsTrigger,
 } from '@repo/ui/components/tabs'
 
+import type { FaturamentoEmpresaPeriodo } from '@/features/empresas/lib/types'
 import { statusConta, type ContaFiltro } from '../lib/conta-helpers'
+import { jornadaSeguinte } from '../lib/jornada-helpers'
 import type { FinanceiroPageData } from '../lib/queries'
+import type { Quinzena } from '../lib/quinzena-helpers'
 import { ContasPagarTab } from './contas/contas-pagar-tab'
 import { ContasReceberTab } from './contas/contas-receber-tab'
 import { LancamentosTab } from './lancamentos/lancamentos-tab'
@@ -23,15 +26,26 @@ export function FinanceiroTabs({
   dados,
   mes,
   filtro,
+  jornadaInicio,
+  quinzena,
+  faturamentoPorEmpresa,
+  faturamentoDiario,
   hoje,
 }: {
   dados: FinanceiroPageData
   mes: string
   filtro: ContaFiltro
+  jornadaInicio: string
+  quinzena: Quinzena
+  faturamentoPorEmpresa: FaturamentoEmpresaPeriodo[]
+  faturamentoDiario: { dataVencimento: string; valor: number }[]
   hoje: string
 }) {
+  // Atraso vale independente do período em foco — uma conta vencida no
+  // período passado continua contando enquanto não for quitada.
   const pagarAtrasadas = contarAtrasadas(dados.contasPagar, hoje)
-  const receberAtrasadas = contarAtrasadas(dados.contasReceber, hoje)
+
+  const jornada = { inicio: jornadaInicio, fim: jornadaSeguinte(jornadaInicio) }
 
   return (
     <Tabs defaultValue="visao-geral">
@@ -53,14 +67,7 @@ export function FinanceiroTabs({
             </span>
           )}
         </TabsTrigger>
-        <TabsTrigger value="a-receber">
-          A receber
-          {receberAtrasadas > 0 && (
-            <span className="ml-1.5 rounded-full bg-destructive px-1.5 text-xs font-semibold text-destructive-foreground">
-              {receberAtrasadas}
-            </span>
-          )}
-        </TabsTrigger>
+        <TabsTrigger value="a-receber">A receber</TabsTrigger>
       </TabsList>
 
       <TabsContent value="visao-geral" className="mt-6">
@@ -86,7 +93,8 @@ export function FinanceiroTabs({
 
       <TabsContent value="a-pagar" className="mt-6">
         <ContasPagarTab
-          contas={dados.contasPagar}
+          todasContas={dados.contasPagar}
+          jornada={jornada}
           filtro={filtro}
           hoje={hoje}
         />
@@ -94,10 +102,9 @@ export function FinanceiroTabs({
 
       <TabsContent value="a-receber" className="mt-6">
         <ContasReceberTab
-          contas={dados.contasReceber}
-          filtro={filtro}
-          mes={mes}
-          hoje={hoje}
+          quinzena={quinzena}
+          faturamentoPorEmpresa={faturamentoPorEmpresa}
+          faturamentoDiario={faturamentoDiario}
         />
       </TabsContent>
     </Tabs>

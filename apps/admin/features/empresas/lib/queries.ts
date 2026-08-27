@@ -32,6 +32,7 @@ import type {
   EmpresaFaturamentoMensal,
   EmpresaListItem,
   EmpresaRespostaSemanal,
+  FaturamentoEmpresaPeriodo,
   FechamentoDia,
   ItemFechamento,
   PedidoDoDiaItem,
@@ -423,6 +424,67 @@ export function getFaturamentoMensal(
     ],
     { tags: [tagEmpresaFechamentos(empresaId)] }
   )()
+}
+
+/**
+ * Faturamento apurado de TODAS as empresas num intervalo arbitrário (ex:
+ * uma quinzena) — soma `valor_total` de `fechamento_dia_empresa`, o mesmo
+ * dado que `getFaturamentoMensal` usa por empresa. Sem cache: cruza todas
+ * as empresas, então tagear por `tagEmpresaFechamentos(id)` de uma só não
+ * cobriria as outras, e essa consulta já é lida direto por `financeiro`.
+ */
+export async function getFaturamentoPorEmpresaNoPeriodo(
+  inicio: string,
+  fim: string
+): Promise<FaturamentoEmpresaPeriodo[]> {
+  const [empresas, fechamentos] = await Promise.all([
+    db.query.empresa.findMany({ columns: { id: true, nome: true } }),
+    db.query.fechamento_dia_empresa.findMany({
+      where: (f, { and: andOp, gte, lte }) =>
+        andOp(gte(f.data, inicio), lte(f.data, fim)),
+      columns: { empresa_id: true, valor_total: true },
+    }),
+  ])
+
+  const totalPorEmpresa = new Map<string, number>()
+  for (const fechamento of fechamentos) {
+    totalPorEmpresa.set(
+      fechamento.empresa_id,
+      (totalPorEmpresa.get(fechamento.empresa_id) ?? 0) +
+        toNumber(fechamento.valor_total)
+    )
+  }
+
+  return empresas
+    .map((emp) => ({
+      empresaId: emp.id,
+      empresaNome: emp.nome,
+      valor: totalPorEmpresa.get(emp.id) ?? 0,
+    }))
+    .filter((item) => item.valor > 0)
+    .sort((a, b) => b.valor - a.valor)
+}
+
+/**
+ * Um `valor_total` por (empresa, dia) fechado no intervalo, com a data no
+ * campo `dataVencimento` — formato que os helpers genéricos de período de
+ * `features/financeiro` (`resumoQuinzenaFinanceiro`) já sabem consumir, sem
+ * duplicar a agregação por período aqui.
+ */
+export async function getFaturamentoDiarioNoPeriodo(
+  inicio: string,
+  fim: string
+): Promise<{ dataVencimento: string; valor: number }[]> {
+  const rows = await db.query.fechamento_dia_empresa.findMany({
+    where: (f, { and: andOp, gte, lte }) =>
+      andOp(gte(f.data, inicio), lte(f.data, fim)),
+    columns: { data: true, valor_total: true },
+  })
+
+  return rows.map((row) => ({
+    dataVencimento: row.data,
+    valor: toNumber(row.valor_total),
+  }))
 }
 
 /**
