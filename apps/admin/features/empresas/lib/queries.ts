@@ -186,32 +186,31 @@ export function getPedidosDoDia(
         with: {
           pedidos: {
             where: (p, { eq: eqOp }) => eqOp(p.data, data),
-            limit: 1,
           },
         },
         orderBy: (c, { asc }) => [asc(c.nome)],
       })
 
-      return colaboradores
-        .filter((colaborador) => colaborador.pedidos.length > 0)
-        .map((colaborador) => {
-          const pedido = colaborador.pedidos[0]!
-          return {
-            colaboradorId: colaborador.id,
-            nome: colaborador.nome,
-            whatsapp: colaborador.whatsapp,
-            tipo: pedido.tipo,
-            turno: pedido.turno,
-            tamanho: pedido.tamanho,
-            prato: pedido.prato,
-            preco: pedido.preco != null ? toNumber(pedido.preco) : null,
-            observacao: pedido.observacao,
-            respondidoEm: pedido.respondido_em?.toISOString() ?? null,
-            recusou: pedido.recusou || ehRecusa(pedido.prato),
-            importadoEm: pedido.importado_em.toISOString(),
-            impressoEm: pedido.impresso_em?.toISOString() ?? null,
-          }
-        })
+      // flatMap, não map — uma pessoa pode ter almoço E jantar no mesmo dia,
+      // duas linhas de `pedidos` para o mesmo colaborador.
+      return colaboradores.flatMap((colaborador) =>
+        colaborador.pedidos.map((pedido) => ({
+          id: pedido.id,
+          colaboradorId: colaborador.id,
+          nome: colaborador.nome,
+          whatsapp: colaborador.whatsapp,
+          tipo: pedido.tipo,
+          turno: pedido.turno,
+          tamanho: pedido.tamanho,
+          prato: pedido.prato,
+          preco: pedido.preco != null ? toNumber(pedido.preco) : null,
+          observacao: pedido.observacao,
+          respondidoEm: pedido.respondido_em?.toISOString() ?? null,
+          recusou: pedido.recusou || ehRecusa(pedido.prato),
+          importadoEm: pedido.importado_em.toISOString(),
+          impressoEm: pedido.impresso_em?.toISOString() ?? null,
+        }))
+      )
     },
     ['pedidos-do-dia', empresaId, data],
     { tags: [tagEmpresaPedidos(empresaId)] }

@@ -349,6 +349,7 @@ export const importarPedidosAction = authActionClient
             target: [
               pedido_dia_importado.colaborador_id,
               pedido_dia_importado.data,
+              pedido_dia_importado.turno,
             ],
             set: {
               tipo: item.tipo,
@@ -369,6 +370,32 @@ export const importarPedidosAction = authActionClient
 
     await executarLote(statements)
 
+    // `db.batch` não devolve o id de cada upsert individualmente (statements
+    // heterogêneos no mesmo lote) — busca de volta pelas próprias chaves que
+    // acabou de gravar (colaborador+data+turno, já garantidas únicas pelo
+    // upsert acima) pra devolver o id real de cada pedido pro chamador (ex:
+    // marcar como impresso logo em seguida).
+    const datasUnicas = [...new Set(parsedInput.itens.map((item) => item.data))]
+    const linhasGravadas = await db.query.pedido_dia_importado.findMany({
+      where: (p, { and: andOp, inArray: inArrayOp }) =>
+        andOp(
+          inArrayOp(p.colaborador_id, colaboradorIdsResolvidos),
+          inArrayOp(p.data, datasUnicas)
+        ),
+      columns: { id: true, colaborador_id: true, data: true, turno: true },
+    })
+    const pedidoIdsResolvidos = parsedInput.itens.map((item, i) => {
+      const colaboradorId = colaboradorIdsResolvidos[i]!
+      return (
+        linhasGravadas.find(
+          (linha) =>
+            linha.colaborador_id === colaboradorId &&
+            linha.data === item.data &&
+            linha.turno === item.turno
+        )?.id ?? null
+      )
+    })
+
     revalidatePath(`/empresas/${parsedInput.empresaId}`)
     updateTag(TAG_EMPRESAS_LISTA)
     updateTag(tagEmpresa(parsedInput.empresaId))
@@ -378,6 +405,7 @@ export const importarPedidosAction = authActionClient
       colaboradoresNovos: idPorColaboradorNovo.size,
       diasImportados: parsedInput.itens.length,
       colaboradorIds: colaboradorIdsResolvidos,
+      pedidoIds: pedidoIdsResolvidos,
     }
   })
 
@@ -565,11 +593,11 @@ export const listarFaturamentoMensalAction = authActionClient
   })
 
 /**
- * Nenhum desses três actions recebe `empresaId` do cliente (só
- * `colaboradorId`, já suficiente pro `WHERE`) — pra invalidar a tag certa
- * de cache, resolve o dono do colaborador com uma leitura indexada rápida
- * antes de escrever. Mais barato que adicionar `empresaId` em todo schema/
- * prop-drilling só pra isso.
+ * Nenhum desses actions recebe `empresaId` do cliente (só `colaboradorId`,
+ * já suficiente pro `WHERE`) — pra invalidar a tag certa de cache, resolve o
+ * dono do colaborador com uma leitura indexada rápida antes de escrever.
+ * Mais barato que adicionar `empresaId` em todo schema/prop-drilling só pra
+ * isso.
  */
 async function empresaDoColaborador(
   colaboradorId: string
@@ -581,19 +609,25 @@ async function empresaDoColaborador(
   return row?.empresa_id ?? null
 }
 
+/** Mesma ideia de `empresaDoColaborador`, mas a partir do id do pedido — os
+ * actions que editam/removem um pedido específico só recebem `pedidoId`. */
+async function empresaDoPedido(pedidoId: string): Promise<string | null> {
+  const row = await db.query.pedido_dia_importado.findFirst({
+    where: (p, { eq: eqOp }) => eqOp(p.id, pedidoId),
+    columns: {},
+    with: { colaborador: { columns: { empresa_id: true } } },
+  })
+  return row?.colaborador.empresa_id ?? null
+}
+
 export const removerPedidoAction = authActionClient
   .schema(removerPedidoSchema)
   .action(async ({ parsedInput }) => {
-    const empresaId = await empresaDoColaborador(parsedInput.colaboradorId)
+    const empresaId = await empresaDoPedido(parsedInput.pedidoId)
 
     await db
       .delete(pedido_dia_importado)
-      .where(
-        and(
-          eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),
-          eq(pedido_dia_importado.data, parsedInput.data)
-        )
-      )
+      .where(eq(pedido_dia_importado.id, parsedInput.pedidoId))
 
     revalidatePath('/empresas')
     updateTag(TAG_EMPRESAS_LISTA)
@@ -603,17 +637,12 @@ export const removerPedidoAction = authActionClient
 export const marcarRecusaAction = authActionClient
   .schema(marcarRecusaSchema)
   .action(async ({ parsedInput }) => {
-    const empresaId = await empresaDoColaborador(parsedInput.colaboradorId)
+    const empresaId = await empresaDoPedido(parsedInput.pedidoId)
 
     await db
       .update(pedido_dia_importado)
       .set({ recusou: parsedInput.recusou })
-      .where(
-        and(
-          eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),
-          eq(pedido_dia_importado.data, parsedInput.data)
-        )
-      )
+      .where(eq(pedido_dia_importado.id, parsedInput.pedidoId))
 
     revalidatePath('/empresas')
     updateTag(TAG_EMPRESAS_LISTA)
@@ -628,7 +657,7 @@ export const marcarRecusaAction = authActionClient
 export const atualizarPedidoAction = authActionClient
   .schema(atualizarPedidoSchema)
   .action(async ({ parsedInput }) => {
-    const empresaId = await empresaDoColaborador(parsedInput.colaboradorId)
+    const empresaId = await empresaDoPedido(parsedInput.pedidoId)
 
     await db
       .update(pedido_dia_importado)
@@ -638,12 +667,7 @@ export const atualizarPedidoAction = authActionClient
         tamanho: parsedInput.tamanho,
         observacao: parsedInput.observacao?.trim() || null,
       })
-      .where(
-        and(
-          eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),
-          eq(pedido_dia_importado.data, parsedInput.data)
-        )
-      )
+      .where(eq(pedido_dia_importado.id, parsedInput.pedidoId))
 
     revalidatePath('/empresas')
     if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
@@ -652,8 +676,8 @@ export const atualizarPedidoAction = authActionClient
 /**
  * Chamado depois que a impressão de verdade (QZ Tray) já terminou — marca
  * `impresso_em = agora` pra essas comandas saírem de "novo"/"atualizado"
- * pra "impresso" na tela. `empresaId` vem do primeiro colaborador do lote
- * (todos vêm da mesma empresa, sempre — a tela de pedidos é por empresa).
+ * pra "impresso" na tela. `empresaId` vem do primeiro pedido do lote (todos
+ * vêm da mesma empresa, sempre — a tela de pedidos é por empresa).
  */
 export const marcarPedidosImpressosAction = authActionClient
   .schema(marcarPedidosImpressosSchema)
@@ -661,17 +685,9 @@ export const marcarPedidosImpressosAction = authActionClient
     await db
       .update(pedido_dia_importado)
       .set({ impresso_em: new Date() })
-      .where(
-        and(
-          inArray(
-            pedido_dia_importado.colaborador_id,
-            parsedInput.colaboradorIds
-          ),
-          eq(pedido_dia_importado.data, parsedInput.data)
-        )
-      )
+      .where(inArray(pedido_dia_importado.id, parsedInput.pedidoIds))
 
-    const empresaId = await empresaDoColaborador(parsedInput.colaboradorIds[0]!)
+    const empresaId = await empresaDoPedido(parsedInput.pedidoIds[0]!)
     if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
   })
 
@@ -684,7 +700,7 @@ export const marcarPedidosImpressosAction = authActionClient
 export const atualizarPrecoPedidoAction = authActionClient
   .schema(atualizarPrecoPedidoSchema)
   .action(async ({ parsedInput }) => {
-    const empresaId = await empresaDoColaborador(parsedInput.colaboradorId)
+    const empresaId = await empresaDoPedido(parsedInput.pedidoId)
 
     await db
       .update(pedido_dia_importado)
@@ -692,12 +708,7 @@ export const atualizarPrecoPedidoAction = authActionClient
         preco:
           parsedInput.preco != null ? toMoneyString(parsedInput.preco) : null,
       })
-      .where(
-        and(
-          eq(pedido_dia_importado.colaborador_id, parsedInput.colaboradorId),
-          eq(pedido_dia_importado.data, parsedInput.data)
-        )
-      )
+      .where(eq(pedido_dia_importado.id, parsedInput.pedidoId))
 
     revalidatePath('/empresas')
     if (empresaId) updateTag(tagEmpresaPedidos(empresaId))

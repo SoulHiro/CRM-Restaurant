@@ -78,12 +78,10 @@ const STATUS_IMPRESSAO_LABEL: Record<StatusImpressao, string> = {
 
 export function PedidoDiaRow({
   pedido,
-  data,
   onImprimir,
   onRemovido,
 }: {
   pedido: PedidoDoDiaItem
-  data: string
   onImprimir: () => void
   onRemovido: () => void
 }) {
@@ -123,7 +121,7 @@ export function PedidoDiaRow({
   )
 
   function confirmarPreco(valor: number | null) {
-    salvarPreco({ colaboradorId: pedido.colaboradorId, data, preco: valor })
+    salvarPreco({ pedidoId: pedido.id, preco: valor })
   }
 
   const { execute: salvarPedido, isExecuting: salvandoPedido } = useAction(
@@ -141,8 +139,7 @@ export function PedidoDiaRow({
   function confirmarEdicao() {
     if (!pratoInput.trim()) return
     salvarPedido({
-      colaboradorId: pedido.colaboradorId,
-      data,
+      pedidoId: pedido.id,
       prato: pratoInput.trim(),
       turno:
         pedido.tipo === 'lanche' || turnoInput === SEM_TURNO
@@ -402,9 +399,7 @@ export function PedidoDiaRow({
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() =>
-                  execute({ colaboradorId: pedido.colaboradorId, data })
-                }
+                onClick={() => execute({ pedidoId: pedido.id })}
               >
                 Remover
               </AlertDialogAction>

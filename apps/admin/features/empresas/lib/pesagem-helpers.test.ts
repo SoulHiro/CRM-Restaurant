@@ -16,6 +16,7 @@ import type { PedidoDoDiaItem } from './types'
 
 function pedido(overrides: Partial<PedidoDoDiaItem>): PedidoDoDiaItem {
   return {
+    id: 'p1',
     colaboradorId: 'c1',
     nome: 'Fulano',
     whatsapp: null,

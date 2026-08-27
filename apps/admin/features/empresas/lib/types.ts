@@ -171,6 +171,7 @@ export interface EmpresaComparativoSemanal {
 }
 
 export interface PedidoDoDiaItem {
+  id: string
   colaboradorId: string
   nome: string
   whatsapp: string | null

@@ -154,8 +154,8 @@ export function AdicionarPedidoManualDrawer({
     onSuccess: async ({ data: resultado }) => {
       toast.success('Pedido adicionado')
 
-      const colaboradorId = resultado?.colaboradorIds?.[0]
-      if (imprimirAoCriar && colaboradorId) {
+      const pedidoId = resultado?.pedidoIds?.[0]
+      if (imprimirAoCriar && pedidoId) {
         const comanda: ComandaEntrada = {
           nome: nomeSelecionado,
           empresaNome,
@@ -172,8 +172,7 @@ export function AdicionarPedidoManualDrawer({
           respondidoEm: null,
         }
         const sucesso = await imprimir([comanda])
-        if (sucesso)
-          await marcarImpresso({ colaboradorIds: [colaboradorId], data })
+        if (sucesso) await marcarImpresso({ pedidoIds: [pedidoId] })
       }
 
       setOpen(false)

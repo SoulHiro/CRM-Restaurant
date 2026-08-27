@@ -255,23 +255,20 @@ export type ListarFaturamentoMensalInput = z.infer<
 >
 
 export const removerPedidoSchema = z.object({
-  colaboradorId: z.string().min(1),
-  data: z.string().min(1),
+  pedidoId: z.string().min(1),
 })
 
 export type RemoverPedidoInput = z.infer<typeof removerPedidoSchema>
 
 export const marcarRecusaSchema = z.object({
-  colaboradorId: z.string().min(1),
-  data: z.string().min(1),
+  pedidoId: z.string().min(1),
   recusou: z.boolean(),
 })
 
 export type MarcarRecusaInput = z.infer<typeof marcarRecusaSchema>
 
 export const atualizarPedidoSchema = z.object({
-  colaboradorId: z.string().min(1),
-  data: z.string().min(1),
+  pedidoId: z.string().min(1),
   prato: z.string().min(1, 'Informe o prato'),
   turno: z.enum(TURNOS_REFEICAO).nullable(),
   tamanho: z.enum(['P', 'M', 'G']).nullable(),
@@ -281,8 +278,7 @@ export const atualizarPedidoSchema = z.object({
 export type AtualizarPedidoInput = z.infer<typeof atualizarPedidoSchema>
 
 export const marcarPedidosImpressosSchema = z.object({
-  colaboradorIds: z.array(z.string().min(1)).min(1),
-  data: z.string().min(1),
+  pedidoIds: z.array(z.string().min(1)).min(1),
 })
 
 export type MarcarPedidosImpressosInput = z.infer<
@@ -290,8 +286,7 @@ export type MarcarPedidosImpressosInput = z.infer<
 >
 
 export const atualizarPrecoPedidoSchema = z.object({
-  colaboradorId: z.string().min(1),
-  data: z.string().min(1),
+  pedidoId: z.string().min(1),
   // null = volta a usar o preço padrão (o do tamanho, decidido no
   // "Finalizar dia") — só marmita tem padrão pra voltar; lanche sem preço
   // próprio zera.

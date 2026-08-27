@@ -133,8 +133,10 @@ export const pedido_dia_importado = pgTable(
     impresso_em: timestamp('impresso_em'),
   },
   (t) => [
-    // Reimportar a mesma semana faz upsert por dia, não duplica.
-    unique().on(t.colaborador_id, t.data),
+    // Reimportar a mesma semana faz upsert por dia+turno, não duplica —
+    // inclui `turno` de propósito: a mesma pessoa pode ter almoço E jantar
+    // no mesmo dia, só não pode ter dois almoços ou duas jantas.
+    unique().on(t.colaborador_id, t.data, t.turno),
     index('pedido_dia_importado_data_idx').on(t.data),
   ]
 )

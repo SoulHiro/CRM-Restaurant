@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAction } from 'next-safe-action/hooks'
 import {
+  ClipboardCheck,
   ListFilter,
   Printer,
   Scale,
@@ -36,10 +37,17 @@ import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { hojeISO } from '@/lib/formatters'
 import {
+  CAMPOS_RESUMO_PADRAO,
+  type CampoResumoKey,
+} from '@/features/configuracoes/lib/types'
+import { obterConfiguracaoLayoutResumoAction } from '@/features/configuracoes/lib/actions'
+import {
   atualizarColaboradoresSeparadosAction,
   listarColaboradoresEmpresaAction,
   listarPedidosDoDiaAction,
   marcarPedidosImpressosAction,
+  obterImpressoraComandaAction,
+  obterPrecosEmpresaAction,
 } from '../../../../lib/actions'
 import {
   agruparParaPesagem,
@@ -56,7 +64,9 @@ import type {
   EmpresaFluxoPedido,
   EmpresaPrecoModo,
   PedidoDoDiaItem,
+  PrecosPadraoEmpresa,
 } from '../../../../lib/types'
+import type { ItemConferenciaDia } from '../../../../lib/conferencia-dia-pdf'
 import {
   useImprimirComandas,
   type ComandaEntrada,
@@ -80,6 +90,26 @@ function ordenarParaImpressao(pedidos: PedidoDoDiaItem[]): PedidoDoDiaItem[] {
     const ordemB = b.turno ? (ORDEM_TURNO_IMPRESSAO[b.turno] ?? 2) : 2
     return ordemA - ordemB
   })
+}
+
+/**
+ * Preço previsto pra conferência — mesma regra de `finalizarDiaAction`
+ * (preço próprio do pedido, senão o padrão do tamanho/único da empresa), só
+ * que calculado antes de finalizar, com os valores padrão cadastrados em
+ * Configurações → Valores em vez do que a pessoa digitar no "Finalizar dia".
+ */
+function precoPrevistoPedido(
+  pedido: PedidoDoDiaItem,
+  precos: PrecosPadraoEmpresa,
+  precoModo: EmpresaPrecoModo
+): number {
+  if (pedido.preco != null) return pedido.preco
+  if (pedido.tipo === 'lanche') return precos.lanche.preco
+  if (precoModo === 'unico') return precos.marmita_unica.preco
+  if (pedido.tamanho === 'P') return precos.marmita_p.preco
+  if (pedido.tamanho === 'M') return precos.marmita_m.preco
+  if (pedido.tamanho === 'G') return precos.marmita_g.preco
+  return 0
 }
 
 function paraComanda(
@@ -139,6 +169,16 @@ export function PedidosTab({
   const { imprimir, imprimindo } = useImprimirComandas()
   const { imprimirPesagem, imprimindo: imprimindoPesagem } =
     useImprimirPesagem()
+  const [imprimindoConferencia, setImprimindoConferencia] = useState(false)
+  const { executeAsync: buscarImpressoraConferencia } = useAction(
+    obterImpressoraComandaAction
+  )
+  const { executeAsync: buscarLayoutConferencia } = useAction(
+    obterConfiguracaoLayoutResumoAction
+  )
+  const { executeAsync: buscarPrecosConferencia } = useAction(
+    obterPrecosEmpresaAction
+  )
 
   const { execute, isExecuting } = useAction(listarPedidosDoDiaAction, {
     onSuccess: ({ data: resultado }) => setPedidos(resultado?.pedidos ?? []),
@@ -227,8 +267,7 @@ export function PedidosTab({
     )
     if (sucesso) {
       await marcarImpressos({
-        colaboradorIds: pedidosParaImprimir.map((p) => p.colaboradorId),
-        data,
+        pedidoIds: pedidosParaImprimir.map((p) => p.id),
       })
       execute({ empresaId, data })
     }
@@ -291,8 +330,7 @@ export function PedidosTab({
       setDrawerPesagemAberto(false)
       if (grupoAFinal.length > 0) {
         await marcarImpressos({
-          colaboradorIds: grupoAFinal.map((p) => p.colaboradorId),
-          data,
+          pedidoIds: grupoAFinal.map((p) => p.id),
         })
       }
       execute({ empresaId, data })
@@ -318,6 +356,83 @@ export function PedidosTab({
       (p) => p.prato && !p.recusou
     )
   )
+
+  /**
+   * "Imprimir conferência" — mesmo visual da nota de fechamento, sem a
+   * contagem do topo, pra revisar nome/prato antes de finalizar o dia.
+   * `comImprimivel` já vem alfabético dentro de cada turno (almoço primeiro,
+   * depois jantar) — o PDF só decide onde entra o divisor entre os grupos.
+   */
+  async function imprimirConferencia() {
+    if (comImprimivel.length === 0) {
+      toast.info('Nenhum pedido pra conferir hoje.')
+      return
+    }
+
+    setImprimindoConferencia(true)
+    try {
+      const [resultadoImpressora, resultadoLayout, resultadoPrecos] =
+        await Promise.all([
+          buscarImpressoraConferencia({}),
+          buscarLayoutConferencia({}),
+          buscarPrecosConferencia({ empresaId }),
+        ])
+
+      const identificador =
+        resultadoImpressora?.data?.impressora?.identificadorQz ?? null
+      if (!identificador) {
+        toast.error('Nenhuma impressora configurada.')
+        return
+      }
+
+      const camposCabecalho: CampoResumoKey[] =
+        resultadoLayout?.data?.campos ?? CAMPOS_RESUMO_PADRAO
+      const precos = resultadoPrecos?.data?.precos
+      if (!precos) {
+        toast.error('Não foi possível carregar os valores da empresa.')
+        return
+      }
+
+      const itens: ItemConferenciaDia[] = comImprimivel.map((pedido) => ({
+        colaboradorNome: pedido.nome,
+        tipo: pedido.tipo,
+        prato: pedido.prato,
+        tamanho: pedido.tamanho,
+        turno: pedido.turno,
+        preco: precoPrevistoPedido(pedido, precos, precoModo),
+      }))
+
+      const [
+        { pdf },
+        { ConferenciaDiaPDF, LARGURA_BOBINA_CONFERENCIA_MM, calcularAlturaConferenciaMM },
+        { imprimirDocumentoUnico },
+      ] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('../../../../lib/conferencia-dia-pdf'),
+        import('@/lib/qz-print'),
+      ])
+
+      const dados = {
+        camposCabecalho,
+        empresaClienteNome: empresaNome,
+        impressoEm: new Date().toISOString(),
+        itens,
+      }
+      const temDivisorTurno = itens.some(
+        (item, indice) => indice > 0 && item.turno === 'jantar' && itens[indice - 1]!.turno !== 'jantar'
+      )
+
+      const blob = await pdf(<ConferenciaDiaPDF dados={dados} />).toBlob()
+      await imprimirDocumentoUnico(identificador, blob, {
+        largura: LARGURA_BOBINA_CONFERENCIA_MM,
+        altura: calcularAlturaConferenciaMM(itens.length, temDivisorTurno),
+      })
+    } catch {
+      toast.error('Não foi possível imprimir a conferência. Confira o QZ Tray.')
+    } finally {
+      setImprimindoConferencia(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -431,6 +546,15 @@ export function PedidosTab({
         >
           <Printer className="size-4" />
           Imprimir todos ({comImprimivel.length})
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={imprimindoConferencia || comImprimivel.length === 0}
+          onClick={imprimirConferencia}
+        >
+          <ClipboardCheck className="size-4" />
+          {imprimindoConferencia ? 'Imprimindo...' : 'Imprimir conferência'}
         </Button>
         {usaPesagem && (
           <Drawer
@@ -576,9 +700,8 @@ export function PedidosTab({
             <div className="flex flex-col gap-2">
               {pedidosFiltrados.map((pedido) => (
                 <PedidoDiaRow
-                  key={pedido.colaboradorId}
+                  key={pedido.id}
                   pedido={pedido}
-                  data={data}
                   onImprimir={() => imprimirEMarcar([pedido])}
                   onRemovido={() => execute({ empresaId, data })}
                 />
