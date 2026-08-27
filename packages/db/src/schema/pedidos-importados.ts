@@ -80,6 +80,11 @@ export const colaborador_pedido = pgTable(
     // ela estando num turno que normalmente é pesagem; vira comanda
     // individual, igual ao 3º turno (que é sempre separado, sem toggle).
     separado: boolean('separado').notNull().default(false),
+    // De férias: continua ativo (não é a mesma coisa que `ativo=false`, que
+    // é usado pra quem realmente saiu), só sai da conta de "quem ainda não
+    // respondeu hoje" (Visão geral) enquanto durar a viagem — sem isso, toda
+    // pessoa de férias aparecia lá como se tivesse esquecido de pedir.
+    em_ferias: boolean('em_ferias').notNull().default(false),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [index('colaborador_pedido_empresa_nome_idx').on(t.empresa_id, t.nome)]

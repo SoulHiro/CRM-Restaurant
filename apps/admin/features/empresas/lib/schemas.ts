@@ -108,6 +108,24 @@ export type AtualizarColaboradorSeparadoInput = z.infer<
   typeof atualizarColaboradorSeparadoSchema
 >
 
+export const atualizarColaboradorFeriasSchema = z.object({
+  colaboradorId: z.string().min(1),
+  emFerias: z.boolean(),
+})
+
+export type AtualizarColaboradorFeriasInput = z.infer<
+  typeof atualizarColaboradorFeriasSchema
+>
+
+export const atualizarColaboradorTipoSchema = z.object({
+  colaboradorId: z.string().min(1),
+  tipo: z.enum(['funcionario', 'visitante']),
+})
+
+export type AtualizarColaboradorTipoInput = z.infer<
+  typeof atualizarColaboradorTipoSchema
+>
+
 export const atualizarConfiguracaoEmpresaSchema = z.object({
   empresaId: z.string().min(1),
   fluxoPedido: z.enum(['padrao', 'pesagem']),

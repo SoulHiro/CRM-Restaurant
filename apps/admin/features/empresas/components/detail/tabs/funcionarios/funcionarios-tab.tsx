@@ -11,7 +11,9 @@ import { Skeleton } from '@repo/ui/components/skeleton'
 
 import {
   atualizarColaboradorAtivoAction,
+  atualizarColaboradorFeriasAction,
   atualizarColaboradorSeparadoAction,
+  atualizarColaboradorTipoAction,
   listarColaboradoresEmpresaAction,
 } from '../../../../lib/actions'
 import type {
@@ -75,6 +77,38 @@ export function FuncionariosTab({
     }
   )
 
+  const { execute: alternarFerias } = useAction(
+    atualizarColaboradorFeriasAction,
+    {
+      onSuccess: ({ input }) => {
+        setColaboradores((atual) =>
+          (atual ?? []).map((c) =>
+            c.id === input.colaboradorId
+              ? { ...c, emFerias: input.emFerias }
+              : c
+          )
+        )
+        toast.success(
+          input.emFerias ? 'Marcado como de férias' : 'Voltou das férias'
+        )
+      },
+      onError: () => toast.error('Não foi possível atualizar o funcionário'),
+    }
+  )
+
+  const { execute: marcarVisitante } = useAction(
+    atualizarColaboradorTipoAction,
+    {
+      onSuccess: ({ input }) => {
+        setColaboradores((atual) =>
+          (atual ?? []).filter((c) => c.id !== input.colaboradorId)
+        )
+        toast.success('Marcado como visitante')
+      },
+      onError: () => toast.error('Não foi possível atualizar o funcionário'),
+    }
+  )
+
   const colaboradoresFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     if (!termo) return colaboradores
@@ -123,6 +157,18 @@ export function FuncionariosTab({
                 alternarSeparado({
                   colaboradorId: colaborador.id,
                   separado: !colaborador.separado,
+                })
+              }
+              onAlternarFerias={() =>
+                alternarFerias({
+                  colaboradorId: colaborador.id,
+                  emFerias: !colaborador.emFerias,
+                })
+              }
+              onMarcarVisitante={() =>
+                marcarVisitante({
+                  colaboradorId: colaborador.id,
+                  tipo: 'visitante',
                 })
               }
             />

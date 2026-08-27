@@ -1,5 +1,16 @@
-import { UserCheck, UserX, UtensilsCrossed } from 'lucide-react'
+import { Palmtree, UserCheck, UserMinus, UserX, UtensilsCrossed } from 'lucide-react'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@repo/ui/components/alert-dialog'
 import { Badge } from '@repo/ui/components/badge'
 import { Button } from '@repo/ui/components/button'
 import { PersonAvatar } from '@repo/ui/components/person-avatar'
@@ -20,12 +31,16 @@ export function FuncionarioRow({
   mostrarSeparado,
   onAlternarAtivo,
   onAlternarSeparado,
+  onAlternarFerias,
+  onMarcarVisitante,
 }: {
   colaborador: ColaboradorEmpresaItem
   /** Só empresas com fluxo_pedido='pesagem' usam o toggle "marmita separada". */
   mostrarSeparado: boolean
   onAlternarAtivo: () => void
   onAlternarSeparado: () => void
+  onAlternarFerias: () => void
+  onMarcarVisitante: () => void
 }) {
   return (
     <div
@@ -60,6 +75,8 @@ export function FuncionarioRow({
         {mostrarSeparado && colaborador.separado && (
           <Badge variant="secondary">Separado</Badge>
         )}
+
+        {colaborador.emFerias && <Badge variant="secondary">De férias</Badge>}
 
         <AtivoInativoBadge active={colaborador.ativo} />
 
@@ -101,6 +118,31 @@ export function FuncionarioRow({
                 variant="ghost"
                 size="icon"
                 aria-label={
+                  colaborador.emFerias
+                    ? `Voltar ${colaborador.nome} das férias`
+                    : `Marcar ${colaborador.nome} como de férias`
+                }
+                disabled={!colaborador.ativo}
+                onClick={onAlternarFerias}
+              >
+                <Palmtree
+                  className={cn('size-4', colaborador.emFerias && 'text-primary')}
+                />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {colaborador.emFerias ? 'Voltar das férias' : 'Marcar como de férias'}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={
                   colaborador.ativo
                     ? `Marcar ${colaborador.nome} como inativo`
                     : `Reativar ${colaborador.nome}`
@@ -119,6 +161,44 @@ export function FuncionarioRow({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+        <AlertDialog>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Marcar ${colaborador.nome} como visitante`}
+                  >
+                    <UserMinus className="size-4" />
+                  </Button>
+                </AlertDialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Não é funcionário (visitante)</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Marcar como visitante?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {colaborador.nome} sai da aba Funcionários e da conta de
+                &ldquo;não respondeu&rdquo; da Visão geral — usado quando foi
+                cadastrado por engano como funcionário, mas na verdade só
+                comeu naquele dia. O histórico de pedidos continua intacto, e
+                a pessoa continua disponível pra lançar um pedido avulso no
+                futuro.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={onMarcarVisitante}>
+                Marcar como visitante
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )

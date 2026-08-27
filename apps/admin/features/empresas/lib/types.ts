@@ -118,6 +118,8 @@ export interface ColaboradorEmpresaItem {
   ultimoPedidoEm: string | null
   /** "Marmita separada" — só relevante em empresas com fluxo_pedido='pesagem'. */
   separado: boolean
+  /** Continua ativo, só some da conta de "não respondeu" na Visão geral. */
+  emFerias: boolean
 }
 
 export interface EmpresaRespostaSemanal {

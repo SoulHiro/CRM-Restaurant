@@ -27,7 +27,9 @@ import {
 import {
   atualizarColaboradorAtivoSchema,
   atualizarColaboradoresSeparadosSchema,
+  atualizarColaboradorFeriasSchema,
   atualizarColaboradorSeparadoSchema,
+  atualizarColaboradorTipoSchema,
   atualizarConfiguracaoEmpresaSchema,
   atualizarPedidoSchema,
   atualizarPrecoPedidoSchema,
@@ -161,6 +163,50 @@ export const atualizarColaboradorSeparadoAction = authActionClient
       .returning({ empresa_id: colaborador_pedido.empresa_id })
 
     if (atualizado) updateTag(tagEmpresaPedidos(atualizado.empresa_id))
+  })
+
+/**
+ * "De férias" — continua ativo (não é a mesma coisa que inativar), só sai da
+ * conta de "não respondeu" na Visão geral enquanto durar. Invalida
+ * `tagEmpresa` também porque `getVisaoGeralOperacional` usa essa tag.
+ */
+export const atualizarColaboradorFeriasAction = authActionClient
+  .schema(atualizarColaboradorFeriasSchema)
+  .action(async ({ parsedInput }) => {
+    const [atualizado] = await db
+      .update(colaborador_pedido)
+      .set({ em_ferias: parsedInput.emFerias })
+      .where(eq(colaborador_pedido.id, parsedInput.colaboradorId))
+      .returning({ empresa_id: colaborador_pedido.empresa_id })
+
+    if (atualizado) {
+      updateTag(tagEmpresa(atualizado.empresa_id))
+      updateTag(tagEmpresaPedidos(atualizado.empresa_id))
+    }
+  })
+
+/**
+ * Corrige um cadastro feito como "funcionário" quando na prática era
+ * alguém avulso (visitante que só comeu naquele dia) — troca o `tipo` sem
+ * apagar nada: o pedido/histórico continua existindo, só some da aba
+ * Funcionários e das contas da Visão geral (as duas filtram
+ * `tipo = 'funcionario'`), porque `colaborador_pedido` nunca é deletado.
+ */
+export const atualizarColaboradorTipoAction = authActionClient
+  .schema(atualizarColaboradorTipoSchema)
+  .action(async ({ parsedInput }) => {
+    const [atualizado] = await db
+      .update(colaborador_pedido)
+      .set({ tipo: parsedInput.tipo })
+      .where(eq(colaborador_pedido.id, parsedInput.colaboradorId))
+      .returning({ empresa_id: colaborador_pedido.empresa_id })
+
+    revalidatePath('/empresas')
+    if (atualizado) {
+      updateTag(TAG_EMPRESAS_LISTA)
+      updateTag(tagEmpresa(atualizado.empresa_id))
+      updateTag(tagEmpresaPedidos(atualizado.empresa_id))
+    }
   })
 
 /**

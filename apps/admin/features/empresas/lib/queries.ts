@@ -639,6 +639,7 @@ export function getColaboradoresEmpresa(
           whatsapp: colaborador.whatsapp,
           ativo: colaborador.ativo,
           separado: colaborador.separado,
+          emFerias: colaborador.em_ferias,
           totalPedidos: info?.total ?? 0,
           ultimoPedidoEm: info?.ultimo ?? null,
         }
@@ -701,12 +702,16 @@ async function getVisaoGeralOperacionalSemCache(
   const diaAnteriorAoInicio = ultimosDias(2, diasAtuais[0]!)[0]!
   const diasAnteriores = ultimosDias(7, diaAnteriorAoInicio)
 
+  // De férias entra fora da conta inteira (não só de "não respondeu") — é o
+  // que também mantém a taxa de resposta da semana justa, sem tratar quem
+  // está viajando como se tivesse esquecido de pedir.
   const ativos = await db.query.colaborador_pedido.findMany({
     where: (c, { and: andOp, eq: eqOp }) =>
       andOp(
         eqOp(c.empresa_id, empresaId),
         eqOp(c.ativo, true),
-        eqOp(c.tipo, 'funcionario')
+        eqOp(c.tipo, 'funcionario'),
+        eqOp(c.em_ferias, false)
       ),
     columns: { id: true, nome: true },
   })
