@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "helvetica",
+        "createdAt": "2026-09-09T18:08:18.854Z",
+        "reason": "PDF de impressão térmica, mesma fonte usada em todos os outros documentos do sistema (comanda-pdf, resumo-dia-pdf, etc.)"
+      }
+    ]
+  }
+}
