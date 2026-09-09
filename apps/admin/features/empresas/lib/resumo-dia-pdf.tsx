@@ -1,6 +1,11 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
-import { formatCurrencyBRL, formatDateTimeSecondsBR } from '@/lib/formatters'
+import {
+  formatCurrencyBRL,
+  formatDateBR,
+  formatDateTimeSecondsBR,
+  formatDiaSemanaBR,
+} from '@/lib/formatters'
 import {
   CNPJ_RESTAURANTE,
   ENDERECO_RESTAURANTE,
@@ -13,7 +18,16 @@ const MM_TO_PT = 2.834645669
 export const LARGURA_BOBINA_MM = 80
 const LARGURA_BOBINA = LARGURA_BOBINA_MM * MM_TO_PT
 
-const PADDING_PAGINA = 14
+// A bobina é de 80mm, mas a área imprimível real dessa impressora térmica é
+// só 72mm — e a perda dos 8mm restantes é toda do lado direito, não
+// distribuída nas duas bordas (confirmado pela nota saindo cortada só ali).
+// Por isso o padding direito reserva esses 8mm inteiros, em vez de um
+// valor arbitrário maior que o esquerdo.
+const AREA_IMPRIMIVEL_MM = 72
+const MARGEM_NAO_IMPRIMIVEL_MM = LARGURA_BOBINA_MM - AREA_IMPRIMIVEL_MM
+const PADDING_ESQUERDA = 14
+const PADDING_DIREITA = PADDING_ESQUERDA + MARGEM_NAO_IMPRIMIVEL_MM * MM_TO_PT
+const PADDING_VERTICAL = 14
 
 // A nota nunca pode paginar — um resumo de fechamento é uma via só,
 // contínua; paginar arriscaria a impressora cortar o papel no meio (o
@@ -25,7 +39,7 @@ const PADDING_PAGINA = 14
 // medida física esperar: `imprimir()` no drawer usa esses mesmos números
 // pra avisar o QZ Tray do tamanho exato via `qz.configs.create(..., {
 // size, units: 'mm' })`, em vez de deixar o driver inferir do PDF.
-const ALTURA_CABECALHO_MM = 83
+const ALTURA_CABECALHO_MM = 87
 const ALTURA_POR_ITEM_MM = 11
 const ALTURA_RODAPE_MM = 40
 const ALTURA_MINIMA_MM = 110
@@ -37,7 +51,14 @@ export function calcularAlturaResumoDiaMM(quantidadeItens: number): number {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: PADDING_PAGINA, fontFamily: 'Helvetica', fontSize: 10 },
+  page: {
+    paddingTop: PADDING_VERTICAL,
+    paddingBottom: PADDING_VERTICAL,
+    paddingLeft: PADDING_ESQUERDA,
+    paddingRight: PADDING_DIREITA,
+    fontFamily: 'Helvetica',
+    fontSize: 10,
+  },
   quantidadesLinha: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -51,12 +72,6 @@ const styles = StyleSheet.create({
   quantidadeValor: { fontSize: 18, fontWeight: 700 },
   estabelecimento: { fontSize: 15, fontWeight: 700, marginTop: 8 },
   metaLinha: { fontSize: 8.5, color: '#333' },
-  cnpjIeLinha: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    fontSize: 8.5,
-    color: '#333',
-  },
   divisoria: {
     borderTop: '0.75pt solid #000',
     marginTop: 8,
@@ -76,10 +91,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  itemPrato: { fontSize: 8.5, fontWeight: 700, flex: 1, marginRight: 6 },
+  itemPrato: { fontSize: 8, fontWeight: 700, flex: 1, marginRight: 6 },
   itemPreco: { fontSize: 8.5, fontWeight: 700 },
-  itemTamanho: { fontSize: 8.5, color: '#333', marginTop: 1 },
-  itemNome: { fontSize: 8.5, marginTop: 1 },
+  itemTamanho: { fontSize: 8.5, fontWeight: 700, color: '#333', marginTop: 1 },
+  itemNome: { fontSize: 8, marginTop: 1 },
   totalLinha: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -115,6 +130,9 @@ export interface ItemResumoDia {
 }
 
 export interface ResumoDiaDados {
+  /** Dia de calendário ('YYYY-MM-DD') a que esse fechamento se refere — pode
+   * ser diferente do dia em que a nota está sendo impressa/reimpressa. */
+  data: string
   /** Quais linhas do cabeçalho aparecem e em que ordem — ver Configurações → Impressão. */
   camposCabecalho: CampoResumoKey[]
   /**
@@ -248,11 +266,15 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
           if (campo === 'cnpj_ie') {
             return (
               (CNPJ_RESTAURANTE || IE_RESTAURANTE) && (
-                <View key={campo} style={styles.cnpjIeLinha}>
-                  <Text>
-                    {CNPJ_RESTAURANTE ? `CNPJ: ${CNPJ_RESTAURANTE}` : ''}
-                  </Text>
-                  <Text>{IE_RESTAURANTE ? `I.E.: ${IE_RESTAURANTE}` : ''}</Text>
+                <View key={campo}>
+                  {CNPJ_RESTAURANTE && (
+                    <Text style={styles.metaLinha}>
+                      CNPJ: {CNPJ_RESTAURANTE}
+                    </Text>
+                  )}
+                  {IE_RESTAURANTE && (
+                    <Text style={styles.metaLinha}>I.E.: {IE_RESTAURANTE}</Text>
+                  )}
                 </View>
               )
             )
@@ -261,6 +283,9 @@ export function ResumoDiaPDF({ dados }: { dados: ResumoDiaDados }) {
         })}
 
         <View style={styles.divisoria}>
+          <Text style={styles.metaLinha}>
+            Pedido de {formatDiaSemanaBR(dados.data)} — {formatDateBR(dados.data)}
+          </Text>
           <Text style={styles.metaLinha}>
             Impresso em {formatDateTimeSecondsBR(dados.impressoEm)}
           </Text>

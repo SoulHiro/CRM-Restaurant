@@ -169,6 +169,7 @@ export function AdicionarPedidoManualDrawer({
               : (tamanho as 'P' | 'M' | 'G'),
           prato: prato.trim(),
           observacao: observacao.trim() || null,
+          data,
           respondidoEm: null,
         }
         const sucesso = await imprimir([comanda])

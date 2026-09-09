@@ -141,6 +141,22 @@ export type AtualizarConfiguracaoEmpresaInput = z.infer<
   typeof atualizarConfiguracaoEmpresaSchema
 >
 
+export const atualizarSlugEmpresaSchema = z.object({
+  empresaId: z.string().min(1),
+  slug: z
+    .string()
+    .min(3, 'Mínimo de 3 caracteres')
+    .max(60)
+    .regex(
+      /^[a-z0-9]+(-[a-z0-9]+)*$/,
+      'Só letras minúsculas, números e hífen — sem espaço ou acento'
+    ),
+})
+
+export type AtualizarSlugEmpresaInput = z.infer<
+  typeof atualizarSlugEmpresaSchema
+>
+
 export const atualizarColaboradoresSeparadosSchema = z.object({
   atualizacoes: z
     .array(
@@ -277,6 +293,12 @@ export const removerPedidoSchema = z.object({
 })
 
 export type RemoverPedidoInput = z.infer<typeof removerPedidoSchema>
+
+export const removerPedidosSchema = z.object({
+  pedidoIds: z.array(z.string().min(1)).min(1),
+})
+
+export type RemoverPedidosInput = z.infer<typeof removerPedidosSchema>
 
 export const marcarRecusaSchema = z.object({
   pedidoId: z.string().min(1),

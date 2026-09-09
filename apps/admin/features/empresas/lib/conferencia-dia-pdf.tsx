@@ -1,6 +1,11 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
-import { formatCurrencyBRL, formatDateTimeSecondsBR } from '@/lib/formatters'
+import {
+  formatCurrencyBRL,
+  formatDateBR,
+  formatDateTimeSecondsBR,
+  formatDiaSemanaBR,
+} from '@/lib/formatters'
 import {
   CNPJ_RESTAURANTE,
   ENDERECO_RESTAURANTE,
@@ -14,12 +19,19 @@ const MM_TO_PT = 2.834645669
 export const LARGURA_BOBINA_CONFERENCIA_MM = 80
 const LARGURA_BOBINA = LARGURA_BOBINA_CONFERENCIA_MM * MM_TO_PT
 
-const PADDING_PAGINA = 14
+// A bobina é de 80mm, mas a área imprimível real dessa impressora térmica é
+// só 72mm, com a perda toda concentrada do lado direito (ver
+// resumo-dia-pdf.tsx) — o padding direito reserva esses 8mm inteiros.
+const AREA_IMPRIMIVEL_MM = 72
+const MARGEM_NAO_IMPRIMIVEL_MM = LARGURA_BOBINA_CONFERENCIA_MM - AREA_IMPRIMIVEL_MM
+const PADDING_ESQUERDA = 14
+const PADDING_DIREITA = PADDING_ESQUERDA + MARGEM_NAO_IMPRIMIVEL_MM * MM_TO_PT
+const PADDING_VERTICAL = 14
 
 // Sem o bloco de contagem do topo (ver resumo-dia-pdf.tsx) o cabeçalho é bem
 // mais baixo — mesma lógica de nunca ter uma altura de página fixa, pra não
 // arriscar a guilhotina da impressora cortar uma conferência grande no meio.
-const ALTURA_CABECALHO_MM = 45
+const ALTURA_CABECALHO_MM = 49
 const ALTURA_POR_ITEM_MM = 11
 const ALTURA_DIVISOR_TURNO_MM = 6
 const ALTURA_RODAPE_MM = 20
@@ -38,15 +50,16 @@ export function calcularAlturaConferenciaMM(
 }
 
 const styles = StyleSheet.create({
-  page: { padding: PADDING_PAGINA, fontFamily: 'Helvetica', fontSize: 10 },
+  page: {
+    paddingTop: PADDING_VERTICAL,
+    paddingBottom: PADDING_VERTICAL,
+    paddingLeft: PADDING_ESQUERDA,
+    paddingRight: PADDING_DIREITA,
+    fontFamily: 'Helvetica',
+    fontSize: 10,
+  },
   estabelecimento: { fontSize: 15, fontWeight: 700 },
   metaLinha: { fontSize: 8.5, color: '#333' },
-  cnpjIeLinha: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    fontSize: 8.5,
-    color: '#333',
-  },
   divisoria: {
     borderTop: '0.75pt solid #000',
     marginTop: 8,
@@ -71,10 +84,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  itemPrato: { fontSize: 8.5, fontWeight: 700, flex: 1, marginRight: 6 },
+  itemPrato: { fontSize: 8, fontWeight: 700, flex: 1, marginRight: 6 },
   itemPreco: { fontSize: 8.5, fontWeight: 700 },
-  itemTamanho: { fontSize: 8.5, color: '#333', marginTop: 1 },
-  itemNome: { fontSize: 8.5, marginTop: 1 },
+  itemTamanho: { fontSize: 8.5, fontWeight: 700, color: '#333', marginTop: 1 },
+  itemNome: { fontSize: 8, marginTop: 1 },
   totalPagarLinha: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -96,6 +109,9 @@ export interface ItemConferenciaDia {
 }
 
 export interface ConferenciaDiaDados {
+  /** Dia de calendário ('YYYY-MM-DD') a que esses pedidos se referem — pode
+   * ser diferente do dia em que a conferência está sendo impressa. */
+  data: string
   camposCabecalho: CampoResumoKey[]
   empresaClienteNome: string
   impressoEm: string
@@ -158,11 +174,15 @@ export function ConferenciaDiaPDF({ dados }: { dados: ConferenciaDiaDados }) {
           if (campo === 'cnpj_ie') {
             return (
               (CNPJ_RESTAURANTE || IE_RESTAURANTE) && (
-                <View key={campo} style={styles.cnpjIeLinha}>
-                  <Text>
-                    {CNPJ_RESTAURANTE ? `CNPJ: ${CNPJ_RESTAURANTE}` : ''}
-                  </Text>
-                  <Text>{IE_RESTAURANTE ? `I.E.: ${IE_RESTAURANTE}` : ''}</Text>
+                <View key={campo}>
+                  {CNPJ_RESTAURANTE && (
+                    <Text style={styles.metaLinha}>
+                      CNPJ: {CNPJ_RESTAURANTE}
+                    </Text>
+                  )}
+                  {IE_RESTAURANTE && (
+                    <Text style={styles.metaLinha}>I.E.: {IE_RESTAURANTE}</Text>
+                  )}
                 </View>
               )
             )
@@ -171,6 +191,9 @@ export function ConferenciaDiaPDF({ dados }: { dados: ConferenciaDiaDados }) {
         })}
 
         <View style={styles.divisoria}>
+          <Text style={styles.metaLinha}>
+            Pedido de {formatDiaSemanaBR(dados.data)} — {formatDateBR(dados.data)}
+          </Text>
           <Text style={styles.metaLinha}>
             Conferência — {formatDateTimeSecondsBR(dados.impressoEm)}
           </Text>

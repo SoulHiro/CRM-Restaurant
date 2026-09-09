@@ -40,6 +40,10 @@ import {
   atualizarPrecoPedidoAction,
   removerPedidoAction,
 } from '../../../../lib/actions'
+import {
+  STATUS_IMPRESSAO_LABEL,
+  statusImpressao,
+} from '../../../../lib/pedidos-helpers'
 import type { PedidoDoDiaItem, TurnoRefeicao } from '../../../../lib/types'
 
 const TURNO_LABEL: Record<TurnoRefeicao, string> = {
@@ -53,28 +57,6 @@ const TURNO_LABEL: Record<TurnoRefeicao, string> = {
 
 const SEM_TURNO = '__sem_turno__'
 const SEM_TAMANHO = '__sem_tamanho__'
-
-type StatusImpressao = 'novo' | 'atualizado' | 'impresso'
-
-/**
- * Nunca gravado — sempre comparado na hora: `impresso_em` só avança quando
- * a impressão de verdade termina (`marcarPedidosImpressosAction`);
- * `importado_em` avança em toda reimportação que mude a linha. Se o pedido
- * mudou depois da última impressão, precisa reimprimir.
- */
-function statusImpressao(pedido: PedidoDoDiaItem): StatusImpressao {
-  if (!pedido.impressoEm) return 'novo'
-  if (new Date(pedido.importadoEm) > new Date(pedido.impressoEm)) {
-    return 'atualizado'
-  }
-  return 'impresso'
-}
-
-const STATUS_IMPRESSAO_LABEL: Record<StatusImpressao, string> = {
-  novo: 'Novo',
-  atualizado: 'Atualizado',
-  impresso: 'Impresso',
-}
 
 export function PedidoDiaRow({
   pedido,

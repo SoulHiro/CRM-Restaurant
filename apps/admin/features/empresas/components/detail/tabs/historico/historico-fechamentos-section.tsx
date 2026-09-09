@@ -41,6 +41,7 @@ import {
   DateRangeFilter,
   type DateRangeValue,
 } from '../../../shared/date-range-filter'
+import { FechamentoPeriodoDrawer } from './fechamento-periodo-drawer'
 
 export function HistoricoFechamentosSection({
   empresaId,
@@ -122,6 +123,7 @@ export function HistoricoFechamentosSection({
       )
 
       const dados: ResumoDiaDados = {
+        data: fechamentoCompleto.data,
         camposCabecalho: resultadoLayout?.data?.campos ?? CAMPOS_RESUMO_PADRAO,
         mostrarQuantidades: resumoMostraQuantidades,
         precoModo,
@@ -152,7 +154,19 @@ export function HistoricoFechamentosSection({
     <Card className="border-0">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
         <CardTitle className="text-base">Histórico de fechamentos</CardTitle>
-        <DateRangeFilter value={intervalo} onChange={setIntervalo} />
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangeFilter value={intervalo} onChange={setIntervalo} />
+          <FechamentoPeriodoDrawer
+            empresaNome={empresaNome}
+            fechamentosNoPeriodo={fechamentos ?? []}
+            intervalo={intervalo}
+            resumoMostraQuantidades={resumoMostraQuantidades}
+            precoModo={precoModo}
+            pedeCafe={pedeCafe}
+            pedeLanche={pedeLanche}
+            pedeSuco={pedeSuco}
+          />
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {!fechamentos ? (

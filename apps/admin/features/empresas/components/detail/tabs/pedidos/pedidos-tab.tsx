@@ -1,17 +1,31 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useAction } from 'next-safe-action/hooks'
 import {
   ClipboardCheck,
   ListFilter,
   Printer,
+  PrinterCheck,
   Scale,
   Search,
+  Trash2,
   UtensilsCrossed,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@repo/ui/components/alert-dialog'
 import { Button } from '@repo/ui/components/button'
 import { Checkbox } from '@repo/ui/components/checkbox'
 import {
@@ -48,7 +62,9 @@ import {
   marcarPedidosImpressosAction,
   obterImpressoraComandaAction,
   obterPrecosEmpresaAction,
+  removerPedidosAction,
 } from '../../../../lib/actions'
+import { statusImpressao } from '../../../../lib/pedidos-helpers'
 import {
   agruparParaPesagem,
   formatarEndereco,
@@ -114,7 +130,8 @@ function precoPrevistoPedido(
 
 function paraComanda(
   pedido: PedidoDoDiaItem,
-  empresaNome: string
+  empresaNome: string,
+  data: string
 ): ComandaEntrada {
   return {
     nome: pedido.nome,
@@ -123,6 +140,7 @@ function paraComanda(
     tamanho: pedido.tamanho,
     prato: pedido.prato,
     observacao: pedido.observacao,
+    data,
     respondidoEm: pedido.respondidoEm,
   }
 }
@@ -150,7 +168,24 @@ export function PedidosTab({
 }) {
   const usaPesagem = fluxoPedido === 'pesagem'
 
-  const [data, setData] = useState(hojeISO())
+  // Guardada na URL (`?dia=`), não em `useState` — sobrevive a qualquer
+  // refresh de rota disparado por `revalidatePath` nas Server Actions desta
+  // aba (importar planilha, adicionar pedido manual, finalizar dia), que
+  // senão reiniciava esse client component e voltava a data pra hoje bem na
+  // hora de finalizar/adicionar pedido pra outro dia.
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const data = searchParams.get('dia') ?? hojeISO()
+  const setData = useCallback(
+    (novaData: string) => {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('dia', novaData)
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    },
+    [router, pathname, searchParams]
+  )
+
   const [pedidos, setPedidos] = useState<PedidoDoDiaItem[] | null>(null)
   const [colaboradores, setColaboradores] = useState<ColaboradorEmpresaItem[]>(
     []
@@ -166,6 +201,7 @@ export function PedidosTab({
   const [selecaoIndividual, setSelecaoIndividual] = useState<Set<string>>(
     new Set()
   )
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const { imprimir, imprimindo } = useImprimirComandas()
   const { imprimirPesagem, imprimindo: imprimindoPesagem } =
     useImprimirPesagem()
@@ -201,6 +237,19 @@ export function PedidosTab({
     if (usaPesagem) buscarColaboradores({ empresaId })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [empresaId, data, usaPesagem])
+
+  // Poda a seleção sempre que a lista muda (troca de dia, exclusão,
+  // reimportação) — sem isso, um id selecionado que saiu da lista (ou é de
+  // outro dia) ficaria "selecionado" escondido, inflando a contagem do botão
+  // de excluir em lote sem nenhuma linha correspondente na tela.
+  useEffect(() => {
+    if (!pedidos) return
+    const idsValidos = new Set(pedidos.map((p) => p.id))
+    setSelecionados((atual) => {
+      const novo = new Set([...atual].filter((id) => idsValidos.has(id)))
+      return novo.size === atual.size ? atual : novo
+    })
+  }, [pedidos])
 
   const colaboradoresSeparados = useMemo(
     () => new Set(colaboradores.filter((c) => c.separado).map((c) => c.id)),
@@ -257,13 +306,61 @@ export function PedidosTab({
     })
   }, [pedidos, busca, turnoFiltro, recusaFiltro])
 
+  function alternarSelecao(pedidoId: string) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual)
+      if (novo.has(pedidoId)) novo.delete(pedidoId)
+      else novo.add(pedidoId)
+      return novo
+    })
+  }
+
+  const todosFiltradosSelecionados =
+    pedidosFiltrados.length > 0 &&
+    pedidosFiltrados.every((p) => selecionados.has(p.id))
+
+  /**
+   * "Selecionar todos" só enxerga o que o filtro atual (busca/turno/recusa)
+   * está mostrando — nunca seleciona nem desmarca um pedido que não está na
+   * tela agora, mesmo que já estivesse selecionado de antes.
+   */
+  function alternarSelecaoTodosFiltrados() {
+    setSelecionados((atual) => {
+      const novo = new Set(atual)
+      const idsFiltrados = pedidosFiltrados.map((p) => p.id)
+      if (todosFiltradosSelecionados) {
+        idsFiltrados.forEach((id) => novo.delete(id))
+      } else {
+        idsFiltrados.forEach((id) => novo.add(id))
+      }
+      return novo
+    })
+  }
+
+  const pedidosSelecionados = (pedidos ?? []).filter((p) =>
+    selecionados.has(p.id)
+  )
+
+  const { execute: removerSelecionados, isExecuting: removendoSelecionados } =
+    useAction(removerPedidosAction, {
+      onSuccess: () => {
+        toast.success(
+          `${pedidosSelecionados.length} ${pedidosSelecionados.length === 1 ? 'pedido excluído' : 'pedidos excluídos'}`
+        )
+        setSelecionados(new Set())
+        execute({ empresaId, data })
+      },
+      onError: () =>
+        toast.error('Não foi possível excluir os pedidos selecionados'),
+    })
+
   const { executeAsync: marcarImpressos } = useAction(
     marcarPedidosImpressosAction
   )
 
   async function imprimirEMarcar(pedidosParaImprimir: PedidoDoDiaItem[]) {
     const sucesso = await imprimir(
-      pedidosParaImprimir.map((p) => paraComanda(p, empresaNome))
+      pedidosParaImprimir.map((p) => paraComanda(p, empresaNome, data))
     )
     if (sucesso) {
       await marcarImpressos({
@@ -357,6 +454,11 @@ export function PedidosTab({
     )
   )
 
+  /** Quem ainda não saiu impresso com o conteúdo atual — "Novo" ou "Atualizado". */
+  const novosOuAtualizados = comImprimivel.filter(
+    (p) => statusImpressao(p) !== 'impresso'
+  )
+
   /**
    * "Imprimir conferência" — mesmo visual da nota de fechamento, sem a
    * contagem do topo, pra revisar nome/prato antes de finalizar o dia.
@@ -413,6 +515,7 @@ export function PedidosTab({
       ])
 
       const dados = {
+        data,
         camposCabecalho,
         empresaClienteNome: empresaNome,
         impressoEm: new Date().toISOString(),
@@ -546,6 +649,15 @@ export function PedidosTab({
         >
           <Printer className="size-4" />
           Imprimir todos ({comImprimivel.length})
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={imprimindo || novosOuAtualizados.length === 0}
+          onClick={() => imprimirEMarcar(novosOuAtualizados)}
+        >
+          <PrinterCheck className="size-4" />
+          Imprimir novos/atualizados ({novosOuAtualizados.length})
         </Button>
         <Button
           variant="outline"
@@ -698,13 +810,77 @@ export function PedidosTab({
             />
           ) : (
             <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Checkbox
+                    checked={todosFiltradosSelecionados}
+                    onCheckedChange={alternarSelecaoTodosFiltrados}
+                  />
+                  Selecionar todos ({pedidosFiltrados.length})
+                </label>
+
+                {selecionados.size > 1 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={removendoSelecionados}
+                      >
+                        <Trash2 className="size-4" />
+                        Excluir selecionados ({selecionados.size})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Excluir {selecionados.size} pedidos?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Os pedidos de{' '}
+                          {pedidosSelecionados
+                            .slice(0, 10)
+                            .map((p) => p.nome)
+                            .join(', ')}
+                          {pedidosSelecionados.length > 10 &&
+                            ` e mais ${pedidosSelecionados.length - 10}`}{' '}
+                          serão removidos. Os colaboradores continuam
+                          cadastrados — só os pedidos somem. Essa ação não
+                          pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() =>
+                            removerSelecionados({
+                              pedidoIds: [...selecionados],
+                            })
+                          }
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+
               {pedidosFiltrados.map((pedido) => (
-                <PedidoDiaRow
-                  key={pedido.id}
-                  pedido={pedido}
-                  onImprimir={() => imprimirEMarcar([pedido])}
-                  onRemovido={() => execute({ empresaId, data })}
-                />
+                <div key={pedido.id} className="flex items-center gap-3">
+                  <Checkbox
+                    checked={selecionados.has(pedido.id)}
+                    onCheckedChange={() => alternarSelecao(pedido.id)}
+                    aria-label={`Selecionar pedido de ${pedido.nome}`}
+                  />
+                  <div className="flex-1">
+                    <PedidoDiaRow
+                      pedido={pedido}
+                      onImprimir={() => imprimirEMarcar([pedido])}
+                      onRemovido={() => execute({ empresaId, data })}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
           )}

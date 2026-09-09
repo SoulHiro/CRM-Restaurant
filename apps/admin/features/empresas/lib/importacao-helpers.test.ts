@@ -282,6 +282,14 @@ describe('deduparPorCarimbo', () => {
     ]
     expect(deduparPorCarimbo(linhas)).toHaveLength(3)
   })
+
+  it('mantém almoço e jantar da mesma pessoa no mesmo dia, sem mesclar', () => {
+    const linhas = [
+      pedido({ nome: 'João', data: '2026-08-10', turno: 'almoco' }),
+      pedido({ nome: 'João', data: '2026-08-10', turno: 'jantar' }),
+    ]
+    expect(deduparPorCarimbo(linhas)).toHaveLength(2)
+  })
 })
 
 describe('ehRecusa', () => {

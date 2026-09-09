@@ -1,6 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
-import { formatDateTimeBR } from '@/lib/formatters'
+import { formatDateBR, formatDateTimeBR, formatDiaSemanaBR } from '@/lib/formatters'
 import type { CampoComandaKey } from '@/features/configuracoes/lib/types'
 import type { TurnoRefeicao } from './types'
 
@@ -31,7 +31,8 @@ const TAMANHO_LABEL: Record<'P' | 'M' | 'G', string> = {
 
 const styles = StyleSheet.create({
   page: { padding: 14, fontFamily: 'Helvetica' },
-  nome: { fontSize: 20, fontWeight: 700, marginBottom: 8 },
+  nome: { fontSize: 20, fontWeight: 700, marginBottom: 2 },
+  dataPedido: { fontSize: 9, color: '#555', marginBottom: 8 },
   turno: {
     fontSize: 14,
     fontWeight: 700,
@@ -58,6 +59,10 @@ export interface ComandaDados {
   tamanho: 'P' | 'M' | 'G' | null
   prato: string | null
   observacao: string | null
+  /** Dia de calendário ('YYYY-MM-DD') a que esse pedido se refere — pode ser
+   * diferente do dia em que a comanda está sendo impressa (ex: imprimir
+   * pedidos de amanhã com antecedência). */
+  data: string
   /** ISO — quando o funcionário respondeu no formulário. */
   respondidoEm: string | null
   /** ISO — quando esta comanda foi gerada, calculado na hora da impressão. */
@@ -134,6 +139,9 @@ export function ComandaPDF({
         style={styles.page}
       >
         <Text style={styles.nome}>{comanda.nome}</Text>
+        <Text style={styles.dataPedido}>
+          Pedido de {formatDiaSemanaBR(comanda.data)} — {formatDateBR(comanda.data)}
+        </Text>
         {campos.map((campo) => renderCampo(campo, comanda))}
       </Page>
     </Document>

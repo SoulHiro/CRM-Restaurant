@@ -240,9 +240,13 @@ export function linhasParaDias(
 }
 
 /**
- * Entre duas linhas da mesma pessoa no mesmo dia (reenvio da semana), fica a
- * de carimbo mais recente. Sem carimbo, a última do arquivo vence — a ordem
- * de exportação do Google Forms já é cronológica.
+ * Entre duas linhas da mesma pessoa, no mesmo dia e no mesmo turno (reenvio
+ * da semana), fica a de carimbo mais recente. Sem carimbo, a última do
+ * arquivo vence — a ordem de exportação do Google Forms já é cronológica. A
+ * chave inclui `turno` de propósito: a mesma pessoa pode responder almoço E
+ * jantar pro mesmo dia (mesma regra da constraint única em
+ * `pedido_dia_importado`) — sem o turno na chave, a segunda resposta
+ * apagaria a primeira em vez de conviver com ela.
  */
 export function deduparPorCarimbo(
   linhas: readonly PedidoDiaBruto[]
@@ -250,7 +254,7 @@ export function deduparPorCarimbo(
   const porChave = new Map<string, PedidoDiaBruto>()
 
   linhas.forEach((linha, indice) => {
-    const chave = `${linha.nome}__${linha.data}`
+    const chave = `${linha.nome}__${linha.data}__${linha.turno ?? ''}`
     const atual = porChave.get(chave)
     if (!atual) {
       porChave.set(chave, linha)

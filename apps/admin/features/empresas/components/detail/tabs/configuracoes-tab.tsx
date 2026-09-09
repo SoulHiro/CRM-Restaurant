@@ -22,7 +22,11 @@ import {
   SelectValue,
 } from '@repo/ui/components/select'
 
-import { atualizarConfiguracaoEmpresaAction } from '../../../lib/actions'
+import { slugify, urlFormularioPublico } from '@/lib/urls'
+import {
+  atualizarConfiguracaoEmpresaAction,
+  atualizarSlugEmpresaAction,
+} from '../../../lib/actions'
 import type {
   EmpresaFluxoPedido,
   EmpresaListItem,
@@ -30,6 +34,16 @@ import type {
 } from '../../../lib/types'
 
 export function ConfiguracoesTab({ empresa }: { empresa: EmpresaListItem }) {
+  const [slug, setSlug] = useState(empresa.slug ?? slugify(empresa.nome))
+  const { execute: salvarSlug, isExecuting: salvandoSlug } = useAction(
+    atualizarSlugEmpresaAction,
+    {
+      onSuccess: () => toast.success('Link do formulário salvo'),
+      onError: ({ error }) =>
+        toast.error(error.serverError ?? 'Não foi possível salvar o link'),
+    }
+  )
+
   const [fluxoPedido, setFluxoPedido] = useState<EmpresaFluxoPedido>(
     empresa.fluxoPedido
   )
@@ -132,6 +146,37 @@ export function ConfiguracoesTab({ empresa }: { empresa: EmpresaListItem }) {
                 </SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0">
+        <CardHeader>
+          <CardTitle className="text-base">Link do formulário</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <Label className="text-sm">Endereço público</Label>
+          <p className="text-xs text-muted-foreground">
+            Onde os funcionários dessa empresa respondem o cardápio da
+            semana. Sem espaço ou acento — só letras minúsculas, números e
+            hífen.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {urlFormularioPublico('')}
+            </span>
+            <Input
+              value={slug}
+              onChange={(e) => setSlug(slugify(e.target.value))}
+              className="w-56"
+            />
+            <Button
+              size="sm"
+              disabled={salvandoSlug || slug.length < 3}
+              onClick={() => salvarSlug({ empresaId: empresa.id, slug })}
+            >
+              {salvandoSlug ? 'Salvando...' : 'Salvar'}
+            </Button>
           </div>
         </CardContent>
       </Card>

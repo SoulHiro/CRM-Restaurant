@@ -122,3 +122,30 @@ export function dataISO(instante: Date): string {
 export function hojeISO(): string {
   return dataISO(new Date())
 }
+
+const DIAS_SEMANA_LABEL = [
+  'Domingo',
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado',
+] as const
+
+/**
+ * Dia da semana de um dia de calendário ('2026-11-08'). Dia da semana é uma
+ * propriedade pura do calendário Gregoriano — não depende de fuso horário,
+ * então constrói a data via `Date.UTC` a partir dos componentes Y/M/D (sem
+ * interpretar a string como instante), diferente de `formatDateBR` que só
+ * evita `new Date()` pra não mudar o dia exibido.
+ */
+export function formatDiaSemanaBR(data: string): string {
+  const dia = DIA_DE_CALENDARIO.exec(data)
+  if (!dia) return ''
+  const [, ano, mes, diaDoMes] = dia
+  const diaSemana = new Date(
+    Date.UTC(Number(ano), Number(mes) - 1, Number(diaDoMes))
+  ).getUTCDay()
+  return DIAS_SEMANA_LABEL[diaSemana]!
+}

@@ -27,6 +27,8 @@ export interface EmpresaListItem {
   email: string
   responsavelNome: string
   responsavelTelefone: string
+  /** Endereço curto pro formulário público de pedidos (/cardapio/{slug}) — nulo até ser configurado. */
+  slug: string | null
   cadastradaEm: string
   funcionariosRespondidos: number
   funcionariosTotal: number

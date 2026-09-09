@@ -90,6 +90,7 @@ async function mapEmpresa(
     email: row.email_contato ?? '',
     responsavelNome: row.responsavel_nome ?? '',
     responsavelTelefone: row.telefone_contato ?? '',
+    slug: row.slug,
     cadastradaEm: dataISO(row.created_at),
     funcionariosTotal: total,
     funcionariosRespondidos: respondidos,

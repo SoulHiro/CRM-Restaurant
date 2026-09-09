@@ -6,6 +6,7 @@ import { createId } from '@paralleldrive/cuid2'
 import { db } from '@/lib/db'
 import { executarLote, type Statement } from '@/lib/db-batch'
 import { ActionError, actionClient, authActionClient } from '@/lib/safe-action'
+import { proximoSlugDisponivel, slugify } from '@/lib/urls'
 import { onlyDigits } from '@repo/ui/lib/masks'
 import {
   colaborador_pedido,
@@ -15,7 +16,7 @@ import {
   fechamento_dia_item,
   pedido_dia_importado,
 } from '@repo/db'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { normalizar } from './importacao-helpers'
 import {
   TAG_EMPRESAS_LISTA,
@@ -33,6 +34,7 @@ import {
   atualizarConfiguracaoEmpresaSchema,
   atualizarPedidoSchema,
   atualizarPrecoPedidoSchema,
+  atualizarSlugEmpresaSchema,
   createEmpresaSchema,
   createPausaSchema,
   deletePausaSchema,
@@ -51,6 +53,7 @@ import {
   obterPrecosEmpresaSchema,
   reabrirDiaSchema,
   removerPedidoSchema,
+  removerPedidosSchema,
   salvarPrecosEmpresaSchema,
 } from './schemas'
 import {
@@ -77,11 +80,27 @@ export const createEmpresaAction = authActionClient
       throw new ActionError('Já existe uma empresa cadastrada com esse CNPJ.')
     }
 
+    // Link do formulário público já nasce pronto — ninguém deveria precisar
+    // lembrar de configurar isso manualmente pra empresa aparecer pros
+    // funcionários dela responderem o cardápio. `slugify` sozinho pode
+    // colidir entre duas empresas de nome parecido, por isso confere contra
+    // todos os slugs já usados antes de gravar.
+    const slugsExistentes = await db.query.empresa.findMany({
+      columns: { slug: true },
+      where: (e, { isNotNull }) => isNotNull(e.slug),
+    })
+    const slugBase = slugify(parsedInput.nome.trim()) || 'empresa'
+    const slug = proximoSlugDisponivel(
+      slugBase,
+      slugsExistentes.map((e) => e.slug!)
+    )
+
     const [criada] = await db
       .insert(empresa)
       .values({
         nome: parsedInput.nome.trim(),
         cnpj: onlyDigits(parsedInput.cnpj),
+        slug,
         responsavel_nome: parsedInput.responsavelNome?.trim() || null,
         email_contato: parsedInput.emailContato?.trim() || null,
         telefone_contato: parsedInput.telefoneContato?.trim() || null,
@@ -124,6 +143,34 @@ export const atualizarConfiguracaoEmpresaAction = authActionClient
         pede_suco: parsedInput.pedeSuco,
         cardapio_qtd_alternativas: parsedInput.cardapioQtdAlternativas,
       })
+      .where(eq(empresa.id, parsedInput.empresaId))
+
+    revalidatePath('/empresas')
+    updateTag(TAG_EMPRESAS_LISTA)
+    updateTag(tagEmpresa(parsedInput.empresaId))
+  })
+
+/**
+ * Endereço do formulário público de pedidos (apps/web, `/cardapio/{slug}`).
+ * Confere unicidade antes de gravar (em vez de deixar a constraint do banco
+ * estourar) só pra devolver uma mensagem legível no toast, ver
+ * `docs/rules` sobre `ActionError`.
+ */
+export const atualizarSlugEmpresaAction = authActionClient
+  .schema(atualizarSlugEmpresaSchema)
+  .action(async ({ parsedInput }) => {
+    const emUso = await db.query.empresa.findFirst({
+      where: (e, { and: andOp, eq: eqOp, ne }) =>
+        andOp(eqOp(e.slug, parsedInput.slug), ne(e.id, parsedInput.empresaId)),
+      columns: { id: true },
+    })
+    if (emUso) {
+      throw new ActionError('Esse link já está em uso por outra empresa.')
+    }
+
+    await db
+      .update(empresa)
+      .set({ slug: parsedInput.slug })
       .where(eq(empresa.id, parsedInput.empresaId))
 
     revalidatePath('/empresas')
@@ -410,6 +457,14 @@ export const importarPedidosAction = authActionClient
                 : null,
               importado_em: new Date(),
             },
+            // Só aplica a atualização (e só então avança `importado_em`, que
+            // vira "Atualizado" na tela) quando a resposta que chega é
+            // realmente mais nova que a já gravada. Reimportar a mesma
+            // planilha sem nada de novo não pode derrubar um pedido já
+            // impresso de volta pra "Atualizado" — sem carimbo dos dois lados
+            // (ex: linha sem coluna de carimbo) continua aplicando, como
+            // sempre foi.
+            setWhere: sql`${pedido_dia_importado.respondido_em} is null or (excluded.respondido_em is not null and excluded.respondido_em > ${pedido_dia_importado.respondido_em})`,
           })
       )
     }
@@ -680,6 +735,20 @@ export const removerPedidoAction = authActionClient
     if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
   })
 
+export const removerPedidosAction = authActionClient
+  .schema(removerPedidosSchema)
+  .action(async ({ parsedInput }) => {
+    const empresaId = await empresaDoPedido(parsedInput.pedidoIds[0]!)
+
+    await db
+      .delete(pedido_dia_importado)
+      .where(inArray(pedido_dia_importado.id, parsedInput.pedidoIds))
+
+    revalidatePath('/empresas')
+    updateTag(TAG_EMPRESAS_LISTA)
+    if (empresaId) updateTag(tagEmpresaPedidos(empresaId))
+  })
+
 export const marcarRecusaAction = authActionClient
   .schema(marcarRecusaSchema)
   .action(async ({ parsedInput }) => {
@@ -712,6 +781,10 @@ export const atualizarPedidoAction = authActionClient
         turno: parsedInput.turno,
         tamanho: parsedInput.tamanho,
         observacao: parsedInput.observacao?.trim() || null,
+        // Edição manual sempre conta como mudança real — diferente da
+        // reimportação de planilha, aqui não tem carimbo pra comparar, e a
+        // pessoa que editou já está olhando pro pedido de propósito.
+        importado_em: new Date(),
       })
       .where(eq(pedido_dia_importado.id, parsedInput.pedidoId))
 

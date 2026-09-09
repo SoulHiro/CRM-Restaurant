@@ -39,16 +39,16 @@ export function EmpresaTabs({
   return (
     <Tabs defaultValue="visao-geral">
       <TabsList className="flex w-full justify-start bg-sidebar">
-        <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
-        <TabsTrigger value="funcionarios">Funcionários</TabsTrigger>
-        <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
-        {vePrecos && <TabsTrigger value="valores">Valores</TabsTrigger>}
-        <TabsTrigger value="historico">Histórico</TabsTrigger>
-        <TabsTrigger value="pausas">Pausas</TabsTrigger>
-        {vePrecos && <TabsTrigger value="faturamento">Faturamento</TabsTrigger>}
-        <TabsTrigger value="dados">Dados</TabsTrigger>
+        <TabsTrigger value="visao-geral" className="flex-1">Visão geral</TabsTrigger>
+        <TabsTrigger value="funcionarios" className="flex-1">Funcionários</TabsTrigger>
+        <TabsTrigger value="pedidos" className="flex-1">Pedidos</TabsTrigger>
+        {vePrecos && <TabsTrigger value="valores" className="flex-1">Valores</TabsTrigger>}
+        <TabsTrigger value="historico" className="flex-1">Histórico</TabsTrigger>
+        <TabsTrigger value="pausas" className="flex-1">Pausas</TabsTrigger>
+        {vePrecos && <TabsTrigger value="faturamento" className="flex-1">Faturamento</TabsTrigger>}
+        <TabsTrigger value="dados" className="flex-1">Dados</TabsTrigger>
         {vePrecos && (
-          <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
+          <TabsTrigger value="configuracoes" className="flex-1">Configurações</TabsTrigger>
         )}
       </TabsList>
 

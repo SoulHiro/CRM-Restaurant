@@ -1,8 +1,14 @@
+import Link from 'next/link'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
+import { ArrowLeft } from 'lucide-react'
+
+import { Button } from '@repo/ui/components/button'
 
 import { auth } from '@/lib/auth'
-import { EmpresaHeader } from '@/features/empresas/components/detail/empresa-header'
+import { SetHeaderContent } from '@/components/header-slot'
+import { EmpresaHeaderActions } from '@/features/empresas/components/detail/empresa-header-actions'
+import { EmpresaHeaderCenter } from '@/features/empresas/components/detail/empresa-header-center'
 import { EmpresaTabs } from '@/features/empresas/components/detail/empresa-tabs'
 import {
   getEmpresaById,
@@ -38,7 +44,17 @@ export default async function EmpresaDetailPage({
 
   return (
     <div className="flex flex-col gap-8 p-6">
-      <EmpresaHeader empresa={empresa} status={detail.status} />
+      <SetHeaderContent
+        left={
+          <Button variant="ghost" size="icon" aria-label="Voltar" asChild>
+            <Link href="/empresas">
+              <ArrowLeft className="size-4" />
+            </Link>
+          </Button>
+        }
+        center={<EmpresaHeaderCenter empresa={empresa} />}
+        right={<EmpresaHeaderActions empresa={empresa} />}
+      />
       <EmpresaTabs
         empresa={empresa}
         detail={detail}

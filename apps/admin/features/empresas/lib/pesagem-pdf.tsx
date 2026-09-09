@@ -1,6 +1,10 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
-import { formatDateBR, formatDateTimeSecondsBR } from '@/lib/formatters'
+import {
+  formatDateBR,
+  formatDateTimeSecondsBR,
+  formatDiaSemanaBR,
+} from '@/lib/formatters'
 import type { ContagemPrato, QuantidadeItemPesagem } from './pesagem-helpers'
 
 const styles = StyleSheet.create({
@@ -17,6 +21,7 @@ const styles = StyleSheet.create({
   metaBloco: { flexDirection: 'column' },
   metaLabel: { fontSize: 8.5, color: '#666', textTransform: 'uppercase' },
   metaValor: { fontSize: 12, fontWeight: 700 },
+  metaDiaSemana: { fontSize: 9, color: '#666', marginTop: 1 },
   pesagemLinha: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -85,6 +90,7 @@ export function PesagemPDF({ dados }: { dados: PesagemDadosPapel }) {
           <View style={styles.metaBloco}>
             <Text style={styles.metaLabel}>Data</Text>
             <Text style={styles.metaValor}>{formatDateBR(dados.data)}</Text>
+            <Text style={styles.metaDiaSemana}>{formatDiaSemanaBR(dados.data)}</Text>
           </View>
           <View style={styles.metaBloco}>
             <Text style={styles.metaLabel}>Endereço</Text>

@@ -5,6 +5,7 @@ import {
   formatDateBR,
   formatDateTimeBR,
   formatDateTimeSecondsBR,
+  formatDiaSemanaBR,
   formatShortDateBR,
 } from './formatters'
 
@@ -77,5 +78,17 @@ describe('formatDateTimeSecondsBR', () => {
     expect(formatDateTimeSecondsBR('2026-08-10T14:32:07.000Z')).toBe(
       '10/08/2026 11:32:07'
     )
+  })
+})
+
+describe('formatDiaSemanaBR', () => {
+  it('calcula o dia da semana de um dia de calendário, sem depender de fuso', () => {
+    expect(formatDiaSemanaBR('2026-11-08')).toBe('Domingo')
+    expect(formatDiaSemanaBR('2026-01-01')).toBe('Quinta-feira')
+    expect(formatDiaSemanaBR('2026-03-01')).toBe('Domingo')
+  })
+
+  it('preserva 29 de fevereiro em ano bissexto', () => {
+    expect(formatDiaSemanaBR('2028-02-29')).toBe('Terça-feira')
   })
 })

@@ -264,6 +264,7 @@ export function FinalizarDiaDrawer({
     )
 
     return {
+      data: registro.data,
       camposCabecalho,
       mostrarQuantidades: resumoMostraQuantidades,
       precoModo,
