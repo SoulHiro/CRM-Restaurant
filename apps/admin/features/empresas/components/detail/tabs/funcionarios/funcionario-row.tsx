@@ -1,4 +1,12 @@
-import { Palmtree, UserCheck, UserMinus, UserX, UtensilsCrossed } from 'lucide-react'
+import { useState } from 'react'
+import {
+  Palmtree,
+  Pencil,
+  UserCheck,
+  UserMinus,
+  UserX,
+  UtensilsCrossed,
+} from 'lucide-react'
 
 import {
   AlertDialog,
@@ -13,7 +21,14 @@ import {
 } from '@repo/ui/components/alert-dialog'
 import { Badge } from '@repo/ui/components/badge'
 import { Button } from '@repo/ui/components/button'
+import { Input } from '@repo/ui/components/input'
+import { Label } from '@repo/ui/components/label'
 import { PersonAvatar } from '@repo/ui/components/person-avatar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@repo/ui/components/popover'
 import {
   Tooltip,
   TooltipContent,
@@ -33,6 +48,7 @@ export function FuncionarioRow({
   onAlternarSeparado,
   onAlternarFerias,
   onMarcarVisitante,
+  onRenomear,
 }: {
   colaborador: ColaboradorEmpresaItem
   /** Só empresas com fluxo_pedido='pesagem' usam o toggle "marmita separada". */
@@ -41,7 +57,21 @@ export function FuncionarioRow({
   onAlternarSeparado: () => void
   onAlternarFerias: () => void
   onMarcarVisitante: () => void
+  onRenomear: (nome: string) => void
 }) {
+  const [editandoNome, setEditandoNome] = useState(false)
+  const [nomeInput, setNomeInput] = useState(colaborador.nome)
+
+  function confirmarNome() {
+    const nome = nomeInput.trim()
+    if (!nome || nome === colaborador.nome) {
+      setEditandoNome(false)
+      return
+    }
+    onRenomear(nome)
+    setEditandoNome(false)
+  }
+
   return (
     <div
       className={cn(
@@ -52,7 +82,51 @@ export function FuncionarioRow({
       <div className="flex min-w-0 items-center gap-3">
         <PersonAvatar name={colaborador.nome} className="size-9 shrink-0" />
         <div className="flex min-w-0 flex-col">
-          <span className="truncate font-medium">{colaborador.nome}</span>
+          <div className="flex items-center gap-1">
+            <span className="truncate font-medium">{colaborador.nome}</span>
+            <Popover
+              open={editandoNome}
+              onOpenChange={(open) => {
+                setEditandoNome(open)
+                if (open) setNomeInput(colaborador.nome)
+              }}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6 shrink-0"
+                  aria-label={`Editar nome de ${colaborador.nome}`}
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72" align="start">
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-sm">Nome</Label>
+                    <Input
+                      value={nomeInput}
+                      onChange={(e) => setNomeInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') confirmarNome()
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      disabled={!nomeInput.trim()}
+                      onClick={confirmarNome}
+                    >
+                      Salvar
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <span className="truncate text-sm text-muted-foreground">
             {colaborador.whatsapp ?? 'Sem WhatsApp cadastrado'}
           </span>

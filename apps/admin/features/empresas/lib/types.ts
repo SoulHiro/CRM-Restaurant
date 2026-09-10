@@ -29,6 +29,8 @@ export interface EmpresaListItem {
   responsavelTelefone: string
   /** Endereço curto pro formulário público de pedidos (/cardapio/{slug}) — nulo até ser configurado. */
   slug: string | null
+  /** Aviso mostrado no topo do formulário público — contrato específico da empresa (ex: LNR). Nulo = não mostra nada. */
+  avisoCardapio: string | null
   cadastradaEm: string
   funcionariosRespondidos: number
   funcionariosTotal: number

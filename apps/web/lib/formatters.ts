@@ -38,3 +38,14 @@ export function formatDateBR(value: string): string {
 export function diaSemanaLabel(dataCalendario: string): string {
   return DIA_SEMANA_LABEL[new Date(`${dataCalendario}T00:00:00Z`).getUTCDay()]!
 }
+
+const horaFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: FUSO_RESTAURANTE,
+  hour: 'numeric',
+  hourCycle: 'h23',
+})
+
+/** Hora atual (0-23) no fuso do restaurante — não do navegador de quem acessa. */
+export function horaAtualBrasilia(): number {
+  return Number(horaFormatter.format(new Date()))
+}

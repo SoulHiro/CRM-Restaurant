@@ -74,6 +74,10 @@ export const empresa = pgTable('empresa', {
   cardapio_qtd_alternativas: integer('cardapio_qtd_alternativas')
     .notNull()
     .default(5),
+  // Texto livre, mostrado no topo do formulário público (/cardapio/{slug})
+  // — avisos de contrato específicos da empresa (ex: LNR, "todos os pratos
+  // acompanham Salada, Legumes..."). Nulo = não mostra nada.
+  aviso_cardapio: text('aviso_cardapio'),
   created_at: timestamp('created_at').notNull().defaultNow(),
 })
 

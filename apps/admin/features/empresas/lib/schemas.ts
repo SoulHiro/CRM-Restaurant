@@ -117,6 +117,15 @@ export type AtualizarColaboradorFeriasInput = z.infer<
   typeof atualizarColaboradorFeriasSchema
 >
 
+export const atualizarColaboradorNomeSchema = z.object({
+  colaboradorId: z.string().min(1),
+  nome: z.string().trim().min(1, 'Nome não pode ficar em branco'),
+})
+
+export type AtualizarColaboradorNomeInput = z.infer<
+  typeof atualizarColaboradorNomeSchema
+>
+
 export const atualizarColaboradorTipoSchema = z.object({
   colaboradorId: z.string().min(1),
   tipo: z.enum(['funcionario', 'visitante']),
@@ -155,6 +164,17 @@ export const atualizarSlugEmpresaSchema = z.object({
 
 export type AtualizarSlugEmpresaInput = z.infer<
   typeof atualizarSlugEmpresaSchema
+>
+
+export const atualizarAvisoCardapioSchema = z.object({
+  empresaId: z.string().min(1),
+  // String vazia é uma escolha válida (apaga o aviso) — só `null` no banco é
+  // o estado "nunca configurado", diferença que não importa pra quem chama.
+  avisoCardapio: z.string().max(500),
+})
+
+export type AtualizarAvisoCardapioInput = z.infer<
+  typeof atualizarAvisoCardapioSchema
 >
 
 export const atualizarColaboradoresSeparadosSchema = z.object({

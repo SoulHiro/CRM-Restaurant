@@ -29,12 +29,14 @@ import {
   atualizarColaboradorAtivoSchema,
   atualizarColaboradoresSeparadosSchema,
   atualizarColaboradorFeriasSchema,
+  atualizarColaboradorNomeSchema,
   atualizarColaboradorSeparadoSchema,
   atualizarColaboradorTipoSchema,
   atualizarConfiguracaoEmpresaSchema,
   atualizarPedidoSchema,
   atualizarPrecoPedidoSchema,
   atualizarSlugEmpresaSchema,
+  atualizarAvisoCardapioSchema,
   createEmpresaSchema,
   createPausaSchema,
   deletePausaSchema,
@@ -178,6 +180,19 @@ export const atualizarSlugEmpresaAction = authActionClient
     updateTag(tagEmpresa(parsedInput.empresaId))
   })
 
+export const atualizarAvisoCardapioAction = authActionClient
+  .schema(atualizarAvisoCardapioSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .update(empresa)
+      .set({ aviso_cardapio: parsedInput.avisoCardapio.trim() || null })
+      .where(eq(empresa.id, parsedInput.empresaId))
+
+    revalidatePath('/empresas')
+    updateTag(TAG_EMPRESAS_LISTA)
+    updateTag(tagEmpresa(parsedInput.empresaId))
+  })
+
 export const listarColaboradoresEmpresaAction = authActionClient
   .schema(listarColaboradoresEmpresaSchema)
   .action(async ({ parsedInput }) => {
@@ -197,6 +212,30 @@ export const atualizarColaboradorAtivoAction = authActionClient
     revalidatePath('/empresas')
     updateTag(TAG_EMPRESAS_LISTA)
     if (atualizado) updateTag(tagEmpresa(atualizado.empresa_id))
+  })
+
+/**
+ * Corrige nome com caractere errado/digitado errado — `id` é quem de fato
+ * identifica o colaborador em todo o sistema (pedidos, fechamentos já
+ * gravados guardam `colaborador_nome` como snapshot, então histórico
+ * antigo não muda; só o cadastro e os pedidos ainda não fechados passam a
+ * usar o nome novo).
+ */
+export const atualizarColaboradorNomeAction = authActionClient
+  .schema(atualizarColaboradorNomeSchema)
+  .action(async ({ parsedInput }) => {
+    const [atualizado] = await db
+      .update(colaborador_pedido)
+      .set({ nome: parsedInput.nome })
+      .where(eq(colaborador_pedido.id, parsedInput.colaboradorId))
+      .returning({ empresa_id: colaborador_pedido.empresa_id })
+
+    revalidatePath('/empresas')
+    updateTag(TAG_EMPRESAS_LISTA)
+    if (atualizado) {
+      updateTag(tagEmpresa(atualizado.empresa_id))
+      updateTag(tagEmpresaPedidos(atualizado.empresa_id))
+    }
   })
 
 /** "Marmita separada" — só relevante em empresas com fluxo_pedido='pesagem'. */

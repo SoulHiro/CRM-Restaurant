@@ -12,6 +12,7 @@ import { Skeleton } from '@repo/ui/components/skeleton'
 import {
   atualizarColaboradorAtivoAction,
   atualizarColaboradorFeriasAction,
+  atualizarColaboradorNomeAction,
   atualizarColaboradorSeparadoAction,
   atualizarColaboradorTipoAction,
   listarColaboradoresEmpresaAction,
@@ -96,6 +97,18 @@ export function FuncionariosTab({
     }
   )
 
+  const { execute: renomear } = useAction(atualizarColaboradorNomeAction, {
+    onSuccess: ({ input }) => {
+      setColaboradores((atual) =>
+        (atual ?? []).map((c) =>
+          c.id === input.colaboradorId ? { ...c, nome: input.nome } : c
+        )
+      )
+      toast.success('Nome atualizado')
+    },
+    onError: () => toast.error('Não foi possível atualizar o nome'),
+  })
+
   const { execute: marcarVisitante } = useAction(
     atualizarColaboradorTipoAction,
     {
@@ -170,6 +183,9 @@ export function FuncionariosTab({
                   colaboradorId: colaborador.id,
                   tipo: 'visitante',
                 })
+              }
+              onRenomear={(nome) =>
+                renomear({ colaboradorId: colaborador.id, nome })
               }
             />
           ))}

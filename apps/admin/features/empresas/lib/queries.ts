@@ -91,6 +91,7 @@ async function mapEmpresa(
     responsavelNome: row.responsavel_nome ?? '',
     responsavelTelefone: row.telefone_contato ?? '',
     slug: row.slug,
+    avisoCardapio: row.aviso_cardapio,
     cadastradaEm: dataISO(row.created_at),
     funcionariosTotal: total,
     funcionariosRespondidos: respondidos,

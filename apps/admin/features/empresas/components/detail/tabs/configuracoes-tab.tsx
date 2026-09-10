@@ -21,9 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/ui/components/select'
+import { Textarea } from '@repo/ui/components/textarea'
 
 import { slugify, urlFormularioPublico } from '@/lib/urls'
 import {
+  atualizarAvisoCardapioAction,
   atualizarConfiguracaoEmpresaAction,
   atualizarSlugEmpresaAction,
 } from '../../../lib/actions'
@@ -41,6 +43,17 @@ export function ConfiguracoesTab({ empresa }: { empresa: EmpresaListItem }) {
       onSuccess: () => toast.success('Link do formulário salvo'),
       onError: ({ error }) =>
         toast.error(error.serverError ?? 'Não foi possível salvar o link'),
+    }
+  )
+
+  const [avisoCardapio, setAvisoCardapio] = useState(
+    empresa.avisoCardapio ?? ''
+  )
+  const { execute: salvarAviso, isExecuting: salvandoAviso } = useAction(
+    atualizarAvisoCardapioAction,
+    {
+      onSuccess: () => toast.success('Aviso salvo'),
+      onError: () => toast.error('Não foi possível salvar o aviso'),
     }
   )
 
@@ -176,6 +189,33 @@ export function ConfiguracoesTab({ empresa }: { empresa: EmpresaListItem }) {
               onClick={() => salvarSlug({ empresaId: empresa.id, slug })}
             >
               {salvandoSlug ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-1.5 border-t pt-4">
+            <Label className="text-sm">
+              Aviso no topo do formulário (opcional)
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Pra avisos de contrato específicos dessa empresa — ex:
+              &ldquo;Todos os pratos acompanham Salada, Legumes, Sobremesa e
+              Suco&rdquo;. Deixe em branco pra não mostrar nada.
+            </p>
+            <Textarea
+              value={avisoCardapio}
+              onChange={(e) => setAvisoCardapio(e.target.value)}
+              maxLength={500}
+              rows={3}
+            />
+            <Button
+              size="sm"
+              className="self-start"
+              disabled={salvandoAviso}
+              onClick={() =>
+                salvarAviso({ empresaId: empresa.id, avisoCardapio })
+              }
+            >
+              {salvandoAviso ? 'Salvando...' : 'Salvar aviso'}
             </Button>
           </div>
         </CardContent>

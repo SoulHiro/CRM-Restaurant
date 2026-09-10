@@ -7,6 +7,7 @@ import type {
   ColaboradorOption,
   EmpresaCardapioInfo,
   RespostaExistente,
+  TurnoRefeicao,
 } from './types'
 
 export async function getEmpresaPorSlug(
@@ -19,6 +20,8 @@ export async function getEmpresaPorSlug(
       nome: true,
       preco_modo: true,
       cardapio_qtd_alternativas: true,
+      fluxo_pedido: true,
+      aviso_cardapio: true,
     },
   })
 
@@ -28,6 +31,8 @@ export async function getEmpresaPorSlug(
         nome: row.nome,
         precoModo: row.preco_modo,
         cardapioQtdAlternativas: row.cardapio_qtd_alternativas,
+        fluxoPedido: row.fluxo_pedido,
+        avisoCardapio: row.aviso_cardapio,
       }
     : null
 }
@@ -82,9 +87,15 @@ export async function getCardapioSemana(
   })
 }
 
-/** O que essa pessoa já respondeu nesse intervalo — pra pré-preencher o form quando ela reabre o link. */
+/**
+ * O que essa pessoa já respondeu nesse intervalo pra esse turno — pra
+ * pré-preencher o form quando ela reabre o link. Filtra por turno porque a
+ * mesma pessoa pode ter respostas de almoço E jantar no mesmo dia; sem o
+ * filtro, a última linha lida (turno errado) pisaria no prato certo.
+ */
 export async function getRespostasColaborador(
   colaboradorId: string,
+  turno: TurnoRefeicao,
   from: string,
   to: string
 ): Promise<RespostaExistente[]> {
@@ -92,10 +103,17 @@ export async function getRespostasColaborador(
     where: (p, { and, eq, gte, lte }) =>
       and(
         eq(p.colaborador_id, colaboradorId),
+        eq(p.turno, turno),
         gte(p.data, from),
         lte(p.data, to)
       ),
-    columns: { data: true, prato: true, tamanho: true, recusou: true },
+    columns: {
+      data: true,
+      prato: true,
+      tamanho: true,
+      observacao: true,
+      recusou: true,
+    },
   })
 
   return rows
