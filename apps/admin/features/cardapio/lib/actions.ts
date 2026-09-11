@@ -8,19 +8,27 @@ import { ActionError, authActionClient } from '@/lib/safe-action'
 import {
   cardapioSemanaDia,
   cardapioSemanaDiaItem,
+  empresaPratoExtra,
   pratoCardapio,
 } from '@repo/db'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { TAG_CARDAPIO_CATALOGO, TAG_CARDAPIO_DIAS } from './cache-tags'
-import { getCardapioIntervalo, getCatalogo } from './queries'
 import {
+  TAG_CARDAPIO_CATALOGO,
+  TAG_CARDAPIO_DIAS,
+  tagCardapioExtrasEmpresa,
+} from './cache-tags'
+import { getCardapioIntervalo, getCatalogo, getExtrasEmpresa } from './queries'
+import {
+  adicionarExtraEmpresaSchema,
   atualizarPratoSchema,
   confirmarCardapioMesSchema,
   criarPratoSchema,
   gerarPreviewCardapioSchema,
   listarCardapioIntervaloSchema,
+  listarExtrasEmpresaSchema,
+  removerExtraEmpresaSchema,
 } from './schemas'
 import {
   diasFixosFeijoada,
@@ -68,6 +76,43 @@ export const listarCardapioIntervaloAction = authActionClient
   .action(async ({ parsedInput }) => {
     const dias = await getCardapioIntervalo(parsedInput.from, parsedInput.to)
     return { dias }
+  })
+
+export const listarExtrasEmpresaAction = authActionClient
+  .schema(listarExtrasEmpresaSchema)
+  .action(async ({ parsedInput }) => {
+    const extras = await getExtrasEmpresa(
+      parsedInput.empresaId,
+      parsedInput.from,
+      parsedInput.to
+    )
+    return { extras }
+  })
+
+export const adicionarExtraEmpresaAction = authActionClient
+  .schema(adicionarExtraEmpresaSchema)
+  .action(async ({ parsedInput }) => {
+    await db
+      .insert(empresaPratoExtra)
+      .values({
+        empresa_id: parsedInput.empresaId,
+        data: parsedInput.data,
+        prato_catalogo_id: parsedInput.pratoCatalogoId,
+      })
+      .onConflictDoNothing()
+
+    updateTag(tagCardapioExtrasEmpresa(parsedInput.empresaId))
+  })
+
+export const removerExtraEmpresaAction = authActionClient
+  .schema(removerExtraEmpresaSchema)
+  .action(async ({ parsedInput }) => {
+    const [removido] = await db
+      .delete(empresaPratoExtra)
+      .where(eq(empresaPratoExtra.id, parsedInput.extraId))
+      .returning({ empresa_id: empresaPratoExtra.empresa_id })
+
+    if (removido) updateTag(tagCardapioExtrasEmpresa(removido.empresa_id))
   })
 
 /**

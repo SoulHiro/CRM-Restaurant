@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 
 import type {
   CardapioDiaPublico,
+  CardapioDiaPublicoPrato,
   ColaboradorOption,
   EmpresaCardapioInfo,
   RespostaExistente,
@@ -85,6 +86,28 @@ export async function getCardapioSemana(
         .map((item) => ({ id: item.prato.id, nome: item.prato.nome })),
     }
   })
+}
+
+/**
+ * Pratos exclusivos dessa empresa no intervalo — cadastrados à mão no admin
+ * (`/cardapio`, aba "Cardápio por empresa"), somam por cima do cardápio
+ * comum, sem entrar no corte de `cardapioQtdAlternativas`.
+ */
+export async function getExtrasEmpresa(
+  empresaId: string,
+  from: string,
+  to: string
+): Promise<{ data: string; prato: CardapioDiaPublicoPrato }[]> {
+  const rows = await db.query.empresaPratoExtra.findMany({
+    where: (e, { and, eq, gte, lte }) =>
+      and(eq(e.empresa_id, empresaId), gte(e.data, from), lte(e.data, to)),
+    with: { prato: true },
+  })
+
+  return rows.map((row) => ({
+    data: row.data,
+    prato: { id: row.prato.id, nome: row.prato.nome, exclusivo: true },
+  }))
 }
 
 /**

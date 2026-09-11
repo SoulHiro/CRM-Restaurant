@@ -37,6 +37,7 @@ export const buscarRespostasSchema = z.object({
 })
 
 export const buscarCardapioSemanaSchema = z.object({
+  empresaId: z.string().min(1),
   from: z.string().min(1),
   to: z.string().min(1),
   cardapioQtdAlternativas: z.number().int().min(0),

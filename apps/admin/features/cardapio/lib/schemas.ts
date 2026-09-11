@@ -38,6 +38,34 @@ const cardapioDiaPropostoSchema = z.object({
   alternativaIds: z.array(z.string().min(1)),
 })
 
+export const listarExtrasEmpresaSchema = z.object({
+  empresaId: z.string().min(1),
+  from: z.string().min(1),
+  to: z.string().min(1),
+})
+
+export type ListarExtrasEmpresaInput = z.infer<
+  typeof listarExtrasEmpresaSchema
+>
+
+export const adicionarExtraEmpresaSchema = z.object({
+  empresaId: z.string().min(1),
+  data: z.string().min(1),
+  pratoCatalogoId: z.string().min(1),
+})
+
+export type AdicionarExtraEmpresaInput = z.infer<
+  typeof adicionarExtraEmpresaSchema
+>
+
+export const removerExtraEmpresaSchema = z.object({
+  extraId: z.string().min(1),
+})
+
+export type RemoverExtraEmpresaInput = z.infer<
+  typeof removerExtraEmpresaSchema
+>
+
 export const confirmarCardapioMesSchema = z.object({
   dias: z.array(cardapioDiaPropostoSchema).min(1),
 })

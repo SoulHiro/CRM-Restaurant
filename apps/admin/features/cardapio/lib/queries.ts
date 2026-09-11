@@ -4,8 +4,12 @@ import { unstable_cache } from 'next/cache'
 
 import { db } from '@/lib/db'
 
-import { TAG_CARDAPIO_CATALOGO, TAG_CARDAPIO_DIAS } from './cache-tags'
-import type { CardapioDiaItem, PratoCatalogoItem } from './types'
+import {
+  TAG_CARDAPIO_CATALOGO,
+  TAG_CARDAPIO_DIAS,
+  tagCardapioExtrasEmpresa,
+} from './cache-tags'
+import type { CardapioDiaItem, ExtraEmpresaItem, PratoCatalogoItem } from './types'
 
 /** Catálogo único do restaurante — não é mais por empresa. */
 export const getCatalogo = unstable_cache(
@@ -65,5 +69,31 @@ export function getCardapioIntervalo(
     },
     ['cardapio-intervalo', from, to],
     { tags: [TAG_CARDAPIO_DIAS] }
+  )()
+}
+
+/** Pratos extras cadastrados à mão pra uma empresa específica, num intervalo. */
+export function getExtrasEmpresa(
+  empresaId: string,
+  from: string,
+  to: string
+): Promise<ExtraEmpresaItem[]> {
+  return unstable_cache(
+    async (): Promise<ExtraEmpresaItem[]> => {
+      const rows = await db.query.empresaPratoExtra.findMany({
+        where: (e, { and, eq: eqOp, gte, lte }) =>
+          and(eqOp(e.empresa_id, empresaId), gte(e.data, from), lte(e.data, to)),
+        orderBy: (e, { asc }) => [asc(e.data)],
+        with: { prato: true },
+      })
+
+      return rows.map((row) => ({
+        id: row.id,
+        data: row.data,
+        prato: { id: row.prato.id, nome: row.prato.nome },
+      }))
+    },
+    ['cardapio-extras-empresa', empresaId, from, to],
+    { tags: [tagCardapioExtrasEmpresa(empresaId)] }
   )()
 }

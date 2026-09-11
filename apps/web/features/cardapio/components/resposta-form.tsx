@@ -225,7 +225,9 @@ export function RespostaForm({
                             {prato.nome}
                             {dia.destaque?.id === prato.id
                               ? ' (prato do dia)'
-                              : ''}
+                              : prato.exclusivo
+                                ? ' (exclusivo)'
+                                : ''}
                           </SelectItem>
                         ))}
                         <SelectItem value={NAO_VOU_ALMOCAR}>

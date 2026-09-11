@@ -2,7 +2,14 @@
 
 import { useState } from 'react'
 
-import { CardapioTabela } from './cardapio-tabela'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@repo/ui/components/tabs'
+
+import { CardapioPorEmpresaTab } from './cardapio-por-empresa-tab'
 import { CatalogoSection } from './catalogo-section'
 import { GerarCardapioDrawer } from './gerar-cardapio-drawer'
 
@@ -17,24 +24,34 @@ export function CardapioShell({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Um cardápio só pro restaurante inteiro — prato do dia e alternativas
-          são os mesmos pra todas as empresas.
+          Prato do dia e alternativas são gerados uma vez pro restaurante
+          inteiro — cada empresa pode ainda ter pratos exclusivos por cima,
+          por causa de contrato específico.
         </p>
         <GerarCardapioDrawer
           onConfirmado={() => setAtualizarKey((k) => k + 1)}
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr] lg:items-start">
-        <CatalogoSection />
-        {empresas.length > 0 ? (
-          <CardapioTabela empresas={empresas} atualizarKey={atualizarKey} />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Cadastre uma empresa pra ver como o cardápio aparece pra ela.
-          </p>
-        )}
-      </div>
+      <Tabs defaultValue="por-empresa">
+        <TabsList>
+          <TabsTrigger value="por-empresa">Cardápio por empresa</TabsTrigger>
+          <TabsTrigger value="catalogo">Catálogo de pratos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="por-empresa" className="mt-4">
+          <CardapioPorEmpresaTab
+            empresas={empresas}
+            atualizarKey={atualizarKey}
+          />
+        </TabsContent>
+
+        <TabsContent value="catalogo" className="mt-4">
+          <div className="max-w-lg">
+            <CatalogoSection />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

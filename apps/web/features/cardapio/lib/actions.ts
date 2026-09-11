@@ -8,8 +8,13 @@ import { db } from '@/lib/db'
 import { hojeISO } from '@/lib/formatters'
 import { ActionError, actionClient } from '@/lib/safe-action'
 
+import { mesclarExtras } from './cardapio-helpers'
 import { diaEditavel } from './edicao-helpers'
-import { getCardapioSemana, getRespostasColaborador } from './queries'
+import {
+  getCardapioSemana,
+  getExtrasEmpresa,
+  getRespostasColaborador,
+} from './queries'
 import {
   buscarCardapioSemanaSchema,
   buscarRespostasSchema,
@@ -31,19 +36,21 @@ export const buscarRespostasAction = actionClient
 export const buscarCardapioSemanaAction = actionClient
   .schema(buscarCardapioSemanaSchema)
   .action(async ({ parsedInput }) => {
-    const cardapioCompleto = await getCardapioSemana(
-      parsedInput.from,
-      parsedInput.to
-    )
+    const [cardapioCompleto, extras] = await Promise.all([
+      getCardapioSemana(parsedInput.from, parsedInput.to),
+      getExtrasEmpresa(parsedInput.empresaId, parsedInput.from, parsedInput.to),
+    ])
     // Mesmo corte de `page.tsx` — o cardápio é gerado inteiro pro
-    // restaurante, cada empresa só enxerga as N primeiras alternativas dela.
-    const cardapio = cardapioCompleto.map((dia) => ({
+    // restaurante, cada empresa só enxerga as N primeiras alternativas dela,
+    // mais os extras exclusivos por cima.
+    const cardapioCortado = cardapioCompleto.map((dia) => ({
       ...dia,
       alternativas: dia.alternativas.slice(
         0,
         parsedInput.cardapioQtdAlternativas
       ),
     }))
+    const cardapio = mesclarExtras(cardapioCortado, extras)
     return { cardapio }
   })
 

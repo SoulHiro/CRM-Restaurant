@@ -98,6 +98,7 @@ export function CardapioPublico({
     setSemana(nova)
     setCarregandoCardapio(true)
     buscarCardapio({
+      empresaId: empresa.id,
       from: nova.inicio,
       to: nova.fim,
       cardapioQtdAlternativas: empresa.cardapioQtdAlternativas,

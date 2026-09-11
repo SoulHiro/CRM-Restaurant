@@ -21,3 +21,9 @@ export interface CardapioDiaPropostoInput {
   destaqueId: string
   alternativaIds: string[]
 }
+
+export interface ExtraEmpresaItem {
+  id: string
+  data: string
+  prato: CardapioDiaPrato
+}

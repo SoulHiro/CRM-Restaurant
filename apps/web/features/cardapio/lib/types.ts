@@ -26,6 +26,8 @@ export interface ColaboradorOption {
 export interface CardapioDiaPublicoPrato {
   id: string
   nome: string
+  /** Prato exclusivo dessa empresa (contrato específico) — soma por cima, nunca conta no corte de alternativas. */
+  exclusivo?: boolean
 }
 
 export interface CardapioDiaPublico {

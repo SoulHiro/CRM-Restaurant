@@ -25,8 +25,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/ui/components/select'
+import { ToggleGroup, ToggleGroupItem } from '@repo/ui/components/toggle-group'
 
-import { formatDateBR } from '@/lib/formatters'
+import { somarDiasISO } from '@/lib/dates'
+import { formatDateBR, formatShortDateBR, hojeISO } from '@/lib/formatters'
 import {
   confirmarCardapioMesAction,
   gerarPreviewCardapioAction,
@@ -42,14 +44,49 @@ interface DiaProposto {
 
 const SEM_FEIJOADA = '__sem_feijoada__'
 
+/** Dia da semana como número (0 = domingo) — puro cálculo de calendário, sem fuso. */
+function diaDaSemana(data: string): number {
+  const [ano, mes, dia] = data.split('-').map(Number)
+  return new Date(Date.UTC(ano!, mes! - 1, dia!)).getUTCDay()
+}
+
+function ultimoDiaDoMesISO(mes: string): string {
+  const [ano, mesNum] = mes.split('-').map(Number)
+  const ultimoDia = new Date(Date.UTC(ano!, mesNum!, 0)).getUTCDate()
+  return `${mes}-${String(ultimoDia).padStart(2, '0')}`
+}
+
+/** Segunda-feira mais próxima a partir de hoje (hoje incluso, se já for segunda). */
+function proximaSegundaISO(): string {
+  const hoje = hojeISO()
+  const diaSemana = diaDaSemana(hoje)
+  const deslocamento = diaSemana === 0 ? 1 : diaSemana === 1 ? 0 : 8 - diaSemana
+  return somarDiasISO(hoje, deslocamento)
+}
+
+/** O sorteio nunca inclui domingo, então cada nova segunda-feira é o início de uma semana. */
+function agruparPorSemana(dias: DiaProposto[]): DiaProposto[][] {
+  const semanas: DiaProposto[][] = []
+  for (const dia of dias) {
+    const inicioDeSemana = diaDaSemana(dia.data) === 1 || semanas.length === 0
+    if (inicioDeSemana) {
+      semanas.push([dia])
+    } else {
+      semanas[semanas.length - 1]!.push(dia)
+    }
+  }
+  return semanas
+}
+
 export function GerarCardapioDrawer({
   onConfirmado,
 }: {
   onConfirmado: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const [periodo, setPeriodo] = useState<'semana' | 'mes'>('mes')
+  const [mes, setMes] = useState(() => hojeISO().slice(0, 7))
+  const [semanaInicio, setSemanaInicio] = useState(proximaSegundaISO)
   const [itensPorDia, setItensPorDia] = useState('13')
   const [pratoFeijoadaId, setPratoFeijoadaId] = useState(SEM_FEIJOADA)
   const [catalogo, setCatalogo] = useState<PratoCatalogoItem[]>([])
@@ -67,6 +104,7 @@ export function GerarCardapioDrawer({
 
   const catalogoAtivo = catalogo.filter((p) => p.ativo)
   const nomePorId = new Map(catalogo.map((p) => [p.id, p.nome]))
+  const semanas = proposta ? agruparPorSemana(proposta) : []
 
   const { execute: gerar, isExecuting: gerando } = useAction(
     gerarPreviewCardapioAction,
@@ -102,6 +140,9 @@ export function GerarCardapioDrawer({
   )
 
   function gerarPreview() {
+    const from = periodo === 'mes' ? `${mes}-01` : semanaInicio
+    const to =
+      periodo === 'mes' ? ultimoDiaDoMesISO(mes) : somarDiasISO(semanaInicio, 5)
     if (!from || !to) return
     gerar({
       from,
@@ -176,24 +217,49 @@ export function GerarCardapioDrawer({
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-6">
           {!proposta ? (
             <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-sm">De</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(e) => setFrom(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-sm">Até</Label>
-                  <Input
-                    type="date"
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                  />
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-sm">Período</Label>
+                <p className="text-xs text-muted-foreground">
+                  Sempre de segunda a sábado — o mês inteiro de uma vez ou só
+                  a semana que vem.
+                </p>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  value={periodo}
+                  onValueChange={(v) => v && setPeriodo(v as 'semana' | 'mes')}
+                >
+                  <ToggleGroupItem value="mes">Mês inteiro</ToggleGroupItem>
+                  <ToggleGroupItem value="semana">
+                    Semana que vem
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
+
+              {periodo === 'mes' ? (
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-sm">Mês</Label>
+                  <Input
+                    type="month"
+                    className="w-full sm:w-48"
+                    value={mes}
+                    onChange={(e) => setMes(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-sm">Semana de</Label>
+                  <Input
+                    type="date"
+                    className="w-full sm:w-48"
+                    value={semanaInicio}
+                    onChange={(e) => setSemanaInicio(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Até {formatDateBR(somarDiasISO(semanaInicio, 5))} (sábado).
+                  </p>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-sm">
@@ -238,7 +304,11 @@ export function GerarCardapioDrawer({
 
               <Button
                 className="self-start"
-                disabled={gerando || !from || !to || catalogoAtivo.length === 0}
+                disabled={
+                  gerando ||
+                  (periodo === 'mes' ? !mes : !semanaInicio) ||
+                  catalogoAtivo.length === 0
+                }
                 onClick={gerarPreview}
               >
                 {gerando ? 'Sorteando...' : 'Sortear prévia'}
@@ -250,64 +320,76 @@ export function GerarCardapioDrawer({
               )}
             </>
           ) : (
-            <div className="flex flex-col gap-4">
-              {proposta.map((dia) => (
-                <div key={dia.data} className="rounded-lg border p-3">
-                  <p className="mb-2 text-sm font-semibold">
-                    {formatDateBR(dia.data)}
+            <div className="flex flex-col gap-6">
+              {semanas.map((semana) => (
+                <div key={semana[0]!.data} className="flex flex-col gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Semana de {formatShortDateBR(semana[0]!.data)} a{' '}
+                    {formatShortDateBR(semana[semana.length - 1]!.data)}
                   </p>
+                  <div className="flex flex-col gap-4">
+                    {semana.map((dia) => (
+                      <div key={dia.data} className="rounded-lg border p-3">
+                        <p className="mb-2 text-sm font-semibold">
+                          {formatDateBR(dia.data)}
+                        </p>
 
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs text-muted-foreground">
-                      Prato do dia
-                    </Label>
-                    <Select
-                      value={dia.destaqueId}
-                      onValueChange={(v) => trocarDestaque(dia.data, v)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {catalogoAtivo.map((prato) => (
-                          <SelectItem key={prato.id} value={prato.id}>
-                            {prato.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="mt-2 flex flex-col gap-1">
-                    <Label className="text-xs text-muted-foreground">
-                      Alternativas (ordem = quem entra primeiro nas empresas com
-                      menos vagas)
-                    </Label>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                      {dia.alternativaIds.map((id, indice) => (
-                        <span key={id} className="text-sm">
-                          {indice + 1}. {nomePorId.get(id)}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                      {catalogoAtivo
-                        .filter((p) => p.id !== dia.destaqueId)
-                        .map((prato) => (
-                          <label
-                            key={prato.id}
-                            className="flex items-center gap-2 text-sm"
+                        <div className="flex flex-col gap-1.5">
+                          <Label className="text-xs text-muted-foreground">
+                            Prato do dia
+                          </Label>
+                          <Select
+                            value={dia.destaqueId}
+                            onValueChange={(v) => trocarDestaque(dia.data, v)}
                           >
-                            <Checkbox
-                              checked={dia.alternativaIds.includes(prato.id)}
-                              onCheckedChange={() =>
-                                alternarAlternativa(dia.data, prato.id)
-                              }
-                            />
-                            {nomePorId.get(prato.id)}
-                          </label>
-                        ))}
-                    </div>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {catalogoAtivo.map((prato) => (
+                                <SelectItem key={prato.id} value={prato.id}>
+                                  {prato.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="mt-2 flex flex-col gap-1">
+                          <Label className="text-xs text-muted-foreground">
+                            Alternativas (ordem = quem entra primeiro nas
+                            empresas com menos vagas)
+                          </Label>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                            {dia.alternativaIds.map((id, indice) => (
+                              <span key={id} className="text-sm">
+                                {indice + 1}. {nomePorId.get(id)}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+                            {catalogoAtivo
+                              .filter((p) => p.id !== dia.destaqueId)
+                              .map((prato) => (
+                                <label
+                                  key={prato.id}
+                                  className="flex items-center gap-2 text-sm"
+                                >
+                                  <Checkbox
+                                    checked={dia.alternativaIds.includes(
+                                      prato.id
+                                    )}
+                                    onCheckedChange={() =>
+                                      alternarAlternativa(dia.data, prato.id)
+                                    }
+                                  />
+                                  {nomePorId.get(prato.id)}
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
