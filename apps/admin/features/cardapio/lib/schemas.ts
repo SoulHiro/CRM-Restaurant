@@ -1,13 +1,19 @@
 import { z } from 'zod'
 
+import { CATEGORIAS_PRATO } from './categoria-prato'
+
+const categoriaPratoSchema = z.enum(CATEGORIAS_PRATO)
+
 export const criarPratoSchema = z.object({
   nome: z.string().min(1, 'Informe o nome do prato'),
+  categoria: categoriaPratoSchema,
 })
 
 export const atualizarPratoSchema = z.object({
   pratoId: z.string().min(1),
   nome: z.string().min(1, 'Informe o nome do prato'),
   ativo: z.boolean(),
+  categoria: categoriaPratoSchema,
 })
 
 export const listarCardapioIntervaloSchema = z.object({
@@ -65,6 +71,61 @@ export const removerExtraEmpresaSchema = z.object({
 export type RemoverExtraEmpresaInput = z.infer<
   typeof removerExtraEmpresaSchema
 >
+
+export const adicionarItemDiaSchema = z.object({
+  data: z.string().min(1),
+  pratoCatalogoId: z.string().min(1),
+})
+
+export type AdicionarItemDiaInput = z.infer<typeof adicionarItemDiaSchema>
+
+export const removerItemDiaSchema = z.object({
+  itemId: z.string().min(1),
+})
+
+export type RemoverItemDiaInput = z.infer<typeof removerItemDiaSchema>
+
+export const reordenarAlternativasSchema = z.object({
+  diaId: z.string().min(1),
+  itemIds: z.array(z.string().min(1)),
+})
+
+export type ReordenarAlternativasInput = z.infer<
+  typeof reordenarAlternativasSchema
+>
+
+export const promoverDestaqueSchema = z.object({
+  diaId: z.string().min(1),
+  itemId: z.string().min(1),
+})
+
+export type PromoverDestaqueInput = z.infer<typeof promoverDestaqueSchema>
+
+export const removerDestaqueSchema = z.object({
+  diaId: z.string().min(1),
+  itemId: z.string().min(1),
+})
+
+export type RemoverDestaqueInput = z.infer<typeof removerDestaqueSchema>
+
+export const marcarEspecialSchema = z.object({
+  itemId: z.string().min(1),
+  especial: z.boolean(),
+})
+
+export type MarcarEspecialInput = z.infer<typeof marcarEspecialSchema>
+
+export const fixarItemSchema = z.object({
+  itemId: z.string().min(1),
+})
+
+export type FixarItemInput = z.infer<typeof fixarItemSchema>
+
+export const desfixarItemSchema = z.object({
+  itemId: z.string().min(1),
+})
+
+export type DesfixarItemInput = z.infer<typeof desfixarItemSchema>
 
 export const confirmarCardapioMesSchema = z.object({
   dias: z.array(cardapioDiaPropostoSchema).min(1),

@@ -4,61 +4,61 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
 import { db } from '@/lib/db'
-import { executarLote, type Statement } from '@/lib/db-batch'
 import { hojeISO } from '@/lib/formatters'
 import { toMoneyString, toNumericString } from '@/lib/numeric'
 import { ActionError, authActionClient } from '@/lib/safe-action'
 import {
-  adicional,
   categoria_produto,
-  grupo_adicional,
   produto,
-  produto_dia_semana,
   produto_ficha_tecnica_item,
   produto_ficha_tecnica_tamanho_override,
-  produto_grupo_adicional,
   produto_tamanho,
 } from '@repo/db'
 
+import { getProdutoDetalhe } from './queries'
 import {
-  criarAdicionalItemSchema,
   criarCategoriaProdutoSchema,
-  criarGrupoAdicionalSchema,
   criarProdutoSchema,
+  duplicarProdutoSchema,
   editarProdutoSchema,
   type CriarProdutoSchemaInput,
 } from './schemas'
 
 function revalidarCatalogo(produtoId?: string) {
   revalidatePath('/catalogo/produtos')
-  revalidatePath('/catalogo/delivery')
   if (produtoId) revalidatePath(`/catalogo/produtos/${produtoId}`)
 }
 
+/**
+ * Descrição, vídeo, canais, turno e desconto são conceito de cardápio
+ * digital (vitrine pro cliente escolher) — este sistema não tem isso, fica
+ * com a Brendi numa parceria futura. As colunas continuam existindo no
+ * banco (mudar isso é uma migração à parte), só que sempre gravadas com um
+ * valor neutro em vez de vir do formulário. `foto_url` é exceção — continua
+ * vindo do formulário porque `features/consumo-funcionario` usa a foto pro
+ * funcionário reconhecer o item na hora de lançar consumo.
+ */
 function montarValoresProduto(parsedInput: CriarProdutoSchemaInput) {
   return {
     nome: parsedInput.nome.trim(),
     categoria_id: parsedInput.categoriaId,
     tipo: parsedInput.tipo,
-    descricao: parsedInput.descricao?.trim() || null,
+    descricao: null,
     foto_url: parsedInput.fotoUrl?.trim() || null,
-    video_url: parsedInput.videoUrl?.trim() || null,
-    disponivel_delivery: parsedInput.disponivelDelivery,
-    disponivel_local: parsedInput.disponivelLocal,
+    video_url: null,
+    disponivel_delivery: false,
+    disponivel_local: true,
     pausado_em: parsedInput.pausadoHoje ? hojeISO() : null,
-    aparece_almoco: parsedInput.apareceAlmoco,
-    aparece_janta: parsedInput.apareceJanta,
-    classificacoes: parsedInput.classificacoes,
+    aparece_almoco: true,
+    aparece_janta: true,
+    classificacoes: [],
     tempo_medio_preparo_minutos: parsedInput.tempoMedioPreparoMinutos,
     tem_tamanhos: parsedInput.temTamanhos,
     preco_venda: parsedInput.temTamanhos
       ? null
       : toMoneyString(parsedInput.precoVenda),
-    desconto_tipo: parsedInput.descontoTipo === 'valorFixo' ? 'valor_fixo' as const : 'percentual' as const,
-    desconto_valor:
-      parsedInput.descontoValor == null
-        ? null
-        : toMoneyString(parsedInput.descontoValor),
+    desconto_tipo: 'percentual' as const,
+    desconto_valor: null,
   }
 }
 
@@ -66,8 +66,7 @@ function montarValoresProduto(parsedInput: CriarProdutoSchemaInput) {
  * Tamanhos e linhas de ficha técnica precisam do próprio id antes dos
  * overrides poderem referenciá-los — por isso os inserts rodam em sequência
  * (não dá pra encadear resultado entre statements de um único `db.batch` no
- * driver neon-http). Só o que não depende de id gerado aqui (dias da semana,
- * grupos de adicionais) vai pro lote no final.
+ * driver neon-http).
  */
 async function inserirDependenciasProduto(
   produtoId: string,
@@ -137,32 +136,6 @@ async function inserirDependenciasProduto(
   if (overrides.length > 0) {
     await db.insert(produto_ficha_tecnica_tamanho_override).values(overrides)
   }
-
-  const statements: Statement[] = []
-
-  if (parsedInput.diasSemana.length > 0) {
-    statements.push(
-      db.insert(produto_dia_semana).values(
-        parsedInput.diasSemana.map((diaSemana) => ({
-          produto_id: produtoId,
-          dia_semana: diaSemana,
-        }))
-      )
-    )
-  }
-
-  if (parsedInput.grupoAdicionalIds.length > 0) {
-    statements.push(
-      db.insert(produto_grupo_adicional).values(
-        parsedInput.grupoAdicionalIds.map((grupoId) => ({
-          produto_id: produtoId,
-          grupo_id: grupoId,
-        }))
-      )
-    )
-  }
-
-  await executarLote(statements)
 }
 
 export const criarProdutoAction = authActionClient
@@ -192,27 +165,52 @@ export const editarProdutoAction = authActionClient
 
     if (!atualizado) throw new ActionError('Produto não encontrado')
 
-    // Ficha técnica, tamanhos, dias da semana e grupos de adicionais são
-    // configuração do produto, não um livro-razão histórico — substituir
-    // tudo a cada edição é seguro (diferente de estoque_movimento/
-    // transacao_financeira, que nunca podem ser reescritos).
+    // Ficha técnica e tamanhos são configuração do produto, não um
+    // livro-razão histórico — substituir tudo a cada edição é seguro
+    // (diferente de estoque_movimento/transacao_financeira, que nunca podem
+    // ser reescritos).
     await Promise.all([
       db.delete(produto_tamanho).where(eq(produto_tamanho.produto_id, atualizado.id)),
       db
         .delete(produto_ficha_tecnica_item)
         .where(eq(produto_ficha_tecnica_item.produto_id, atualizado.id)),
-      db
-        .delete(produto_dia_semana)
-        .where(eq(produto_dia_semana.produto_id, atualizado.id)),
-      db
-        .delete(produto_grupo_adicional)
-        .where(eq(produto_grupo_adicional.produto_id, atualizado.id)),
     ])
 
     await inserirDependenciasProduto(atualizado.id, parsedInput)
 
     revalidarCatalogo(atualizado.id)
     return { produtoId: atualizado.id }
+  })
+
+/**
+ * Cópia rasa de tudo que `montarValoresProduto`/`inserirDependenciasProduto`
+ * gravam — ficha técnica, tamanhos, dias da semana e grupos de adicionais
+ * incluídos. Nasce pausado hoje pra não aparecer no delivery/local por
+ * engano antes de alguém revisar preço e nome.
+ */
+export const duplicarProdutoAction = authActionClient
+  .schema(duplicarProdutoSchema)
+  .action(async ({ parsedInput }) => {
+    const original = await getProdutoDetalhe(parsedInput.produtoId)
+    if (!original) throw new ActionError('Produto não encontrado')
+
+    const dadosCopia: CriarProdutoSchemaInput = {
+      ...original,
+      nome: `${original.nome} (cópia)`,
+      pausadoHoje: true,
+    }
+
+    const [criado] = await db
+      .insert(produto)
+      .values(montarValoresProduto(dadosCopia))
+      .returning({ id: produto.id })
+
+    if (!criado) throw new ActionError('Não foi possível duplicar o produto')
+
+    await inserirDependenciasProduto(criado.id, dadosCopia)
+
+    revalidarCatalogo(criado.id)
+    return { produtoId: criado.id }
   })
 
 export const criarCategoriaProdutoAction = authActionClient
@@ -227,43 +225,4 @@ export const criarCategoriaProdutoAction = authActionClient
 
     revalidarCatalogo()
     return criada
-  })
-
-export const criarGrupoAdicionalAction = authActionClient
-  .schema(criarGrupoAdicionalSchema)
-  .action(async ({ parsedInput }) => {
-    const [criado] = await db
-      .insert(grupo_adicional)
-      .values({
-        nome: parsedInput.nome.trim(),
-        disponivel_almoco: parsedInput.disponivelAlmoco,
-        disponivel_janta: parsedInput.disponivelJanta,
-      })
-      .returning({ id: grupo_adicional.id })
-
-    if (!criado) throw new ActionError('Não foi possível criar o grupo')
-
-    revalidatePath('/catalogo/adicionais')
-    return { grupoId: criado.id }
-  })
-
-export const criarAdicionalItemAction = authActionClient
-  .schema(criarAdicionalItemSchema)
-  .action(async ({ parsedInput }) => {
-    const [criado] = await db
-      .insert(adicional)
-      .values({
-        grupo_id: parsedInput.grupoId,
-        nome: parsedInput.nome.trim(),
-        preco: toMoneyString(parsedInput.preco),
-        foto_url: parsedInput.fotoUrl?.trim() || null,
-        quantidade_minima: parsedInput.quantidadeMinima,
-        quantidade_maxima: parsedInput.quantidadeMaxima,
-      })
-      .returning({ id: adicional.id })
-
-    if (!criado) throw new ActionError('Não foi possível criar o item')
-
-    revalidatePath(`/catalogo/adicionais/${parsedInput.grupoId}`)
-    return { adicionalId: criado.id }
   })

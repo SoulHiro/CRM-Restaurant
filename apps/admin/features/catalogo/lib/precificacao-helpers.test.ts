@@ -5,8 +5,8 @@ import {
   calcularCustoInsumosTamanho,
   calcularCustoProducao,
   calcularFaixasPreco,
+  calcularFoodCostPercentual,
   calcularMargemPercentual,
-  calcularPrecoComDesconto,
   corMargem,
   multiplicadorPorPeso,
 } from './precificacao-helpers'
@@ -69,6 +69,20 @@ describe('calcularMargemPercentual', () => {
   })
 })
 
+describe('calcularFoodCostPercentual', () => {
+  it('custo igual ao preço é 100% de food cost', () => {
+    expect(calcularFoodCostPercentual(20, 20)).toBe(100)
+  })
+
+  it('custo abaixo do preço calcula a fração corretamente', () => {
+    expect(calcularFoodCostPercentual(20, 6)).toBeCloseTo(30)
+  })
+
+  it('preço de venda zero não divide por zero', () => {
+    expect(calcularFoodCostPercentual(0, 10)).toBe(0)
+  })
+})
+
 describe('multiplicadorPorPeso', () => {
   it('deriva o multiplicador da razão de peso — P (350g) sobre base M (500g)', () => {
     expect(multiplicadorPorPeso(350, 500)).toBeCloseTo(0.7)
@@ -125,25 +139,6 @@ describe('calcularCustoInsumosTamanho', () => {
       1.5
     )
     expect(custo).toBeCloseTo(5)
-  })
-})
-
-describe('calcularPrecoComDesconto', () => {
-  it('percentual tira a fração do preço', () => {
-    expect(calcularPrecoComDesconto(100, 'percentual', 10)).toBeCloseTo(90)
-  })
-
-  it('valorFixo tira um valor em R$ fixo', () => {
-    expect(calcularPrecoComDesconto(100, 'valorFixo', 15)).toBeCloseTo(85)
-  })
-
-  it('valorFixo nunca deixa o preço negativo', () => {
-    expect(calcularPrecoComDesconto(10, 'valorFixo', 50)).toBe(0)
-  })
-
-  it('sem desconto (null ou zero) devolve o preço original', () => {
-    expect(calcularPrecoComDesconto(100, 'percentual', null)).toBe(100)
-    expect(calcularPrecoComDesconto(100, 'percentual', 0)).toBe(100)
   })
 })
 

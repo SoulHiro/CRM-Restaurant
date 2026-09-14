@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { CircleDollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Badge } from '@repo/ui/components/badge'
 import { Button } from '@repo/ui/components/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/components/card'
 import { Input } from '@repo/ui/components/input'
@@ -15,6 +14,7 @@ import { cn } from '@repo/ui/lib/utils'
 import type { ConfiguracaoPrecificacao } from '@/features/configuracoes/lib/types'
 import { formatCurrencyBRL } from '@/lib/formatters'
 import { criarProdutoAction, editarProdutoAction } from '../../lib/actions'
+import { limparRascunho } from '../../lib/produto-rascunho'
 import {
   COR_MARGEM_CLASSE,
   COR_MARGEM_LABEL,
@@ -22,6 +22,7 @@ import {
   calcularCustoInsumosTamanho,
   calcularCustoProducao,
   calcularFaixasPreco,
+  calcularFoodCostPercentual,
   calcularMargemPercentual,
   corMargem,
   multiplicadorPorPeso,
@@ -60,6 +61,7 @@ function TamanhoResumoLinha({
     configuracaoPrecificacao.custoOperacionalPorMinuto
   )
   const margem = calcularMargemPercentual(tamanho.precoVenda, custoProducao)
+  const foodCost = calcularFoodCostPercentual(tamanho.precoVenda, custoProducao)
   const cor = corMargem(margem, {
     amareloPct: configuracaoPrecificacao.limiarAmareloPct,
     verdePct: configuracaoPrecificacao.limiarVerdePct,
@@ -86,7 +88,8 @@ function TamanhoResumoLinha({
         />
       </div>
       <span className="text-xs text-muted-foreground">
-        Custo de produção: {formatCurrencyBRL(custoProducao)}
+        Custo de produção: {formatCurrencyBRL(custoProducao)} · Food cost:{' '}
+        {foodCost.toFixed(0)}%
       </span>
       <span className={cn('text-xs font-medium', COR_MARGEM_CLASSE[cor])}>
         {COR_MARGEM_LABEL[cor]} — {margem.toFixed(0)}% de margem
@@ -112,6 +115,7 @@ export function ProdutoResumoSidebar({
   const { execute: criar, isExecuting: criando } = useAction(criarProdutoAction, {
     onSuccess: ({ data }) => {
       if (!data) return
+      limparRascunho(produtoId)
       toast.success('Produto cadastrado')
       router.push('/catalogo/produtos')
     },
@@ -123,6 +127,7 @@ export function ProdutoResumoSidebar({
     {
       onSuccess: ({ data }) => {
         if (!data) return
+        limparRascunho(produtoId)
         toast.success('Produto atualizado')
         router.push('/catalogo/produtos')
       },
@@ -146,6 +151,7 @@ export function ProdutoResumoSidebar({
     configuracaoPrecificacao.custoOperacionalPorMinuto
   )
   const margem = calcularMargemPercentual(dados.precoVenda, custoProducao)
+  const foodCost = calcularFoodCostPercentual(dados.precoVenda, custoProducao)
   const cor = corMargem(margem, {
     amareloPct: configuracaoPrecificacao.limiarAmareloPct,
     verdePct: configuracaoPrecificacao.limiarVerdePct,
@@ -169,11 +175,6 @@ export function ProdutoResumoSidebar({
       ),
     })
   }
-
-  const canais = [
-    dados.disponivelDelivery && 'Delivery',
-    dados.disponivelLocal && 'Local',
-  ].filter(Boolean) as string[]
 
   const podeSalvar = dados.nome.trim().length > 0
 
@@ -227,6 +228,9 @@ export function ProdutoResumoSidebar({
                 Custo de produção: {formatCurrencyBRL(custoProducao)} (insumos{' '}
                 {formatCurrencyBRL(custoInsumos)})
               </span>
+              <span className="text-xs text-muted-foreground">
+                Food cost: {foodCost.toFixed(0)}%
+              </span>
               <span
                 className={cn('text-sm font-medium', COR_MARGEM_CLASSE[cor])}
               >
@@ -242,28 +246,6 @@ export function ProdutoResumoSidebar({
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Ficha técnica</span>
             <span>{dados.fichaTecnica.length} insumo(s)</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Canais</span>
-            <div className="flex gap-1">
-              {canais.length === 0 ? (
-                <span>—</span>
-              ) : (
-                canais.map((canal) => (
-                  <Badge key={canal} variant="outline">
-                    {canal}
-                  </Badge>
-                ))
-              )}
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Classificações</span>
-            <span>{dados.classificacoes.length}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Grupos de adicionais</span>
-            <span>{dados.grupoAdicionalIds.length}</span>
           </div>
         </div>
 

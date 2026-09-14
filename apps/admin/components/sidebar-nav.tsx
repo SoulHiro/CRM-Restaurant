@@ -27,19 +27,13 @@ export interface NavItem {
 type Modo = 'main' | 'config' | 'catalogo'
 type Fase = 'idle' | 'saindo' | 'entrando'
 
-const STAGGER_MS = 55
-const DURACAO_MS = 220
+const STAGGER_MS = 35
+const DURACAO_MS = 150
 
 /** Label do cabeçalho "← Voltar" de cada seção que não é a principal. */
 const SECAO_LABEL: Record<Exclude<Modo, 'main'>, string> = {
   config: 'Configurações',
   catalogo: 'Catálogo',
-}
-
-function modoDe(pathname: string): Modo {
-  if (pathname.startsWith('/configuracoes')) return 'config'
-  if (pathname.startsWith('/catalogo')) return 'catalogo'
-  return 'main'
 }
 
 function tempoTotal(quantidade: number) {
@@ -71,6 +65,29 @@ export function SidebarNav({
     return items
   }
 
+  /**
+   * Baseado nas URLs reais dos itens de cada seção, não só no prefixo da
+   * rota — algumas páginas de uma seção (ex: "Cardápio das empresas" em
+   * `/cardapio`) não vivem sob o prefixo da própria seção (`/catalogo`).
+   * Um prefixo cru derrubava o modo de volta pra "main" ao navegar pra
+   * essas páginas, no meio de uma seção que o usuário nem saiu.
+   */
+  function modoDe(alvo: string): Modo {
+    if (
+      alvo.startsWith('/configuracoes') ||
+      configItems.some((item) => alvo.startsWith(item.url))
+    ) {
+      return 'config'
+    }
+    if (
+      alvo.startsWith('/catalogo') ||
+      catalogoItems.some((item) => alvo.startsWith(item.url))
+    ) {
+      return 'catalogo'
+    }
+    return 'main'
+  }
+
   const [modo, setModo] = useState<Modo>(() => modoDe(pathname))
   const [fase, setFase] = useState<Fase>('idle')
   const [entrouVisivel, setEntrouVisivel] = useState(true)
@@ -87,6 +104,7 @@ export function SidebarNav({
   // que dispara a troca quando o clique já veio do próprio sidebar.
   useEffect(() => {
     iniciarTransicao(modoDe(pathname))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
   useEffect(() => {
@@ -125,7 +143,7 @@ export function SidebarNav({
             type="button"
             onClick={() => iniciarTransicao('main')}
             className={cn(
-              'flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left transition-all duration-200 ease-out hover:bg-sidebar-accent',
+              'flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left transition-all duration-150 ease-out hover:bg-sidebar-accent',
               cabecalhoVisivel
                 ? 'translate-x-0 opacity-100'
                 : '-translate-x-2 opacity-0'

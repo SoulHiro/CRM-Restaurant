@@ -14,6 +14,7 @@ import {
 } from '@repo/ui/components/card'
 import { EmptyState } from '@repo/ui/components/empty-state'
 import { Input } from '@repo/ui/components/input'
+import { Label } from '@repo/ui/components/label'
 import {
   Select,
   SelectContent,
@@ -23,31 +24,33 @@ import {
 } from '@repo/ui/components/select'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
-import { formatDateBR } from '@/lib/formatters'
 import {
   adicionarExtraEmpresaAction,
   listarCatalogoAction,
   listarExtrasEmpresaAction,
   removerExtraEmpresaAction,
-} from '../lib/actions'
-import type { ExtraEmpresaItem, PratoCatalogoItem } from '../lib/types'
+} from '@/features/cardapio/lib/actions'
+import type {
+  ExtraEmpresaItem,
+  PratoCatalogoItem,
+} from '@/features/cardapio/lib/types'
+import { somarDiasISO } from '@/lib/dates'
+import { formatDateBR, hojeISO } from '@/lib/formatters'
 
 /**
- * Prato exclusivo de uma empresa (contrato específico, ex: LNR) — soma uma
- * opção a mais só pra ela, por cima do que todo mundo já vê. Sempre
- * cadastrado à mão aqui, nunca entra no sorteio do cardápio comum.
+ * Prato exclusivo dessa empresa (contrato específico, ex: LNR) — soma uma
+ * opção a mais só pra ela, por cima do cardápio comum. Sempre cadastrado à
+ * mão aqui, nunca entra no sorteio nem no corte de alternativas.
  */
-export function ExtrasEmpresaSection({
+export function ExtrasCardapioSection({
   empresaId,
   empresaNome,
-  from,
-  to,
 }: {
   empresaId: string
   empresaNome: string
-  from: string
-  to: string
 }) {
+  const [from, setFrom] = useState(hojeISO)
+  const [to, setTo] = useState(() => somarDiasISO(hojeISO(), 30))
   const [extras, setExtras] = useState<ExtraEmpresaItem[] | null>(null)
   const [catalogo, setCatalogo] = useState<PratoCatalogoItem[]>([])
   const [novaData, setNovaData] = useState(from)
@@ -69,7 +72,6 @@ export function ExtrasEmpresaSection({
     setExtras(null)
     buscarExtras({ empresaId, from, to })
     buscarCatalogo({})
-    setNovaData(from)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [empresaId, from, to])
 
@@ -111,6 +113,27 @@ export function ExtrasEmpresaSection({
         </p>
 
         <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Ver extras de</Label>
+            <Input
+              type="date"
+              className="h-9 w-40"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Até</Label>
+            <Input
+              type="date"
+              className="h-9 w-40"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-2 border-t pt-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-muted-foreground">
               Dia

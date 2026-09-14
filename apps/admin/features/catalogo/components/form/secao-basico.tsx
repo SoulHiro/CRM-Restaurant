@@ -1,6 +1,16 @@
 'use client'
 
-import { AlignLeft, Clock, FolderTree, Ruler, Tag, X } from 'lucide-react'
+import {
+  CircleCheck,
+  Clock,
+  CupSoda,
+  FolderTree,
+  PauseCircle,
+  Ruler,
+  Tag,
+  UtensilsCrossed,
+  X,
+} from 'lucide-react'
 
 import { Card, CardContent } from '@repo/ui/components/card'
 import { Input } from '@repo/ui/components/input'
@@ -12,15 +22,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/ui/components/select'
-import { Textarea } from '@repo/ui/components/textarea'
-
-import type { CategoriaProdutoOption, CriarProdutoInput } from '../../lib/types'
-import { SecaoPrecificacao } from './secao-precificacao'
 import { SelectableCard } from '@repo/ui/components/selectable-card'
+
+import {
+  TIPO_PRODUTO_LABEL,
+  TIPOS_PRODUTO,
+  type CategoriaProdutoOption,
+  type CriarProdutoInput,
+  type TipoProduto,
+} from '../../lib/types'
 import { ResumoTamanhosPadrao, tamanhosPadrao } from './tamanhos-editor'
 import { UploadMidia } from './upload-midia'
 
 const SEM_CATEGORIA = '__nenhuma__'
+
+const TIPO_ICON: Record<TipoProduto, typeof UtensilsCrossed> = {
+  comida: UtensilsCrossed,
+  bebida: CupSoda,
+}
 
 export function SecaoBasico({
   dados,
@@ -74,32 +93,28 @@ export function SecaoBasico({
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label className="flex items-center gap-1.5 text-sm">
-            <AlignLeft className="size-3.5 text-muted-foreground" />
-            Descrição
-          </Label>
-          <Textarea
-            value={dados.descricao}
-            onChange={(e) => onChange({ descricao: e.target.value })}
-            rows={3}
-            placeholder="O que vem no prato/lanche..."
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="sm:w-1/2 sm:pr-2">
           <UploadMidia
             tipo="foto"
-            label="Foto"
+            label="Foto (usada por funcionários ao lançar consumo próprio)"
             value={dados.fotoUrl}
             onChange={(fotoUrl) => onChange({ fotoUrl })}
           />
-          <UploadMidia
-            tipo="video"
-            label="Vídeo"
-            value={dados.videoUrl}
-            onChange={(videoUrl) => onChange({ videoUrl })}
-          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-sm">Tipo</Label>
+          <div className="grid grid-cols-2 gap-3">
+            {TIPOS_PRODUTO.map((t) => (
+              <SelectableCard
+                key={t}
+                icon={TIPO_ICON[t]}
+                label={TIPO_PRODUTO_LABEL[t]}
+                selected={dados.tipo === t}
+                onClick={() => onChange({ tipo: t })}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col gap-1.5 pt-2 sm:w-1/2 sm:pr-2">
@@ -149,7 +164,24 @@ export function SecaoBasico({
           {dados.temTamanhos && <ResumoTamanhosPadrao />}
         </div>
 
-        <SecaoPrecificacao dados={dados} onChange={onChange} />
+        <div className="flex flex-col gap-2 pt-2">
+          <Label className="text-sm">Status</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <SelectableCard
+              icon={CircleCheck}
+              label="Disponível"
+              selected={!dados.pausadoHoje}
+              onClick={() => onChange({ pausadoHoje: false })}
+            />
+            <SelectableCard
+              icon={PauseCircle}
+              label="Pausado hoje"
+              description="Volta sozinho amanhã"
+              selected={dados.pausadoHoje}
+              onClick={() => onChange({ pausadoHoje: true })}
+            />
+          </div>
+        </div>
       </CardContent>
     </Card>
   )

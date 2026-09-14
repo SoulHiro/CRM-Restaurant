@@ -111,24 +111,18 @@ export function calcularMargemPercentual(
   return ((precoVenda - custoProducao) / custoProducao) * 100
 }
 
-export type TipoDesconto = 'percentual' | 'valorFixo'
-
 /**
- * Um desconto só por produto, aplicado igual em cada tamanho quando o
- * produto tem tamanhos — 'percentual' tira uma fração do preço, 'valorFixo'
- * tira um valor em R$ fixo (nunca deixa o preço negativo).
+ * Food cost % — quanto do preço de venda é consumido pelo custo de produção
+ * (o inverso da margem, mesma matemática só que na leitura que dono de
+ * restaurante/contador já reconhece de cabeça: ~28-35% é saudável, acima
+ * disso é alerta). `precoVenda` zero é "sem dado", não divisão por zero.
  */
-export function calcularPrecoComDesconto(
+export function calcularFoodCostPercentual(
   precoVenda: number,
-  descontoTipo: TipoDesconto,
-  descontoValor: number | null
+  custoProducao: number
 ): number {
-  if (descontoValor == null || descontoValor <= 0) return precoVenda
-  const precoFinal =
-    descontoTipo === 'percentual'
-      ? precoVenda * (1 - descontoValor / 100)
-      : precoVenda - descontoValor
-  return Math.max(0, precoFinal)
+  if (precoVenda <= 0) return 0
+  return (custoProducao / precoVenda) * 100
 }
 
 export function corMargem(

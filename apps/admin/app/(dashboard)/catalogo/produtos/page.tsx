@@ -29,8 +29,7 @@ export default async function ProdutosPage({
         <div>
           <h1 className="text-2xl font-semibold">Produtos</h1>
           <p className="text-sm text-muted-foreground">
-            Cardápio de almoço e de janta, local e delivery, tudo num lugar
-            só.
+            Ficha técnica, custo de produção e preço de venda de cada item.
           </p>
         </div>
         <Button asChild size="sm" className="w-full sm:w-auto">

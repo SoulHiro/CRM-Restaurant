@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { sql } from 'drizzle-orm'
+
 import { db } from '@/lib/db'
 import { hojeISO } from '@/lib/formatters'
 import { toNumber } from '@/lib/numeric'
@@ -7,24 +9,39 @@ import {
   getEstoqueItensAtivos,
   getUltimosPrecos,
 } from '@/features/estoque/lib/queries'
+import { produto_ficha_tecnica_item } from '@repo/db'
 
 import type {
-  AdicionalItemOption,
   CategoriaProdutoOption,
   EditarProdutoInput,
-  GrupoAdicionalOption,
   InsumoOption,
   ProdutoListItem,
 } from './types'
 
 const CATEGORIAS_FICHA_TECNICA = ['comestivel', 'preparo', 'embalagem'] as const
 
+/** `estoque_item_id → em quantas fichas técnicas aparece` — só pra ordenar a busca por mais usado primeiro. */
+async function getContagemUsoInsumos(): Promise<Map<string, number>> {
+  const linhas = await db
+    .select({
+      estoqueItemId: produto_ficha_tecnica_item.estoque_item_id,
+      total: sql<string>`count(*)`,
+    })
+    .from(produto_ficha_tecnica_item)
+    .groupBy(produto_ficha_tecnica_item.estoque_item_id)
+
+  return new Map(linhas.map((linha) => [linha.estoqueItemId, Number(linha.total)]))
+}
+
 export async function getInsumosDisponiveis(): Promise<InsumoOption[]> {
   const itens = await getEstoqueItensAtivos()
   const elegiveis = itens.filter((item) =>
     (CATEGORIAS_FICHA_TECNICA as readonly string[]).includes(item.categoria)
   )
-  const precos = await getUltimosPrecos(elegiveis.map((item) => item.id))
+  const [precos, vezesUsado] = await Promise.all([
+    getUltimosPrecos(elegiveis.map((item) => item.id)),
+    getContagemUsoInsumos(),
+  ])
 
   return elegiveis.map((item) => ({
     id: item.id,
@@ -32,6 +49,7 @@ export async function getInsumosDisponiveis(): Promise<InsumoOption[]> {
     unidade: item.unidade,
     categoria: item.categoria,
     custoUnitario: precos.get(item.id) ?? 0,
+    vezesUsado: vezesUsado.get(item.id) ?? 0,
   }))
 }
 
@@ -46,68 +64,6 @@ export async function getCategoriasProduto(): Promise<
   })
 
   return rows.map((row) => ({ id: row.id, nome: row.nome }))
-}
-
-function mapAdicionalItem(row: {
-  id: string
-  grupo_id: string
-  nome: string
-  preco: string
-  foto_url: string | null
-  quantidade_minima: number
-  quantidade_maxima: number
-  ativo: boolean
-}): AdicionalItemOption {
-  return {
-    id: row.id,
-    grupoId: row.grupo_id,
-    nome: row.nome,
-    preco: toNumber(row.preco),
-    fotoUrl: row.foto_url,
-    quantidadeMinima: row.quantidade_minima,
-    quantidadeMaxima: row.quantidade_maxima,
-    ativo: row.ativo,
-  }
-}
-
-/** Grupos ativos, com os itens ativos de cada um — usado pra escolher no cadastro de produto. */
-export async function getGruposAdicionais(): Promise<GrupoAdicionalOption[]> {
-  const rows = await db.query.grupo_adicional.findMany({
-    where: (grupo, { eq }) => eq(grupo.ativo, true),
-    with: {
-      itens: { where: (item, { eq }) => eq(item.ativo, true) },
-    },
-    orderBy: (grupo, { asc }) => [asc(grupo.nome)],
-  })
-
-  return rows.map((row) => ({
-    id: row.id,
-    nome: row.nome,
-    disponivelAlmoco: row.disponivel_almoco,
-    disponivelJanta: row.disponivel_janta,
-    ativo: row.ativo,
-    itens: row.itens.map(mapAdicionalItem),
-  }))
-}
-
-export async function getGrupoAdicionalDetalhe(
-  id: string
-): Promise<GrupoAdicionalOption | null> {
-  const row = await db.query.grupo_adicional.findFirst({
-    where: (grupo, { eq }) => eq(grupo.id, id),
-    with: { itens: true },
-  })
-
-  if (!row) return null
-
-  return {
-    id: row.id,
-    nome: row.nome,
-    disponivelAlmoco: row.disponivel_almoco,
-    disponivelJanta: row.disponivel_janta,
-    ativo: row.ativo,
-    itens: row.itens.map(mapAdicionalItem),
-  }
 }
 
 export async function getProdutos(): Promise<ProdutoListItem[]> {
@@ -133,10 +89,6 @@ export async function getProdutos(): Promise<ProdutoListItem[]> {
       temTamanhos: row.tem_tamanhos,
       precoMinimo: precosTamanhos.length > 0 ? Math.min(...precosTamanhos) : null,
       pausadoHoje: row.pausado_em === hoje,
-      disponivelDelivery: row.disponivel_delivery,
-      disponivelLocal: row.disponivel_local,
-      apareceAlmoco: row.aparece_almoco,
-      apareceJanta: row.aparece_janta,
       fotoUrl: row.foto_url,
       ativo: row.ativo,
     }
@@ -152,8 +104,6 @@ export async function getProdutoDetalhe(
     with: {
       fichaTecnica: { with: { insumo: true } },
       tamanhos: { orderBy: (t, { asc }) => [asc(t.ordem)] },
-      diasSemana: true,
-      grupoAdicionais: true,
     },
   })
 
@@ -176,9 +126,7 @@ export async function getProdutoDetalhe(
     nome: row.nome,
     categoriaId: row.categoria_id,
     tipo: row.tipo,
-    descricao: row.descricao ?? '',
     fotoUrl: row.foto_url ?? '',
-    videoUrl: row.video_url ?? '',
     fichaTecnica: row.fichaTecnica.map((item) => ({
       estoqueItemId: item.estoque_item_id,
       nome: item.insumo.nome,
@@ -204,22 +152,6 @@ export async function getProdutoDetalhe(
       ehBase: t.is_base,
     })),
     precoVenda: row.preco_venda == null ? 0 : toNumber(row.preco_venda),
-    descontoTipo: row.desconto_tipo === 'valor_fixo' ? 'valorFixo' : 'percentual',
-    descontoValor: row.desconto_valor == null ? null : toNumber(row.desconto_valor),
-    disponivelDelivery: row.disponivel_delivery,
-    disponivelLocal: row.disponivel_local,
     pausadoHoje: row.pausado_em === hojeISO(),
-    apareceAlmoco: row.aparece_almoco,
-    apareceJanta: row.aparece_janta,
-    diasSemana: row.diasSemana.map((d) => d.dia_semana),
-    classificacoes: row.classificacoes ?? [],
-    grupoAdicionalIds: row.grupoAdicionais.map((g) => g.grupo_id),
   }
-}
-
-export async function getProdutosDelivery(): Promise<ProdutoListItem[]> {
-  const produtos = await getProdutos()
-  return produtos.filter(
-    (produto) => produto.ativo && produto.disponivelDelivery
-  )
 }

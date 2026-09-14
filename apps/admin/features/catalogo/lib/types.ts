@@ -1,5 +1,4 @@
 import type { CategoriaEstoque, Unidade } from '@/features/estoque/lib/types'
-import type { TipoDesconto } from './precificacao-helpers'
 
 export const TIPOS_PRODUTO = ['comida', 'bebida'] as const
 export type TipoProduto = (typeof TIPOS_PRODUTO)[number]
@@ -14,26 +13,6 @@ export interface CategoriaProdutoOption {
   nome: string
 }
 
-export interface AdicionalItemOption {
-  id: string
-  grupoId: string
-  nome: string
-  preco: number
-  fotoUrl: string | null
-  quantidadeMinima: number
-  quantidadeMaxima: number
-  ativo: boolean
-}
-
-export interface GrupoAdicionalOption {
-  id: string
-  nome: string
-  disponivelAlmoco: boolean
-  disponivelJanta: boolean
-  ativo: boolean
-  itens: AdicionalItemOption[]
-}
-
 /** Insumo elegível pra ficha técnica — só comestível/preparo/embalagem entram. */
 export interface InsumoOption {
   id: string
@@ -41,6 +20,8 @@ export interface InsumoOption {
   unidade: Unidade
   categoria: CategoriaEstoque
   custoUnitario: number
+  /** Em quantas fichas técnicas (de outros produtos) esse insumo já aparece — usado só pra ordenar a busca, mais usado primeiro. */
+  vezesUsado: number
 }
 
 export type TipoEscalaFichaTecnica = 'proporcional' | 'fixo'
@@ -85,29 +66,16 @@ export interface CriarProdutoInput {
   nome: string
   categoriaId: string | null
   tipo: TipoProduto
-  descricao: string
+  /** Só pra `features/consumo-funcionario` (staff reconhecer o item na hora de lançar consumo) — não é vitrine de cardápio digital. */
   fotoUrl: string
-  videoUrl: string
   fichaTecnica: FichaTecnicaItemInput[]
   tempoMedioPreparoMinutos: number
   temTamanhos: boolean
   tamanhos: TamanhoInput[]
   /** Ignorado quando `temTamanhos` — nesse caso o preço vive em `tamanhos[].precoVenda`. */
   precoVenda: number
-  /** Um desconto só pro produto inteiro — aplicado igual em cada tamanho quando `temTamanhos`. */
-  descontoTipo: TipoDesconto
-  descontoValor: number | null
-  disponivelDelivery: boolean
-  disponivelLocal: boolean
   /** Pausa é sempre "por hoje" — ver `produto.pausado_em` no schema. */
   pausadoHoje: boolean
-  apareceAlmoco: boolean
-  apareceJanta: boolean
-  /** Em quais dias da semana (0=domingo...6=sábado) aparece. Vazio = todo dia. */
-  diasSemana: number[]
-  /** Chaves fixas de `lib/classificacoes.ts` — sem entidade de banco. */
-  classificacoes: string[]
-  grupoAdicionalIds: string[]
 }
 
 export interface ProdutoListItem {
@@ -122,10 +90,6 @@ export interface ProdutoListItem {
   /** Menor `preco_venda` entre os tamanhos — null quando não tem tamanhos ou nenhum tamanho tem preço. */
   precoMinimo: number | null
   pausadoHoje: boolean
-  disponivelDelivery: boolean
-  disponivelLocal: boolean
-  apareceAlmoco: boolean
-  apareceJanta: boolean
   fotoUrl: string | null
   ativo: boolean
 }

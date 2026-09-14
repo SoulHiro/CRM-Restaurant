@@ -33,6 +33,8 @@ export const pratoCardapio = pgTable(
       .$defaultFn(() => createId()),
     nome: text('nome').notNull(),
     ativo: boolean('ativo').notNull().default(true),
+    /** 'aves' | 'bovinos' | 'suinos' | 'peixes' | 'massas' | 'saladas' | 'outros' — validado em `lib/schemas.ts`, não como pg enum, pra adicionar categoria nova ser só código. */
+    categoria: text('categoria').notNull().default('outros'),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [unique().on(t.nome)]
@@ -69,9 +71,38 @@ export const cardapioSemanaDiaItem = pgTable(
       .notNull()
       .references(() => pratoCardapio.id, { onDelete: 'cascade' }),
     destaque: boolean('destaque').notNull().default(false),
+    /** Prato de custo mais alto — cobra um adicional fixo (cadastrado em Valores) de quem escolher, independente de ser destaque ou alternativa. */
+    especial: boolean('especial').notNull().default(false),
+    /** Marcado por um pin em `cardapio_prato_fixo` — só reflete a regra, não é a fonte dela. */
+    fixo: boolean('fixo').notNull().default(false),
     ordem: integer('ordem').notNull().default(0),
   },
   (t) => [unique().on(t.cardapio_semana_dia_id, t.prato_catalogo_id)]
+)
+
+/**
+ * Regra "esse prato repete toda [dia da semana]" — fixada a partir do pin no
+ * calendário. É a fonte de verdade da recorrência; `cardapio_semana_dia_item.fixo`
+ * só marca quais linhas já materializadas vieram dela. Materializar (inserir
+ * o item nas próximas semanas) é responsabilidade da action que cria a
+ * regra, não de uma leitura — assim o calendário continua só lendo
+ * `cardapio_semana_dia_item` normalmente, sem lógica de recorrência no
+ * caminho de leitura.
+ */
+export const cardapioPratoFixo = pgTable(
+  'cardapio_prato_fixo',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    /** 0 = domingo .. 6 = sábado (sorteio nunca usa domingo, mas o pin pode ser fixado em qualquer dia que já tenha cardápio). */
+    dia_semana: integer('dia_semana').notNull(),
+    prato_catalogo_id: text('prato_catalogo_id')
+      .notNull()
+      .references(() => pratoCardapio.id, { onDelete: 'cascade' }),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.dia_semana, t.prato_catalogo_id)]
 )
 
 /**

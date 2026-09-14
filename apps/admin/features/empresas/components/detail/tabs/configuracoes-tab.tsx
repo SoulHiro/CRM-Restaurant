@@ -34,6 +34,7 @@ import type {
   EmpresaListItem,
   EmpresaPrecoModo,
 } from '../../../lib/types'
+import { ExtrasCardapioSection } from './extras-cardapio-section'
 
 export function ConfiguracoesTab({ empresa }: { empresa: EmpresaListItem }) {
   const [slug, setSlug] = useState(empresa.slug ?? slugify(empresa.nome))
@@ -246,6 +247,8 @@ export function ConfiguracoesTab({ empresa }: { empresa: EmpresaListItem }) {
           </div>
         </CardContent>
       </Card>
+
+      <ExtrasCardapioSection empresaId={empresa.id} empresaNome={empresa.nome} />
 
       <Card className="border-0">
         <CardHeader>

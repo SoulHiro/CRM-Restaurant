@@ -66,12 +66,10 @@ export function ProdutosToolbar({
   const { searchParams, setParams } = useQueryParams()
 
   const tipo = searchParams.get('tipo') ?? ''
-  const canal = searchParams.get('canal') ?? ''
-  const turno = searchParams.get('turno') ?? ''
   const categoriaId = searchParams.get('categoria') ?? TODAS_CATEGORIAS
 
   const temFiltroAtivo =
-    tipo || canal || turno || categoriaId !== TODAS_CATEGORIAS || searchParams.get('q')
+    tipo || categoriaId !== TODAS_CATEGORIAS || searchParams.get('q')
 
   return (
     <div className="flex flex-col gap-3">
@@ -112,41 +110,13 @@ export function ProdutosToolbar({
           ))}
         </ToggleGroup>
 
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          value={canal}
-          onValueChange={(value) => setParams({ canal: value || null })}
-        >
-          <ToggleGroupItem value="local" className="text-xs">
-            Local
-          </ToggleGroupItem>
-          <ToggleGroupItem value="delivery" className="text-xs">
-            Delivery
-          </ToggleGroupItem>
-        </ToggleGroup>
-
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          value={turno}
-          onValueChange={(value) => setParams({ turno: value || null })}
-        >
-          <ToggleGroupItem value="almoco" className="text-xs">
-            Almoço
-          </ToggleGroupItem>
-          <ToggleGroupItem value="janta" className="text-xs">
-            Janta
-          </ToggleGroupItem>
-        </ToggleGroup>
-
         {temFiltroAtivo && (
           <Button
             variant="ghost"
             size="sm"
             className="h-9 text-muted-foreground"
             onClick={() =>
-              setParams({ q: null, tipo: null, canal: null, turno: null, categoria: null })
+              setParams({ q: null, tipo: null, categoria: null })
             }
           >
             <FilterX className="size-4" />

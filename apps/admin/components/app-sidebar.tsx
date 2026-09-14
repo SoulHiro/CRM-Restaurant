@@ -10,7 +10,6 @@ import {
   LayoutGrid,
   Package,
   Package2,
-  ShoppingBag,
   ShoppingCart,
   Wallet,
   Users,
@@ -19,7 +18,6 @@ import {
   Bike,
   Printer,
   Settings,
-  Tag,
   UserCog,
 } from 'lucide-react'
 
@@ -123,16 +121,19 @@ const CONFIG_NAV_ITEMS: NavItem[] = [
   },
 ]
 
+// "Insumos" não tem item aqui de propósito — apontava pra `/estoque`, a
+// mesma URL do item de topo "Estoque" (`NAV_ITEMS`). Dois caminhos pro mesmo
+// lugar, e o pior: por não começar com `/catalogo`, clicar nele derrubava o
+// sidebar de volta pro modo "main" no meio da navegação (ver `modoDe` em
+// sidebar-nav.tsx). "Estoque" no menu principal já cobre isso.
+//
+// "Cardápio de delivery" e "Adicionais" também saíram — eram o esqueleto de
+// um cardápio digital pro cliente pedir direto (vitrine + upsell de
+// pedido), fora do escopo deste sistema: aqui é só custo, estoque e gestão.
+// Cardápio pro cliente fica pra uma parceria futura com a Brendi.
 const CATALOGO_NAV_ITEMS: NavItem[] = [
   { title: 'Cardápio das empresas', url: '/cardapio', icon: BookOpen },
-  {
-    title: 'Cardápio de delivery',
-    url: '/catalogo/delivery',
-    icon: ShoppingBag,
-  },
-  { title: 'Insumos', url: '/estoque', icon: Package },
   { title: 'Produtos', url: '/catalogo/produtos', icon: Package2 },
-  { title: 'Adicionais', url: '/catalogo/adicionais', icon: Tag },
 ]
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {

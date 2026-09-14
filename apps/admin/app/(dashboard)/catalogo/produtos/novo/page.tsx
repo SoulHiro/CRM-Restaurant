@@ -6,19 +6,16 @@ import { Button } from '@repo/ui/components/button'
 import { ProdutoForm } from '@/features/catalogo/components/form/produto-form'
 import {
   getCategoriasProduto,
-  getGruposAdicionais,
   getInsumosDisponiveis,
 } from '@/features/catalogo/lib/queries'
 import { getConfiguracaoPrecificacao } from '@/features/configuracoes/lib/queries'
 
 export default async function NovoProdutoPage() {
-  const [categorias, insumos, grupos, configuracaoPrecificacao] =
-    await Promise.all([
-      getCategoriasProduto(),
-      getInsumosDisponiveis(),
-      getGruposAdicionais(),
-      getConfiguracaoPrecificacao(),
-    ])
+  const [categorias, insumos, configuracaoPrecificacao] = await Promise.all([
+    getCategoriasProduto(),
+    getInsumosDisponiveis(),
+    getConfiguracaoPrecificacao(),
+  ])
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6">
@@ -39,7 +36,6 @@ export default async function NovoProdutoPage() {
       <ProdutoForm
         categorias={categorias}
         insumos={insumos}
-        grupos={grupos}
         configuracaoPrecificacao={configuracaoPrecificacao}
       />
     </div>

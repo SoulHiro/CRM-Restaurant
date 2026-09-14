@@ -9,6 +9,7 @@ import {
   TAG_CARDAPIO_DIAS,
   tagCardapioExtrasEmpresa,
 } from './cache-tags'
+import type { CategoriaPrato } from './categoria-prato'
 import type { CardapioDiaItem, ExtraEmpresaItem, PratoCatalogoItem } from './types'
 
 /** Catálogo único do restaurante — não é mais por empresa. */
@@ -22,6 +23,7 @@ export const getCatalogo = unstable_cache(
       id: row.id,
       nome: row.nome,
       ativo: row.ativo,
+      categoria: row.categoria as CategoriaPrato,
     }))
   },
   ['cardapio-catalogo'],
@@ -56,12 +58,25 @@ export function getCardapioIntervalo(
         const destaqueRow = dia.itens.find((item) => item.destaque)
         const alternativas = dia.itens
           .filter((item) => !item.destaque)
-          .map((item) => ({ id: item.prato.id, nome: item.prato.nome }))
+          .map((item) => ({
+            id: item.prato.id,
+            nome: item.prato.nome,
+            itemId: item.id,
+            especial: item.especial,
+            fixo: item.fixo,
+          }))
 
         return {
+          diaId: dia.id,
           data: dia.data,
           destaque: destaqueRow
-            ? { id: destaqueRow.prato.id, nome: destaqueRow.prato.nome }
+            ? {
+                id: destaqueRow.prato.id,
+                nome: destaqueRow.prato.nome,
+                itemId: destaqueRow.id,
+                especial: destaqueRow.especial,
+                fixo: destaqueRow.fixo,
+              }
             : null,
           alternativas,
         }

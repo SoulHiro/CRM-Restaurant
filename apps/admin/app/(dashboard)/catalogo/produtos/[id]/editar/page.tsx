@@ -7,7 +7,6 @@ import { Button } from '@repo/ui/components/button'
 import { ProdutoForm } from '@/features/catalogo/components/form/produto-form'
 import {
   getCategoriasProduto,
-  getGruposAdicionais,
   getInsumosDisponiveis,
   getProdutoDetalhe,
 } from '@/features/catalogo/lib/queries'
@@ -20,11 +19,10 @@ export default async function EditarProdutoPage({
 }) {
   const { id } = await params
 
-  const [categorias, insumos, grupos, configuracaoPrecificacao, produto] =
+  const [categorias, insumos, configuracaoPrecificacao, produto] =
     await Promise.all([
       getCategoriasProduto(),
       getInsumosDisponiveis(),
-      getGruposAdicionais(),
       getConfiguracaoPrecificacao(),
       getProdutoDetalhe(id),
     ])
@@ -49,7 +47,6 @@ export default async function EditarProdutoPage({
       <ProdutoForm
         categorias={categorias}
         insumos={insumos}
-        grupos={grupos}
         configuracaoPrecificacao={configuracaoPrecificacao}
         produtoId={produto.id}
         dadosIniciais={produto}
