@@ -1,12 +1,12 @@
 'use server'
 
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
 import { db } from '@/lib/db'
 import { hojeISO } from '@/lib/formatters'
 import { toMoneyString, toNumericString } from '@/lib/numeric'
-import { ActionError, authActionClient } from '@/lib/safe-action'
+import { ActionError, tenantActionClient } from '@/lib/safe-action'
 import {
   categoria_produto,
   produto,
@@ -15,7 +15,7 @@ import {
   produto_tamanho,
 } from '@repo/db'
 
-import { getProdutoDetalhe } from './queries'
+import { getProdutoDetalhe, todosInsumosPertencemAoTenant } from './queries'
 import {
   criarCategoriaProdutoSchema,
   criarProdutoSchema,
@@ -38,8 +38,12 @@ function revalidarCatalogo(produtoId?: string) {
  * vindo do formulário porque `features/consumo-funcionario` usa a foto pro
  * funcionário reconhecer o item na hora de lançar consumo.
  */
-function montarValoresProduto(parsedInput: CriarProdutoSchemaInput) {
+function montarValoresProduto(
+  organizationId: string,
+  parsedInput: CriarProdutoSchemaInput
+) {
   return {
+    organization_id: organizationId,
     nome: parsedInput.nome.trim(),
     categoria_id: parsedInput.categoriaId,
     tipo: parsedInput.tipo,
@@ -138,12 +142,34 @@ async function inserirDependenciasProduto(
   }
 }
 
-export const criarProdutoAction = authActionClient
+/** Todo `estoqueItemId` da ficha técnica (linha base + overrides de tamanho) precisa ser do mesmo estabelecimento do produto. */
+async function validarInsumosDoTenant(
+  organizationId: string,
+  parsedInput: CriarProdutoSchemaInput
+) {
+  const ids = [
+    ...parsedInput.fichaTecnica.map((item) => item.estoqueItemId),
+    ...parsedInput.fichaTecnica.flatMap((item) =>
+      item.overridesPorTamanho
+        .map((o) => o.estoqueItemId)
+        .filter((id): id is string => id != null)
+    ),
+  ]
+  if (!(await todosInsumosPertencemAoTenant(organizationId, ids))) {
+    throw new ActionError(
+      'Um dos insumos da ficha técnica não pertence a este estabelecimento.'
+    )
+  }
+}
+
+export const criarProdutoAction = tenantActionClient
   .schema(criarProdutoSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput, ctx }) => {
+    await validarInsumosDoTenant(ctx.organizationId, parsedInput)
+
     const [criado] = await db
       .insert(produto)
-      .values(montarValoresProduto(parsedInput))
+      .values(montarValoresProduto(ctx.organizationId, parsedInput))
       .returning({ id: produto.id })
 
     if (!criado) throw new ActionError('Não foi possível cadastrar o produto')
@@ -154,13 +180,20 @@ export const criarProdutoAction = authActionClient
     return { produtoId: criado.id }
   })
 
-export const editarProdutoAction = authActionClient
+export const editarProdutoAction = tenantActionClient
   .schema(editarProdutoSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput, ctx }) => {
+    await validarInsumosDoTenant(ctx.organizationId, parsedInput)
+
     const [atualizado] = await db
       .update(produto)
-      .set(montarValoresProduto(parsedInput))
-      .where(eq(produto.id, parsedInput.id))
+      .set(montarValoresProduto(ctx.organizationId, parsedInput))
+      .where(
+        and(
+          eq(produto.id, parsedInput.id),
+          eq(produto.organization_id, ctx.organizationId)
+        )
+      )
       .returning({ id: produto.id })
 
     if (!atualizado) throw new ActionError('Produto não encontrado')
@@ -188,10 +221,13 @@ export const editarProdutoAction = authActionClient
  * incluídos. Nasce pausado hoje pra não aparecer no delivery/local por
  * engano antes de alguém revisar preço e nome.
  */
-export const duplicarProdutoAction = authActionClient
+export const duplicarProdutoAction = tenantActionClient
   .schema(duplicarProdutoSchema)
-  .action(async ({ parsedInput }) => {
-    const original = await getProdutoDetalhe(parsedInput.produtoId)
+  .action(async ({ parsedInput, ctx }) => {
+    const original = await getProdutoDetalhe(
+      ctx.organizationId,
+      parsedInput.produtoId
+    )
     if (!original) throw new ActionError('Produto não encontrado')
 
     const dadosCopia: CriarProdutoSchemaInput = {
@@ -202,7 +238,7 @@ export const duplicarProdutoAction = authActionClient
 
     const [criado] = await db
       .insert(produto)
-      .values(montarValoresProduto(dadosCopia))
+      .values(montarValoresProduto(ctx.organizationId, dadosCopia))
       .returning({ id: produto.id })
 
     if (!criado) throw new ActionError('Não foi possível duplicar o produto')
@@ -213,12 +249,12 @@ export const duplicarProdutoAction = authActionClient
     return { produtoId: criado.id }
   })
 
-export const criarCategoriaProdutoAction = authActionClient
+export const criarCategoriaProdutoAction = tenantActionClient
   .schema(criarCategoriaProdutoSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const [criada] = await db
       .insert(categoria_produto)
-      .values({ nome: parsedInput.nome.trim() })
+      .values({ organization_id: ctx.organizationId, nome: parsedInput.nome.trim() })
       .returning({ id: categoria_produto.id, nome: categoria_produto.nome })
 
     if (!criada) throw new ActionError('Não foi possível criar a categoria')

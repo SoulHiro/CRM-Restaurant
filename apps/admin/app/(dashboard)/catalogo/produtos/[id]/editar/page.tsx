@@ -11,6 +11,7 @@ import {
   getProdutoDetalhe,
 } from '@/features/catalogo/lib/queries'
 import { getConfiguracaoPrecificacao } from '@/features/configuracoes/lib/queries'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 
 export default async function EditarProdutoPage({
   params,
@@ -18,13 +19,15 @@ export default async function EditarProdutoPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const organizationId = await getActiveOrganizationId()
+  if (!organizationId) notFound()
 
   const [categorias, insumos, configuracaoPrecificacao, produto] =
     await Promise.all([
-      getCategoriasProduto(),
-      getInsumosDisponiveis(),
-      getConfiguracaoPrecificacao(),
-      getProdutoDetalhe(id),
+      getCategoriasProduto(organizationId),
+      getInsumosDisponiveis(organizationId),
+      getConfiguracaoPrecificacao(organizationId),
+      getProdutoDetalhe(organizationId, id),
     ])
 
   if (!produto) notFound()

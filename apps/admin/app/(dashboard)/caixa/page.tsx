@@ -4,12 +4,14 @@ import {
   getFuncionariosComConsumo,
   getProdutosConsumiveis,
 } from '@/features/consumo-funcionario/lib/queries'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 
 export default async function CaixaPage() {
+  const organizationId = await getActiveOrganizationId()
   const [funcionarios, produtos, categorias] = await Promise.all([
     getFuncionariosComConsumo(),
-    getProdutosConsumiveis(),
-    getCategoriasProduto(),
+    organizationId ? getProdutosConsumiveis(organizationId) : [],
+    organizationId ? getCategoriasProduto(organizationId) : [],
   ])
 
   return (

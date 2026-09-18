@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { admin as adminPlugin } from 'better-auth/plugins'
+import { admin as adminPlugin, organization } from 'better-auth/plugins'
 
 export type { Session, User } from 'better-auth'
 
@@ -27,7 +27,11 @@ export function createAuth(db: Parameters<typeof drizzleAdapter>[0]): any {
     secret: process.env.BETTER_AUTH_SECRET,
     emailAndPassword: { enabled: true },
     database: drizzleAdapter(db, { provider: 'pg' }),
-    plugins: [adminPlugin()],
+    // `organization()` é o tenant do SaaS (ver ARCHITECTURE.md) — cada
+    // "estabelecimento" (Nosso Quintal, Diniz Gourmet, ...) é uma org.
+    // Onboarding hoje é só por script (apps/admin/scripts/), sem convite
+    // por e-mail, por isso não precisa de `sendInvitationEmail`.
+    plugins: [adminPlugin(), organization()],
     session: {
       // Evita bater no Postgres a cada getSession() (ex: proxy.ts roda em
       // toda navegação) — a sessão fica servida por um cookie assinado

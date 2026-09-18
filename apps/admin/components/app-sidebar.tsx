@@ -26,12 +26,11 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
   SidebarRail,
 } from '@repo/ui/components/sidebar'
 import { SidebarNav, type NavItem } from '@/components/sidebar-nav'
 import { NavUser } from '@/components/nav-user'
+import { OrgSwitcher, type OrgOption } from '@/components/org-switcher'
 import type { User } from '@repo/auth'
 
 const NAV_ITEMS = [
@@ -139,9 +138,17 @@ const CATALOGO_NAV_ITEMS: NavItem[] = [
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User
   role?: string
+  organizations: OrgOption[]
+  activeOrganizationId: string | null
 }
 
-export function AppSidebar({ user, role, ...props }: AppSidebarProps) {
+export function AppSidebar({
+  user,
+  role,
+  organizations,
+  activeOrganizationId,
+  ...props
+}: AppSidebarProps) {
   const visibleItems = NAV_ITEMS.filter(
     (item) => role && item.roles.includes(role)
   )
@@ -149,14 +156,10 @@ export function AppSidebar({ user, role, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <div className="px-2 py-1.5 group-data-[collapsible=icon]:hidden">
-              <p className="text-sm font-semibold">Nosso Quintal</p>
-              <p className="text-xs text-sidebar-foreground/50">Admin</p>
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <OrgSwitcher
+          organizations={organizations}
+          activeOrganizationId={activeOrganizationId}
+        />
       </SidebarHeader>
       <SidebarContent>
         <SidebarNav

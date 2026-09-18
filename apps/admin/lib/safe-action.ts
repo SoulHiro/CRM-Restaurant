@@ -44,6 +44,14 @@ export const authActionClient = actionClient.use(async ({ next }) => {
         name: session.user.name as string,
         role: (session.user as { role?: string }).role,
       },
+      // Estabelecimento ativo da sessão (ver org-switcher.tsx) — nullable
+      // aqui de propósito: a maioria dos domínios (empresas, financeiro, RH,
+      // ...) ainda não é multi-tenant e não usa isso. Quem precisa que
+      // exista de verdade usa `tenantActionClient`/`adminTenantActionClient`
+      // abaixo, não este client base.
+      organizationId:
+        (session.session as { activeOrganizationId?: string | null })
+          .activeOrganizationId ?? null,
     },
   })
 })
@@ -55,3 +63,26 @@ export const adminActionClient = authActionClient.use(async ({ next, ctx }) => {
   }
   return next({ ctx })
 })
+
+/**
+ * Exige um estabelecimento ativo — usado pelas actions de Catálogo e
+ * Estoque (únicos domínios multi-tenant hoje, ver ARCHITECTURE.md).
+ * `ctx.organizationId` nunca vem do client: é sempre derivado da sessão em
+ * `authActionClient`, nunca de um campo do formulário.
+ */
+export const tenantActionClient = authActionClient.use(async ({ next, ctx }) => {
+  if (!ctx.organizationId) {
+    throw new ActionError('Selecione um estabelecimento.')
+  }
+  return next({ ctx: { ...ctx, organizationId: ctx.organizationId } })
+})
+
+/** Combina `adminActionClient` (role) com a exigência de estabelecimento ativo. */
+export const adminTenantActionClient = adminActionClient.use(
+  async ({ next, ctx }) => {
+    if (!ctx.organizationId) {
+      throw new ActionError('Selecione um estabelecimento.')
+    }
+    return next({ ctx: { ...ctx, organizationId: ctx.organizationId } })
+  }
+)

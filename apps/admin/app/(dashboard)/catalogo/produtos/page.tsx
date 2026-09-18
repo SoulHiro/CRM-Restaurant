@@ -7,16 +7,19 @@ import { ProdutosTable } from '@/features/catalogo/components/list/produtos-tabl
 import { ProdutosToolbar } from '@/features/catalogo/components/list/produtos-toolbar'
 import { filterProdutos, parseProdutoFilters } from '@/features/catalogo/lib/produto-helpers'
 import { getCategoriasProduto, getProdutos } from '@/features/catalogo/lib/queries'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 
 export default async function ProdutosPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  const organizationId = await getActiveOrganizationId()
+
   const [params, produtos, categorias] = await Promise.all([
     searchParams,
-    getProdutos(),
-    getCategoriasProduto(),
+    organizationId ? getProdutos(organizationId) : [],
+    organizationId ? getCategoriasProduto(organizationId) : [],
   ])
 
   const filters = parseProdutoFilters(params)

@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { toNumber, toNumericString } from '@/lib/numeric'
@@ -69,13 +69,24 @@ export function planejarMovimento(
   }
 }
 
+/**
+ * Também confirma que o item pertence ao estabelecimento ativo — sem isso,
+ * um id de outro tenant (por engano ou adulterado) deixaria ler/mexer no
+ * saldo de um item que não é deste `organizationId`.
+ */
 export async function lerSaldoAtual(
+  organizationId: string,
   estoqueItemId: string
 ): Promise<number | null> {
   const [row] = await db
     .select({ quantidade: estoque_item.quantidade_atual })
     .from(estoque_item)
-    .where(eq(estoque_item.id, estoqueItemId))
+    .where(
+      and(
+        eq(estoque_item.id, estoqueItemId),
+        eq(estoque_item.organization_id, organizationId)
+      )
+    )
     .limit(1)
 
   return row ? toNumber(row.quantidade) : null

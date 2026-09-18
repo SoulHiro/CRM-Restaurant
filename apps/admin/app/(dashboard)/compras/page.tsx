@@ -8,21 +8,25 @@ import {
 } from '@/features/compras/lib/queries'
 import { getEstoqueItensAtivos } from '@/features/estoque/lib/queries'
 import { hojeISO } from '@/lib/formatters'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 
 export default async function ComprasPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const params = await searchParams
+  const [params, organizationId] = await Promise.all([
+    searchParams,
+    getActiveOrganizationId(),
+  ])
   const filtro = parseCompraFiltro(params.filtro)
 
   const [compras, sugestao, fornecedores, itens, precosPorFornecedor] =
     await Promise.all([
       getCompras(),
-      getSugestaoCompra(),
+      organizationId ? getSugestaoCompra(organizationId) : [],
       getFornecedores(),
-      getEstoqueItensAtivos(),
+      organizationId ? getEstoqueItensAtivos(organizationId) : [],
       getPrecosPorFornecedor(),
     ])
 

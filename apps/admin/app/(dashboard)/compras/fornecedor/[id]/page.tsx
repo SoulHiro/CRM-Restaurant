@@ -5,6 +5,7 @@ import { FornecedorTabs } from '@/features/compras/components/detail/fornecedor-
 import { getFornecedorDetalhe } from '@/features/compras/lib/queries'
 import { getEstoqueItensAtivos } from '@/features/estoque/lib/queries'
 import { hojeISO } from '@/lib/formatters'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 
 export default async function FornecedorPage({
   params,
@@ -12,9 +13,10 @@ export default async function FornecedorPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const organizationId = await getActiveOrganizationId()
   const [fornecedor, itens] = await Promise.all([
     getFornecedorDetalhe(id),
-    getEstoqueItensAtivos(),
+    organizationId ? getEstoqueItensAtivos(organizationId) : [],
   ])
 
   if (!fornecedor) {

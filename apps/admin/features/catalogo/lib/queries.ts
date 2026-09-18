@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { hojeISO } from '@/lib/formatters'
@@ -9,7 +9,7 @@ import {
   getEstoqueItensAtivos,
   getUltimosPrecos,
 } from '@/features/estoque/lib/queries'
-import { produto_ficha_tecnica_item } from '@repo/db'
+import { produto, produto_ficha_tecnica_item } from '@repo/db'
 
 import type {
   CategoriaProdutoOption,
@@ -20,27 +20,36 @@ import type {
 
 const CATEGORIAS_FICHA_TECNICA = ['comestivel', 'preparo', 'embalagem'] as const
 
-/** `estoque_item_id → em quantas fichas técnicas aparece` — só pra ordenar a busca por mais usado primeiro. */
-async function getContagemUsoInsumos(): Promise<Map<string, number>> {
+/** `estoque_item_id → em quantas fichas técnicas (deste estabelecimento) aparece` — só pra ordenar a busca por mais usado primeiro. */
+async function getContagemUsoInsumos(
+  organizationId: string
+): Promise<Map<string, number>> {
   const linhas = await db
     .select({
       estoqueItemId: produto_ficha_tecnica_item.estoque_item_id,
       total: sql<string>`count(*)`,
     })
     .from(produto_ficha_tecnica_item)
+    .innerJoin(produto, eq(produto.id, produto_ficha_tecnica_item.produto_id))
+    .where(eq(produto.organization_id, organizationId))
     .groupBy(produto_ficha_tecnica_item.estoque_item_id)
 
   return new Map(linhas.map((linha) => [linha.estoqueItemId, Number(linha.total)]))
 }
 
-export async function getInsumosDisponiveis(): Promise<InsumoOption[]> {
-  const itens = await getEstoqueItensAtivos()
+export async function getInsumosDisponiveis(
+  organizationId: string
+): Promise<InsumoOption[]> {
+  const itens = await getEstoqueItensAtivos(organizationId)
   const elegiveis = itens.filter((item) =>
     (CATEGORIAS_FICHA_TECNICA as readonly string[]).includes(item.categoria)
   )
   const [precos, vezesUsado] = await Promise.all([
-    getUltimosPrecos(elegiveis.map((item) => item.id)),
-    getContagemUsoInsumos(),
+    getUltimosPrecos(
+      organizationId,
+      elegiveis.map((item) => item.id)
+    ),
+    getContagemUsoInsumos(organizationId),
   ])
 
   return elegiveis.map((item) => ({
@@ -53,10 +62,12 @@ export async function getInsumosDisponiveis(): Promise<InsumoOption[]> {
   }))
 }
 
-export async function getCategoriasProduto(): Promise<
-  CategoriaProdutoOption[]
-> {
+export async function getCategoriasProduto(
+  organizationId: string
+): Promise<CategoriaProdutoOption[]> {
   const rows = await db.query.categoria_produto.findMany({
+    where: (categoria, { eq: eqOp }) =>
+      eqOp(categoria.organization_id, organizationId),
     orderBy: (categoria, { asc }) => [
       asc(categoria.ordem),
       asc(categoria.nome),
@@ -66,10 +77,14 @@ export async function getCategoriasProduto(): Promise<
   return rows.map((row) => ({ id: row.id, nome: row.nome }))
 }
 
-export async function getProdutos(): Promise<ProdutoListItem[]> {
+export async function getProdutos(
+  organizationId: string
+): Promise<ProdutoListItem[]> {
   const hoje = hojeISO()
 
   const rows = await db.query.produto.findMany({
+    where: (produto, { eq: eqOp }) =>
+      eqOp(produto.organization_id, organizationId),
     with: {
       categoria: { columns: { nome: true } },
       tamanhos: { columns: { preco_venda: true } },
@@ -97,10 +112,12 @@ export async function getProdutos(): Promise<ProdutoListItem[]> {
 
 /** Produto completo pra tela de edição — mesma forma que o form de cadastro usa, com id. */
 export async function getProdutoDetalhe(
+  organizationId: string,
   id: string
 ): Promise<EditarProdutoInput | null> {
   const row = await db.query.produto.findFirst({
-    where: (produto, { eq }) => eq(produto.id, id),
+    where: (produto, { eq: eqOp, and: andOp }) =>
+      andOp(eqOp(produto.id, id), eqOp(produto.organization_id, organizationId)),
     with: {
       fichaTecnica: { with: { insumo: true } },
       tamanhos: { orderBy: (t, { asc }) => [asc(t.ordem)] },
@@ -110,6 +127,7 @@ export async function getProdutoDetalhe(
   if (!row) return null
 
   const precos = await getUltimosPrecos(
+    organizationId,
     row.fichaTecnica.map((item) => item.estoque_item_id)
   )
 
@@ -154,4 +172,27 @@ export async function getProdutoDetalhe(
     precoVenda: row.preco_venda == null ? 0 : toNumber(row.preco_venda),
     pausadoHoje: row.pausado_em === hojeISO(),
   }
+}
+
+/**
+ * Verifica que todo `estoqueItemId` recebido do formulário pertence mesmo a
+ * este estabelecimento, antes de gravar a ficha técnica — sem isso um bug
+ * (ou um id adulterado) poderia vincular a receita de um produto a um
+ * insumo de outro tenant.
+ */
+export async function todosInsumosPertencemAoTenant(
+  organizationId: string,
+  estoqueItemIds: readonly string[]
+): Promise<boolean> {
+  if (estoqueItemIds.length === 0) return true
+  const unicos = [...new Set(estoqueItemIds)]
+  const rows = await db.query.estoque_item.findMany({
+    where: (item, { and: andOp, eq: eqOp, inArray }) =>
+      andOp(
+        inArray(item.id, unicos),
+        eqOp(item.organization_id, organizationId)
+      ),
+    columns: { id: true },
+  })
+  return rows.length === unicos.length
 }

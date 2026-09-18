@@ -7,6 +7,7 @@ import { Button } from '@repo/ui/components/button'
 
 import { useQueryParams } from '@/hooks/use-query-params'
 import type { EstoqueFilters } from '../../lib/estoque-helpers'
+import type { DepartamentoEstoqueOption } from '../../lib/types'
 
 const NIVEL_LABELS: Record<string, string> = {
   zerado: 'Sem estoque',
@@ -18,13 +19,20 @@ const PARAM_KEYS = {
   q: 'q',
   nivel: 'nivel',
   unidade: 'unidade',
+  departamento: 'departamento',
   vencendo: 'vencendo',
   incluirInativos: 'inativos',
 } as const
 
 type FilterKey = keyof typeof PARAM_KEYS
 
-export function EstoqueActiveFilters({ filters }: { filters: EstoqueFilters }) {
+export function EstoqueActiveFilters({
+  filters,
+  departamentos,
+}: {
+  filters: EstoqueFilters
+  departamentos: DepartamentoEstoqueOption[]
+}) {
   const { setParams } = useQueryParams()
 
   const chips: { key: FilterKey; label: string }[] = []
@@ -34,6 +42,10 @@ export function EstoqueActiveFilters({ filters }: { filters: EstoqueFilters }) {
     chips.push({ key: 'nivel', label: NIVEL_LABELS[filters.nivel] ?? '' })
   if (filters.unidade)
     chips.push({ key: 'unidade', label: `Unidade: ${filters.unidade}` })
+  if (filters.departamento) {
+    const nome = departamentos.find((d) => d.id === filters.departamento)?.nome
+    chips.push({ key: 'departamento', label: `Departamento: ${nome ?? '—'}` })
+  }
   if (filters.vencendo) chips.push({ key: 'vencendo', label: 'Vencendo' })
   if (filters.incluirInativos)
     chips.push({ key: 'incluirInativos', label: 'Com desativados' })
@@ -49,6 +61,7 @@ export function EstoqueActiveFilters({ filters }: { filters: EstoqueFilters }) {
       q: null,
       nivel: null,
       unidade: null,
+      departamento: null,
       vencendo: null,
       inativos: null,
       page: null,

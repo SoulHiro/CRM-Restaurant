@@ -57,6 +57,9 @@ export interface EstoqueItem {
   nome: string
   unidade: Unidade
   categoria: CategoriaEstoque
+  /** Área de negócio do insumo (ex: "Hamburgueria", "Bebida") — null = sem departamento. */
+  departamentoId: string | null
+  departamentoNome: string | null
   quantidadeAtual: number
   pontoReposicao: number
   tamanhoEmbalagem: number | null
@@ -65,6 +68,11 @@ export interface EstoqueItem {
   fornecedorPadraoNome: string | null
   ativo: boolean
   criadoEm: string
+}
+
+export interface DepartamentoEstoqueOption {
+  id: string
+  nome: string
 }
 
 /** Item da lista, com o último preço pago — null quando nunca foi comprado. */

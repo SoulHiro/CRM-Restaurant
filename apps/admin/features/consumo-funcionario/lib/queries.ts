@@ -17,10 +17,10 @@ import type {
 export { getCategoriasProduto }
 
 /** Produtos ativos do cardápio, com o preço já resolvido (o menor tamanho, se tiver). */
-export async function getProdutosConsumiveis(): Promise<
-  ProdutoConsumivelOption[]
-> {
-  const produtos = await getProdutos()
+export async function getProdutosConsumiveis(
+  organizationId: string
+): Promise<ProdutoConsumivelOption[]> {
+  const produtos = await getProdutos(organizationId)
   return produtos
     .filter((produto) => produto.ativo)
     .map((produto) => ({

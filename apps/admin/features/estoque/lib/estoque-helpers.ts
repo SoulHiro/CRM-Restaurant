@@ -88,6 +88,7 @@ export const ESTOQUE_NIVEL_FILTROS = ['baixo', 'zerado', 'ok'] as const
 export interface EstoqueFilters {
   q: string
   unidade: string
+  departamento: string
   nivel: NivelEstoque | ''
   vencendo: boolean
   incluirInativos: boolean
@@ -123,6 +124,7 @@ export function parseEstoqueFilters(
   return {
     q: readParam(searchParams, 'q'),
     unidade: unidadeParam,
+    departamento: readParam(searchParams, 'departamento'),
     nivel: (ESTOQUE_NIVEL_FILTROS as readonly string[]).includes(nivelParam)
       ? (nivelParam as NivelEstoque)
       : '',
@@ -177,6 +179,8 @@ export function filterEstoque<T extends EstoqueItem>(
     if (!filters.incluirInativos && !item.ativo) return false
     if (query && !item.nome.toLowerCase().includes(query)) return false
     if (filters.unidade && item.unidade !== filters.unidade) return false
+    if (filters.departamento && item.departamentoId !== filters.departamento)
+      return false
     if (filters.nivel && nivelEstoque(item) !== filters.nivel) return false
     if (filters.vencendo) {
       if (item.validade == null) return false

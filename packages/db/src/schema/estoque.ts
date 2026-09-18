@@ -3,6 +3,7 @@ import {
   boolean,
   date,
   index,
+  integer,
   numeric,
   pgEnum,
   pgTable,
@@ -12,7 +13,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
 
-import { user } from './auth'
+import { organization, user } from './auth'
 import { fornecedor } from './fornecedor'
 
 export const unidadeEstoqueEnum = pgEnum('unidade_estoque', [
@@ -63,17 +64,48 @@ export const inventarioTipoEnum = pgEnum('inventario_tipo', [
 const QUANTIDADE = { precision: 12, scale: 3 } as const
 const PRECO = { precision: 12, scale: 2 } as const
 
+/**
+ * Departamento de negócio do insumo (ex: "Hamburgueria", "Bebida") — só pra
+ * organizar a listagem de estoque por área do restaurante. Não confundir
+ * com `categoriaEstoqueEnum` (papel do insumo na ficha técnica). Tabela por
+ * organização, mesmo padrão de `categoria_produto` no catálogo — cadastro
+ * livre em vez de enum fixo, porque cada estabelecimento tem seus próprios
+ * departamentos.
+ */
+export const departamento_estoque = pgTable(
+  'departamento_estoque',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    organization_id: text('organization_id')
+      .notNull()
+      .references(() => organization.id),
+    nome: text('nome').notNull(),
+    ordem: integer('ordem').notNull().default(0),
+  },
+  (t) => [index('departamento_estoque_organization_idx').on(t.organization_id)]
+)
+
 export const estoque_item = pgTable(
   'estoque_item',
   {
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId()),
+    // Nullable por enquanto — vira notNull depois do backfill (ver
+    // scripts/setup-diniz-gourmet.ts).
+    organization_id: text('organization_id').references(() => organization.id),
     nome: text('nome').notNull(),
     unidade: unidadeEstoqueEnum('unidade').notNull(),
     categoria: categoriaEstoqueEnum('categoria')
       .notNull()
       .default('comestivel'),
+    // "Sem departamento" é um estado válido — nem todo insumo precisa estar
+    // classificado (ex: restaurante com um departamento só).
+    departamento_id: text('departamento_id').references(
+      () => departamento_estoque.id
+    ),
     quantidade_atual: numeric('quantidade_atual', QUANTIDADE)
       .notNull()
       .default('0'),
@@ -99,6 +131,7 @@ export const estoque_item = pgTable(
     index('estoque_item_nome_idx').on(t.nome),
     index('estoque_item_ativo_idx').on(t.ativo),
     index('estoque_item_validade_idx').on(t.validade),
+    index('estoque_item_organization_idx').on(t.organization_id),
   ]
 )
 
@@ -180,6 +213,8 @@ export const inventario_fisico = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId()),
+    // Nullable por enquanto — vira notNull depois do backfill.
+    organization_id: text('organization_id').references(() => organization.id),
     data: date('data').notNull(),
     tipo: inventarioTipoEnum('tipo').notNull(),
     responsavel: text('responsavel').notNull(),
@@ -190,7 +225,10 @@ export const inventario_fisico = pgTable(
   },
   (t) => [
     index('inventario_fisico_data_idx').on(t.data),
-    unique().on(t.data, t.tipo),
+    index('inventario_fisico_organization_idx').on(t.organization_id),
+    // Inclui organization_id de propósito — sem isso, dois estabelecimentos
+    // abrindo inventário no mesmo dia colidiriam nessa constraint.
+    unique().on(t.organization_id, t.data, t.tipo),
   ]
 )
 
@@ -222,12 +260,23 @@ export const inventario_fisico_item = pgTable(
 // fornecedor_item e avaliacao_fornecedor, e este arquivo não pode importar
 // aquele sem criar ciclo (compras.ts já importa estoque.ts).
 
+export const departamentoEstoqueRelations = relations(
+  departamento_estoque,
+  ({ many }) => ({
+    itens: many(estoque_item),
+  })
+)
+
 export const estoqueItemRelations = relations(
   estoque_item,
   ({ one, many }) => ({
     fornecedorPadrao: one(fornecedor, {
       fields: [estoque_item.fornecedor_padrao_id],
       references: [fornecedor.id],
+    }),
+    departamento: one(departamento_estoque, {
+      fields: [estoque_item.departamento_id],
+      references: [departamento_estoque.id],
     }),
     movimentos: many(estoque_movimento),
     perdas: many(perda_estoque),

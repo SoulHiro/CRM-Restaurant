@@ -223,13 +223,19 @@ export async function getFornecedorDetalhe(
   }
 }
 
-export async function getSugestaoCompra(): Promise<SugestaoGrupo[]> {
+export async function getSugestaoCompra(
+  organizationId: string
+): Promise<SugestaoGrupo[]> {
   const itens = await db.query.estoque_item.findMany({
-    where: (item, { eq: igual }) => igual(item.ativo, true),
+    where: (item, { and: andOp, eq: igual }) =>
+      andOp(igual(item.ativo, true), igual(item.organization_id, organizationId)),
     with: { fornecedorPadrao: { columns: { nome: true } } },
   })
 
-  const precos = await getUltimosPrecos(itens.map((item) => item.id))
+  const precos = await getUltimosPrecos(
+    organizationId,
+    itens.map((item) => item.id)
+  )
 
   const sugeridos = montarSugestao(
     itens.map((item) => ({

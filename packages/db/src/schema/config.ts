@@ -1,13 +1,17 @@
 import {
   boolean,
+  index,
   jsonb,
   numeric,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  unique,
 } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
+
+import { organization } from './auth'
 
 export const impressoraTipoEnum = pgEnum('impressora_tipo', [
   'comanda',
@@ -108,27 +112,40 @@ export const configuracaoHorarioFuncionamento = pgTable(
  * Os 4 limiares nascem com um padrão razoável e ficam editáveis aqui, sem
  * precisar mexer em código pra ajustar a faixa de cada cor.
  */
-export const configuracaoPrecificacao = pgTable('configuracao_precificacao', {
-  id: text('id').primaryKey().default('default'),
-  custo_operacional_por_minuto: numeric('custo_operacional_por_minuto', {
-    precision: 12,
-    scale: 2,
-  })
-    .notNull()
-    .default('0'),
-  // Percentual de margem sobre o custo de produção — abaixo de amarelo é
-  // vermelho (prejuízo), acima de roxo é lucro excessivo demais.
-  limiar_amarelo_pct: numeric('limiar_amarelo_pct', { precision: 6, scale: 2 })
-    .notNull()
-    .default('0'),
-  limiar_verde_pct: numeric('limiar_verde_pct', { precision: 6, scale: 2 })
-    .notNull()
-    .default('30'),
-  limiar_azul_pct: numeric('limiar_azul_pct', { precision: 6, scale: 2 })
-    .notNull()
-    .default('100'),
-  limiar_roxo_pct: numeric('limiar_roxo_pct', { precision: 6, scale: 2 })
-    .notNull()
-    .default('200'),
-  updated_at: timestamp('updated_at').notNull().defaultNow(),
-})
+export const configuracaoPrecificacao = pgTable(
+  'configuracao_precificacao',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    // Um registro por organização — Nosso Quintal (marmita) e Diniz Gourmet
+    // (hambúrguer/bebida) têm estrutura de custo e margem completamente
+    // diferentes, não faz sentido compartilhar os mesmos limiares.
+    organization_id: text('organization_id').references(() => organization.id),
+    custo_operacional_por_minuto: numeric('custo_operacional_por_minuto', {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default('0'),
+    // Percentual de margem sobre o custo de produção — abaixo de amarelo é
+    // vermelho (prejuízo), acima de roxo é lucro excessivo demais.
+    limiar_amarelo_pct: numeric('limiar_amarelo_pct', { precision: 6, scale: 2 })
+      .notNull()
+      .default('0'),
+    limiar_verde_pct: numeric('limiar_verde_pct', { precision: 6, scale: 2 })
+      .notNull()
+      .default('30'),
+    limiar_azul_pct: numeric('limiar_azul_pct', { precision: 6, scale: 2 })
+      .notNull()
+      .default('100'),
+    limiar_roxo_pct: numeric('limiar_roxo_pct', { precision: 6, scale: 2 })
+      .notNull()
+      .default('200'),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.organization_id),
+    index('configuracao_precificacao_organization_idx').on(t.organization_id),
+  ]
+)

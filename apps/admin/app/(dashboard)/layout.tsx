@@ -14,6 +14,13 @@ export default async function DashboardLayout({
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login')
 
+  const organizacoes = await auth.api.listOrganizations({
+    headers: await headers(),
+  })
+  const activeOrganizationId =
+    (session.session as { activeOrganizationId?: string | null })
+      .activeOrganizationId ?? organizacoes?.[0]?.id ?? null
+
   return (
     <HeaderSlotProvider>
       <SidebarProvider>
@@ -21,6 +28,13 @@ export default async function DashboardLayout({
           variant="inset"
           user={session.user}
           role={(session.user as any).role}
+          organizations={(organizacoes ?? []).map(
+            (org: { id: string; name: string }) => ({
+              id: org.id,
+              name: org.name,
+            })
+          )}
+          activeOrganizationId={activeOrganizationId}
         />
         <SidebarInset>
           <SiteHeader />

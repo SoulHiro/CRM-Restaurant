@@ -6,7 +6,7 @@ import { ListFilter } from 'lucide-react'
 import { Button } from '@repo/ui/components/button'
 
 import type { EstoqueFilters } from '../../lib/estoque-helpers'
-import type { Unidade } from '../../lib/types'
+import type { DepartamentoEstoqueOption, Unidade } from '../../lib/types'
 import { CadastrarItemDrawer } from '../form/cadastrar-item-drawer'
 import { EstoqueActiveFilters } from './estoque-active-filters'
 import { EstoqueFiltersPanel } from './estoque-filters-panel'
@@ -16,10 +16,12 @@ import { EstoqueSortMenu } from './estoque-sort-menu'
 export function EstoqueToolbar({
   filters,
   unidadesDisponiveis,
+  departamentos,
   podeCadastrar,
 }: {
   filters: EstoqueFilters
   unidadesDisponiveis: Unidade[]
+  departamentos: DepartamentoEstoqueOption[]
   podeCadastrar: boolean
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -45,10 +47,13 @@ export function EstoqueToolbar({
         {podeCadastrar && <CadastrarItemDrawer />}
       </div>
 
-      <EstoqueActiveFilters filters={filters} />
+      <EstoqueActiveFilters filters={filters} departamentos={departamentos} />
 
       {filtersOpen && (
-        <EstoqueFiltersPanel unidadesDisponiveis={unidadesDisponiveis} />
+        <EstoqueFiltersPanel
+          unidadesDisponiveis={unidadesDisponiveis}
+          departamentos={departamentos}
+        />
       )}
     </div>
   )

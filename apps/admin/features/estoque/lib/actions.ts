@@ -1,13 +1,17 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { executarLote, type Statement } from '@/lib/db-batch'
 import { hojeISO } from '@/lib/formatters'
 import { toMoneyString, toNumber, toNumericString } from '@/lib/numeric'
-import { ActionError, adminActionClient, authActionClient } from '@/lib/safe-action'
+import {
+  ActionError,
+  adminTenantActionClient,
+  tenantActionClient,
+} from '@/lib/safe-action'
 import {
   estoque_item,
   historico_preco_insumo,
@@ -33,15 +37,17 @@ function revalidarEstoque(itemId?: string) {
   if (itemId) revalidatePath(`/estoque/${itemId}`)
 }
 
-export const createEstoqueItemAction = adminActionClient
+export const createEstoqueItemAction = adminTenantActionClient
   .schema(createEstoqueItemSchema)
   .action(async ({ parsedInput, ctx }) => {
     const [criado] = await db
       .insert(estoque_item)
       .values({
+        organization_id: ctx.organizationId,
         nome: parsedInput.nome.trim(),
         unidade: parsedInput.unidade,
         categoria: parsedInput.categoria,
+        departamento_id: parsedInput.departamentoId?.trim() || null,
         quantidade_atual: toNumericString(0),
         tamanho_embalagem:
           parsedInput.tamanhoEmbalagem != null &&
@@ -81,9 +87,9 @@ export const createEstoqueItemAction = adminActionClient
     return { itemId: criado.id }
   })
 
-export const updateEstoqueItemAction = adminActionClient
+export const updateEstoqueItemAction = adminTenantActionClient
   .schema(updateEstoqueItemSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const statements: Statement[] = [
       db
         .update(estoque_item)
@@ -91,6 +97,7 @@ export const updateEstoqueItemAction = adminActionClient
           nome: parsedInput.nome.trim(),
           unidade: parsedInput.unidade,
           categoria: parsedInput.categoria,
+          departamento_id: parsedInput.departamentoId?.trim() || null,
           tamanho_embalagem:
             parsedInput.tamanhoEmbalagem != null &&
             parsedInput.tamanhoEmbalagem > 0
@@ -100,7 +107,12 @@ export const updateEstoqueItemAction = adminActionClient
           validade: parsedInput.validade ?? null,
           fornecedor_padrao_id: parsedInput.fornecedorPadraoId?.trim() || null,
         })
-        .where(eq(estoque_item.id, parsedInput.id)),
+        .where(
+          and(
+            eq(estoque_item.id, parsedInput.id),
+            eq(estoque_item.organization_id, ctx.organizationId)
+          )
+        ),
     ]
 
     // Preço novo não edita o histórico — sempre entra como linha nova.
@@ -120,10 +132,13 @@ export const updateEstoqueItemAction = adminActionClient
     return { itemId: parsedInput.id }
   })
 
-export const ajustarQuantidadeAction = authActionClient
+export const ajustarQuantidadeAction = tenantActionClient
   .schema(ajustarQuantidadeSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const saldoAtual = await lerSaldoAtual(parsedInput.estoqueItemId)
+    const saldoAtual = await lerSaldoAtual(
+      ctx.organizationId,
+      parsedInput.estoqueItemId
+    )
     if (saldoAtual == null) throw new ActionError('Item não encontrado')
 
     const diferenca =
@@ -152,10 +167,13 @@ export const ajustarQuantidadeAction = authActionClient
     return { estoqueItemId: parsedInput.estoqueItemId, ajustado: true }
   })
 
-export const registrarPerdaAction = authActionClient
+export const registrarPerdaAction = tenantActionClient
   .schema(registrarPerdaSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const saldoAtual = await lerSaldoAtual(parsedInput.estoqueItemId)
+    const saldoAtual = await lerSaldoAtual(
+      ctx.organizationId,
+      parsedInput.estoqueItemId
+    )
     if (saldoAtual == null) throw new ActionError('Item não encontrado')
 
     const observacao = parsedInput.observacao?.trim() || undefined
@@ -198,7 +216,7 @@ const TIPO_LABEL: Record<'abertura' | 'fechamento', string> = {
   fechamento: 'Fechamento',
 }
 
-export const iniciarInventarioAction = authActionClient
+export const iniciarInventarioAction = tenantActionClient
   .schema(iniciarInventarioSchema)
   .action(async ({ parsedInput, ctx }) => {
     const hoje = hojeISO()
@@ -207,7 +225,8 @@ export const iniciarInventarioAction = authActionClient
       where: (inventario, { and: andOp }) =>
         andOp(
           eq(inventario.data, hoje),
-          eq(inventario.tipo, parsedInput.tipo)
+          eq(inventario.tipo, parsedInput.tipo),
+          eq(inventario.organization_id, ctx.organizationId)
         ),
       columns: { id: true, status: true },
     })
@@ -227,7 +246,12 @@ export const iniciarInventarioAction = authActionClient
         quantidade: estoque_item.quantidade_atual,
       })
       .from(estoque_item)
-      .where(eq(estoque_item.ativo, true))
+      .where(
+        and(
+          eq(estoque_item.ativo, true),
+          eq(estoque_item.organization_id, ctx.organizationId)
+        )
+      )
 
     if (itens.length === 0) {
       throw new ActionError(
@@ -238,6 +262,7 @@ export const iniciarInventarioAction = authActionClient
     const [inventario] = await db
       .insert(inventario_fisico)
       .values({
+        organization_id: ctx.organizationId,
         data: hoje,
         tipo: parsedInput.tipo,
         responsavel: ctx.user.name,
@@ -258,15 +283,17 @@ export const iniciarInventarioAction = authActionClient
     return { inventarioId: inventario.id }
   })
 
-export const salvarContagemAction = authActionClient
+export const salvarContagemAction = tenantActionClient
   .schema(salvarContagemSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const linha = await db.query.inventario_fisico_item.findFirst({
       where: eq(inventario_fisico_item.id, parsedInput.linhaId),
-      with: { inventario: { columns: { status: true } } },
+      with: { inventario: { columns: { status: true, organization_id: true } } },
     })
 
-    if (!linha) throw new ActionError('Linha de contagem não encontrada')
+    if (!linha || linha.inventario.organization_id !== ctx.organizationId) {
+      throw new ActionError('Linha de contagem não encontrada')
+    }
     if (linha.inventario.status === 'finalizado') {
       throw new ActionError('Essa contagem já foi finalizada.')
     }
@@ -290,7 +317,7 @@ export const salvarContagemAction = authActionClient
     return { linhaId: parsedInput.linhaId }
   })
 
-export const finalizarInventarioAction = authActionClient
+export const finalizarInventarioAction = tenantActionClient
   .schema(finalizarInventarioSchema)
   .action(async ({ parsedInput, ctx }) => {
     const inventario = await db.query.inventario_fisico.findFirst({
@@ -300,7 +327,9 @@ export const finalizarInventarioAction = authActionClient
       },
     })
 
-    if (!inventario) throw new ActionError('Contagem não encontrada')
+    if (!inventario || inventario.organization_id !== ctx.organizationId) {
+      throw new ActionError('Contagem não encontrada')
+    }
     if (inventario.status === 'finalizado') {
       throw new ActionError('Essa contagem já foi finalizada.')
     }

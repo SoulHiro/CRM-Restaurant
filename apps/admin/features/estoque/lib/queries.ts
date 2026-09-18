@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { count, desc, eq, inArray } from 'drizzle-orm'
+import { and, count, desc, eq, inArray } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { hojeISO } from '@/lib/formatters'
@@ -15,6 +15,7 @@ import { toNumber } from '@/lib/numeric'
 import { selecionarAlertas } from './estoque-helpers'
 import type {
   AlertasEstoque,
+  DepartamentoEstoqueOption,
   EstoqueItem,
   EstoqueItemDetalhe,
   EstoqueListItem,
@@ -28,15 +29,21 @@ import type {
 
 type ItemRow = typeof estoque_item.$inferSelect
 type FornecedorRef = { nome: string } | null
+type DepartamentoRef = { id: string; nome: string } | null
 
 function mapItem(
-  row: ItemRow & { fornecedorPadrao?: FornecedorRef }
+  row: ItemRow & {
+    fornecedorPadrao?: FornecedorRef
+    departamento?: DepartamentoRef
+  }
 ): EstoqueItem {
   return {
     id: row.id,
     nome: row.nome,
     unidade: row.unidade,
     categoria: row.categoria,
+    departamentoId: row.departamento?.id ?? null,
+    departamentoNome: row.departamento?.nome ?? null,
     quantidadeAtual: toNumber(row.quantidade_atual),
     pontoReposicao: toNumber(row.ponto_reposicao),
     tamanhoEmbalagem:
@@ -52,8 +59,11 @@ function mapItem(
 /**
  * Último preço pago por item, numa consulta só — a alternativa (um SELECT por
  * item) seria N+1. Usado pela lista de estoque e pela sugestão de compra.
+ * Filtra por `organizationId` via join com `estoque_item` — sem isso, um id
+ * de outro estabelecimento (por engano ou adulterado) devolveria preço real.
  */
 export async function getUltimosPrecos(
+  organizationId: string,
   estoqueItemIds: readonly string[]
 ): Promise<Map<string, number>> {
   if (estoqueItemIds.length === 0) return new Map()
@@ -64,7 +74,16 @@ export async function getUltimosPrecos(
       preco: historico_preco_insumo.preco,
     })
     .from(historico_preco_insumo)
-    .where(inArray(historico_preco_insumo.estoque_item_id, [...estoqueItemIds]))
+    .innerJoin(
+      estoque_item,
+      eq(estoque_item.id, historico_preco_insumo.estoque_item_id)
+    )
+    .where(
+      and(
+        inArray(historico_preco_insumo.estoque_item_id, [...estoqueItemIds]),
+        eq(estoque_item.organization_id, organizationId)
+      )
+    )
     .orderBy(
       desc(historico_preco_insumo.data_vigencia),
       desc(historico_preco_insumo.created_at)
@@ -79,13 +98,22 @@ export async function getUltimosPrecos(
   return precos
 }
 
-export async function getEstoqueItens(): Promise<EstoqueListItem[]> {
+export async function getEstoqueItens(
+  organizationId: string
+): Promise<EstoqueListItem[]> {
   const rows = await db.query.estoque_item.findMany({
-    with: { fornecedorPadrao: { columns: { nome: true } } },
+    where: (item, { eq: eqOp }) => eqOp(item.organization_id, organizationId),
+    with: {
+      fornecedorPadrao: { columns: { nome: true } },
+      departamento: { columns: { id: true, nome: true } },
+    },
     orderBy: (item, { asc }) => [asc(item.nome)],
   })
 
-  const precos = await getUltimosPrecos(rows.map((row) => row.id))
+  const precos = await getUltimosPrecos(
+    organizationId,
+    rows.map((row) => row.id)
+  )
 
   return rows.map((row) => ({
     ...mapItem(row),
@@ -94,11 +122,15 @@ export async function getEstoqueItens(): Promise<EstoqueListItem[]> {
 }
 
 export async function getEstoqueItemById(
+  organizationId: string,
   id: string
 ): Promise<EstoqueItem | null> {
   const row = await db.query.estoque_item.findFirst({
-    where: eq(estoque_item.id, id),
-    with: { fornecedorPadrao: { columns: { nome: true } } },
+    where: and(eq(estoque_item.id, id), eq(estoque_item.organization_id, organizationId)),
+    with: {
+      fornecedorPadrao: { columns: { nome: true } },
+      departamento: { columns: { id: true, nome: true } },
+    },
   })
 
   return row ? mapItem(row) : null
@@ -108,28 +140,40 @@ export async function getEstoqueItemById(
  * Itens elegíveis a receber perda ou entrar num inventário: só os ativos.
  * Um item desativado preserva histórico mas não aceita movimento novo.
  */
-export async function getEstoqueItensAtivos(): Promise<EstoqueItem[]> {
+export async function getEstoqueItensAtivos(
+  organizationId: string
+): Promise<EstoqueItem[]> {
   const rows = await db.query.estoque_item.findMany({
-    where: eq(estoque_item.ativo, true),
-    with: { fornecedorPadrao: { columns: { nome: true } } },
+    where: and(
+      eq(estoque_item.ativo, true),
+      eq(estoque_item.organization_id, organizationId)
+    ),
+    with: {
+      fornecedorPadrao: { columns: { nome: true } },
+      departamento: { columns: { id: true, nome: true } },
+    },
     orderBy: (item, { asc }) => [asc(item.nome)],
   })
 
   return rows.map(mapItem)
 }
 
-export async function getAlertasEstoque(): Promise<AlertasEstoque> {
-  const itens = await getEstoqueItens()
+export async function getAlertasEstoque(
+  organizationId: string
+): Promise<AlertasEstoque> {
+  const itens = await getEstoqueItens(organizationId)
   return selecionarAlertas(itens, hojeISO())
 }
 
 export async function getEstoqueItemDetalhe(
+  organizationId: string,
   id: string
 ): Promise<EstoqueItemDetalhe | null> {
   const row = await db.query.estoque_item.findFirst({
-    where: eq(estoque_item.id, id),
+    where: and(eq(estoque_item.id, id), eq(estoque_item.organization_id, organizationId)),
     with: {
       fornecedorPadrao: { columns: { nome: true } },
+      departamento: { columns: { id: true, nome: true } },
       movimentos: {
         orderBy: (movimento, { desc: descOrder }) => [
           descOrder(movimento.created_at),
@@ -185,7 +229,10 @@ export async function getEstoqueItemDetalhe(
   return { item, movimentos, perdas, precos }
 }
 
-export async function getPerdasRecentes(limite = 50): Promise<PerdaEstoque[]> {
+export async function getPerdasRecentes(
+  organizationId: string,
+  limite = 50
+): Promise<PerdaEstoque[]> {
   const rows = await db
     .select({
       id: perda_estoque.id,
@@ -200,6 +247,7 @@ export async function getPerdasRecentes(limite = 50): Promise<PerdaEstoque[]> {
     })
     .from(perda_estoque)
     .innerJoin(estoque_item, eq(perda_estoque.estoque_item_id, estoque_item.id))
+    .where(eq(estoque_item.organization_id, organizationId))
     .orderBy(desc(perda_estoque.data), desc(perda_estoque.created_at))
     .limit(limite)
 
@@ -211,12 +259,26 @@ export async function getPerdasRecentes(limite = 50): Promise<PerdaEstoque[]> {
 }
 
 export async function getPrecoAtual(
+  organizationId: string,
   estoqueItemId: string
 ): Promise<PrecoInsumo | null> {
   const [row] = await db
-    .select()
+    .select({
+      id: historico_preco_insumo.id,
+      preco: historico_preco_insumo.preco,
+      data_vigencia: historico_preco_insumo.data_vigencia,
+    })
     .from(historico_preco_insumo)
-    .where(eq(historico_preco_insumo.estoque_item_id, estoqueItemId))
+    .innerJoin(
+      estoque_item,
+      eq(estoque_item.id, historico_preco_insumo.estoque_item_id)
+    )
+    .where(
+      and(
+        eq(historico_preco_insumo.estoque_item_id, estoqueItemId),
+        eq(estoque_item.organization_id, organizationId)
+      )
+    )
     .orderBy(desc(historico_preco_insumo.data_vigencia))
     .limit(1)
 
@@ -260,8 +322,12 @@ function resumirInventario(row: {
   }
 }
 
-export async function getInventarios(): Promise<InventarioResumo[]> {
+export async function getInventarios(
+  organizationId: string
+): Promise<InventarioResumo[]> {
   const rows = await db.query.inventario_fisico.findMany({
+    where: (inventario, { eq: eqOp }) =>
+      eqOp(inventario.organization_id, organizationId),
     with: {
       linhas: { columns: { quantidade_contada: true, diferenca: true } },
     },
@@ -279,14 +345,17 @@ export async function getInventarios(): Promise<InventarioResumo[]> {
  * significa "ainda não iniciado hoje", é o estado usado pelo painel de
  * contagem para decidir entre "Fazer X" e "Continuar/Ver X".
  */
-export async function getContagensHoje(): Promise<{
+export async function getContagensHoje(organizationId: string): Promise<{
   abertura: InventarioResumo | null
   fechamento: InventarioResumo | null
 }> {
   const hoje = hojeISO()
 
   const rows = await db.query.inventario_fisico.findMany({
-    where: eq(inventario_fisico.data, hoje),
+    where: and(
+      eq(inventario_fisico.data, hoje),
+      eq(inventario_fisico.organization_id, organizationId)
+    ),
     with: {
       linhas: { columns: { quantidade_contada: true, diferenca: true } },
     },
@@ -301,10 +370,14 @@ export async function getContagensHoje(): Promise<{
 }
 
 export async function getInventarioDetalhe(
+  organizationId: string,
   id: string
 ): Promise<InventarioDetalhe | null> {
   const row = await db.query.inventario_fisico.findFirst({
-    where: eq(inventario_fisico.id, id),
+    where: and(
+      eq(inventario_fisico.id, id),
+      eq(inventario_fisico.organization_id, organizationId)
+    ),
     with: {
       linhas: {
         with: {
@@ -334,11 +407,47 @@ export async function getInventarioDetalhe(
   return { resumo: resumirInventario(row), linhas }
 }
 
-export async function contarItensAtivos(): Promise<number> {
+export async function contarItensAtivos(organizationId: string): Promise<number> {
   const [row] = await db
     .select({ total: count() })
     .from(estoque_item)
-    .where(eq(estoque_item.ativo, true))
+    .where(
+      and(
+        eq(estoque_item.ativo, true),
+        eq(estoque_item.organization_id, organizationId)
+      )
+    )
 
   return row?.total ?? 0
+}
+
+export async function getDepartamentosEstoque(
+  organizationId: string
+): Promise<DepartamentoEstoqueOption[]> {
+  const rows = await db.query.departamento_estoque.findMany({
+    where: (departamento, { eq: eqOp }) =>
+      eqOp(departamento.organization_id, organizationId),
+    orderBy: (departamento, { asc }) => [
+      asc(departamento.ordem),
+      asc(departamento.nome),
+    ],
+  })
+  return rows.map((row) => ({ id: row.id, nome: row.nome }))
+}
+
+/** Todo id de insumo recebido do formulário precisa pertencer a este estabelecimento. */
+export async function todosItensPertencemAoTenant(
+  organizationId: string,
+  estoqueItemIds: readonly string[]
+): Promise<boolean> {
+  if (estoqueItemIds.length === 0) return true
+  const unicos = [...new Set(estoqueItemIds)]
+  const rows = await db.query.estoque_item.findMany({
+    where: and(
+      inArray(estoque_item.id, unicos),
+      eq(estoque_item.organization_id, organizationId)
+    ),
+    columns: { id: true },
+  })
+  return rows.length === unicos.length
 }

@@ -16,6 +16,8 @@ function item(overrides: Partial<EstoqueItem> = {}): EstoqueItem {
     nome: 'Arroz',
     unidade: 'kg',
     categoria: 'comestivel',
+    departamentoId: null,
+    departamentoNome: null,
     quantidadeAtual: 20,
     pontoReposicao: 5,
     tamanhoEmbalagem: null,
@@ -158,6 +160,7 @@ describe('parseEstoqueFilters', () => {
     expect(parseEstoqueFilters({})).toEqual({
       q: '',
       unidade: '',
+      departamento: '',
       nivel: '',
       vencendo: false,
       incluirInativos: false,
@@ -196,6 +199,7 @@ describe('parseEstoqueFilters', () => {
     expect(filters).toEqual({
       q: 'coca',
       unidade: 'un',
+      departamento: '',
       nivel: 'baixo',
       vencendo: true,
       incluirInativos: true,

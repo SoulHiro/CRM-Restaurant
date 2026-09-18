@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag } from 'next/cache'
 
 import { db } from '@/lib/db'
-import { authActionClient } from '@/lib/safe-action'
+import { authActionClient, tenantActionClient } from '@/lib/safe-action'
 import {
   configuracaoComanda,
   configuracaoHorarioFuncionamento,
@@ -225,19 +225,19 @@ export const salvarConfiguracaoHorarioFuncionamentoAction = authActionClient
     return parsedInput
   })
 
-export const obterConfiguracaoPrecificacaoAction = authActionClient
+export const obterConfiguracaoPrecificacaoAction = tenantActionClient
   .schema(obterConfiguracaoPrecificacaoSchema)
-  .action(async () => {
-    return getConfiguracaoPrecificacao()
+  .action(async ({ ctx }) => {
+    return getConfiguracaoPrecificacao(ctx.organizationId)
   })
 
-export const salvarConfiguracaoPrecificacaoAction = authActionClient
+export const salvarConfiguracaoPrecificacaoAction = tenantActionClient
   .schema(salvarConfiguracaoPrecificacaoSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput, ctx }) => {
     await db
       .insert(configuracaoPrecificacao)
       .values({
-        id: 'default',
+        organization_id: ctx.organizationId,
         custo_operacional_por_minuto:
           parsedInput.custoOperacionalPorMinuto.toFixed(2),
         limiar_amarelo_pct: parsedInput.limiarAmareloPct.toFixed(2),
@@ -246,7 +246,7 @@ export const salvarConfiguracaoPrecificacaoAction = authActionClient
         limiar_roxo_pct: parsedInput.limiarRoxoPct.toFixed(2),
       })
       .onConflictDoUpdate({
-        target: configuracaoPrecificacao.id,
+        target: configuracaoPrecificacao.organization_id,
         set: {
           custo_operacional_por_minuto:
             parsedInput.custoOperacionalPorMinuto.toFixed(2),

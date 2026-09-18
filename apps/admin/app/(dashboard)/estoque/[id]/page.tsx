@@ -6,6 +6,7 @@ import { ItemHeader } from '@/features/estoque/components/detail/item-header'
 import { ItemTabs } from '@/features/estoque/components/detail/item-tabs'
 import { getEstoqueItemDetalhe } from '@/features/estoque/lib/queries'
 import { auth } from '@/lib/auth'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 import { hojeISO } from '@/lib/formatters'
 
 export default async function EstoqueItemPage({
@@ -14,8 +15,11 @@ export default async function EstoqueItemPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const organizationId = await getActiveOrganizationId()
+  if (!organizationId) notFound()
+
   const [detalhe, fornecedores, session] = await Promise.all([
-    getEstoqueItemDetalhe(id),
+    getEstoqueItemDetalhe(organizationId, id),
     getFornecedores(),
     auth.api.getSession({ headers: await headers() }),
   ])

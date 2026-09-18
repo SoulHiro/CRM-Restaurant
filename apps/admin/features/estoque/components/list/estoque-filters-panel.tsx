@@ -14,12 +14,14 @@ import {
 
 import { useQueryParams } from '@/hooks/use-query-params'
 import { UNIDADE_LABELS } from '../../lib/estoque-helpers'
-import type { Unidade } from '../../lib/types'
+import type { DepartamentoEstoqueOption, Unidade } from '../../lib/types'
 
 export function EstoqueFiltersPanel({
   unidadesDisponiveis,
+  departamentos,
 }: {
   unidadesDisponiveis: Unidade[]
+  departamentos: DepartamentoEstoqueOption[]
 }) {
   const { searchParams, setParams } = useQueryParams()
 
@@ -79,6 +81,35 @@ export function EstoqueFiltersPanel({
           </SelectContent>
         </Select>
       </div>
+
+      {departamentos.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs font-normal text-muted-foreground">
+            Departamento
+          </Label>
+          <Select
+            value={searchParams.get('departamento') ?? 'todos'}
+            onValueChange={(value) =>
+              setParams({
+                departamento: value === 'todos' ? null : value,
+                page: null,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {departamentos.map((departamento) => (
+                <SelectItem key={departamento.id} value={departamento.id}>
+                  {departamento.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <label className="flex h-11 cursor-pointer items-center gap-2 text-sm sm:h-9">
         <Checkbox

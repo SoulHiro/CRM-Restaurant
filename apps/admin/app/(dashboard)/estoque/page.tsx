@@ -13,8 +13,12 @@ import {
   parseEstoqueFilters,
   selecionarAlertas,
 } from '@/features/estoque/lib/estoque-helpers'
-import { getEstoqueItens } from '@/features/estoque/lib/queries'
+import {
+  getDepartamentosEstoque,
+  getEstoqueItens,
+} from '@/features/estoque/lib/queries'
 import { auth } from '@/lib/auth'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 import { hojeISO } from '@/lib/formatters'
 
 export default async function EstoquePage({
@@ -22,9 +26,11 @@ export default async function EstoquePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const [params, itens, session] = await Promise.all([
+  const organizationId = await getActiveOrganizationId()
+  const [params, itens, departamentos, session] = await Promise.all([
     searchParams,
-    getEstoqueItens(),
+    organizationId ? getEstoqueItens(organizationId) : [],
+    organizationId ? getDepartamentosEstoque(organizationId) : [],
     auth.api.getSession({ headers: await headers() }),
   ])
   const role = (session?.user as { role?: string } | undefined)?.role
@@ -60,6 +66,7 @@ export default async function EstoquePage({
       <EstoqueToolbar
         filters={filters}
         unidadesDisponiveis={resultado.unidadesDisponiveis}
+        departamentos={departamentos}
         podeCadastrar={role === 'admin'}
       />
 

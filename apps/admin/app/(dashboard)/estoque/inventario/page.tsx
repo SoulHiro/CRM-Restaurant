@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
@@ -10,12 +11,16 @@ import {
   getContagensHoje,
   getInventarios,
 } from '@/features/estoque/lib/queries'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 
 export default async function InventarioPage() {
+  const organizationId = await getActiveOrganizationId()
+  if (!organizationId) notFound()
+
   const [contagensHoje, itensAtivos, inventarios] = await Promise.all([
-    getContagensHoje(),
-    contarItensAtivos(),
-    getInventarios(),
+    getContagensHoje(organizationId),
+    contarItensAtivos(organizationId),
+    getInventarios(organizationId),
   ])
 
   return (

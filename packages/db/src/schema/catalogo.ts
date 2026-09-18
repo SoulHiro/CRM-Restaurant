@@ -2,6 +2,7 @@ import { relations } from 'drizzle-orm'
 import {
   boolean,
   date,
+  index,
   integer,
   numeric,
   pgEnum,
@@ -12,6 +13,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
 
+import { organization } from './auth'
 import { estoque_item } from './estoque'
 
 const PRECO = { precision: 12, scale: 2 } as const
@@ -38,13 +40,21 @@ export const tipoDescontoEnum = pgEnum('tipo_desconto', [
   'valor_fixo',
 ])
 
-export const categoria_produto = pgTable('categoria_produto', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  nome: text('nome').notNull(),
-  ordem: integer('ordem').notNull().default(0),
-})
+export const categoria_produto = pgTable(
+  'categoria_produto',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    // Nullable por enquanto — vira notNull depois do backfill (ver
+    // scripts/setup-diniz-gourmet.ts). Cada estabelecimento tem seu próprio
+    // conjunto de categorias.
+    organization_id: text('organization_id').references(() => organization.id),
+    nome: text('nome').notNull(),
+    ordem: integer('ordem').notNull().default(0),
+  },
+  (t) => [index('categoria_produto_organization_idx').on(t.organization_id)]
+)
 
 /**
  * O produto do catálogo (delivery/venda direta) — domínio distinto do
@@ -58,10 +68,15 @@ export const categoria_produto = pgTable('categoria_produto', {
  * congelaria um valor que o custo do insumo (que muda) deixaria de bater.
  * Só `preco_venda` (a decisão final do operador) é gravado de verdade.
  */
-export const produto = pgTable('produto', {
+export const produto = pgTable(
+  'produto',
+  {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => createId()),
+  // Nullable por enquanto — vira notNull depois do backfill (ver
+  // scripts/setup-diniz-gourmet.ts).
+  organization_id: text('organization_id').references(() => organization.id),
   nome: text('nome').notNull(),
   categoria_id: text('categoria_id').references(() => categoria_produto.id),
   tipo: tipoProdutoEnum('tipo').notNull().default('comida'),
@@ -99,7 +114,9 @@ export const produto = pgTable('produto', {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-})
+  },
+  (t) => [index('produto_organization_idx').on(t.organization_id)]
+)
 
 /**
  * Em quais dias da semana o produto normalmente entra no cardápio (ex:
@@ -204,16 +221,21 @@ export const produto_ficha_tecnica_tamanho_override = pgTable(
  * Disponibilidade por turno aqui, não por item: um item dentro de um grupo
  * de almoço não existe fora do almoço.
  */
-export const grupo_adicional = pgTable('grupo_adicional', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  nome: text('nome').notNull(),
-  disponivel_almoco: boolean('disponivel_almoco').notNull().default(true),
-  disponivel_janta: boolean('disponivel_janta').notNull().default(true),
-  ativo: boolean('ativo').notNull().default(true),
-  created_at: timestamp('created_at').notNull().defaultNow(),
-})
+export const grupo_adicional = pgTable(
+  'grupo_adicional',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    organization_id: text('organization_id').references(() => organization.id),
+    nome: text('nome').notNull(),
+    disponivel_almoco: boolean('disponivel_almoco').notNull().default(true),
+    disponivel_janta: boolean('disponivel_janta').notNull().default(true),
+    ativo: boolean('ativo').notNull().default(true),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('grupo_adicional_organization_idx').on(t.organization_id)]
+)
 
 export const adicional = pgTable('adicional', {
   id: text('id')

@@ -12,6 +12,7 @@ import { resumirContagem } from '@/features/estoque/lib/inventario-helpers'
 import { getInventarioDetalhe } from '@/features/estoque/lib/queries'
 import { INVENTARIO_TIPO_LABEL } from '@/features/estoque/lib/types'
 import { formatDateBR } from '@/lib/formatters'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 
 export default async function InventarioDetalhePage({
   params,
@@ -19,7 +20,10 @@ export default async function InventarioDetalhePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const detalhe = await getInventarioDetalhe(id)
+  const organizationId = await getActiveOrganizationId()
+  if (!organizationId) notFound()
+
+  const detalhe = await getInventarioDetalhe(organizationId, id)
 
   if (!detalhe) {
     notFound()

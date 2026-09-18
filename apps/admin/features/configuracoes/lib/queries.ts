@@ -126,9 +126,11 @@ export async function getConfiguracaoHorarioFuncionamento(): Promise<Configuraca
   }
 }
 
-export async function getConfiguracaoPrecificacao(): Promise<ConfiguracaoPrecificacao> {
+export async function getConfiguracaoPrecificacao(
+  organizationId: string
+): Promise<ConfiguracaoPrecificacao> {
   const row = await db.query.configuracaoPrecificacao.findFirst({
-    where: (c, { eq }) => eq(c.id, 'default'),
+    where: (c, { eq }) => eq(c.organization_id, organizationId),
   })
 
   if (!row) return PRECIFICACAO_PADRAO

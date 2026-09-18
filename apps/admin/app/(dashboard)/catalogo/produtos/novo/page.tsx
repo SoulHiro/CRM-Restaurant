@@ -3,18 +3,24 @@ import { ArrowLeft } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
 
+import { notFound } from 'next/navigation'
+
 import { ProdutoForm } from '@/features/catalogo/components/form/produto-form'
 import {
   getCategoriasProduto,
   getInsumosDisponiveis,
 } from '@/features/catalogo/lib/queries'
 import { getConfiguracaoPrecificacao } from '@/features/configuracoes/lib/queries'
+import { getActiveOrganizationId } from '@/lib/get-active-organization-id'
 
 export default async function NovoProdutoPage() {
+  const organizationId = await getActiveOrganizationId()
+  if (!organizationId) notFound()
+
   const [categorias, insumos, configuracaoPrecificacao] = await Promise.all([
-    getCategoriasProduto(),
-    getInsumosDisponiveis(),
-    getConfiguracaoPrecificacao(),
+    getCategoriasProduto(organizationId),
+    getInsumosDisponiveis(organizationId),
+    getConfiguracaoPrecificacao(organizationId),
   ])
 
   return (
