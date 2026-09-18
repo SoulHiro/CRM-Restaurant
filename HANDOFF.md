@@ -1,112 +1,242 @@
 # Handoff — continuar em outro computador
 
-Gerado em 2026-09-14 pela sessão do Claude Code. Este arquivo é só contexto de
-continuidade — pode apagar depois de ler.
+Gerado em 2026-09-17 pela sessão do Claude Code. Este arquivo é só contexto de
+continuidade — pode apagar depois de ler. Ele substitui o `HANDOFF.md`
+anterior (14/09), cujos 4 itens pendentes **já foram todos implementados**
+(confirmado nesta sessão, ver seção 1).
 
-## 1. O que esta sessão fez (tudo commitado)
+**Branch atual: `refactor/architecture`** (criada nesta sessão a partir de
+`main`, working tree limpo antes de criar). Nada foi commitado ainda — só
+`ARCHITECTURE.md` existe como arquivo novo não rastreado (`git status` mostra
+`?? ARCHITECTURE.md`). **Nenhum código de `apps/admin` foi alterado** —
+combinamos explicitamente que não executamos nem mudamos código até a
+arquitetura estar 100% fechada.
 
-### a) Aba "Pedidos" de empresa (`features/empresas`)
-- **Bug de duplicação/dedup na importação de planilha**: `deduparPorCarimbo`
-  (`lib/importacao-helpers.ts`) deduplicava por `nome+data`, sem considerar o
-  turno — colapsava almoço+jantar da mesma pessoa no mesmo dia em vez de
-  manter os dois. Corrigido pra `nome+data+turno`.
-- **Status "Impresso" virando "Atualizado" à toa**: reimportar a planilha sem
-  nada de novo sempre bumpava `importado_em`, derrubando o status. Agora o
-  upsert (`onConflictDoUpdate` em `actions.ts` → `importarPedidosAction`) só
-  aplica a atualização quando o carimbo novo é realmente mais recente
-  (`setWhere`). Edição manual (`atualizarPedidoAction`) passou a bumpar
-  `importado_em` de propósito (antes nunca marcava "Atualizado").
-- **Data selecionada resetando pro dia atual**: `pedidos-tab.tsx` tinha
-  `data` em `useState`; movido pra URL (`?dia=YYYY-MM-DD` via
-  `router.replace`) pra sobreviver a qualquer refresh de rota disparado
-  pelas Server Actions da aba (importar, adicionar pedido, finalizar dia).
-  **Não confirmado no navegador ainda** — pedir pro usuário testar: abrir um
-  dia diferente de hoje, adicionar pedido manual, finalizar o dia, ver se a
-  data se mantém.
+## 1. Confirmação: os 4 pendentes do handoff de 14/09 já estavam implementados
 
-### b) Sidebar (`components/app-sidebar.tsx`, `components/sidebar-nav.tsx`)
-- Removida duplicação: "Insumos" dentro de Catálogo apontava pra `/estoque`,
-  mesma URL do item de topo "Estoque".
-- Corrigido `modoDe()`: antes só checava prefixo da rota (`/catalogo`,
-  `/configuracoes`), então navegar pra um item de uma seção cuja URL não
-  começa com esse prefixo (ex: "Cardápio das empresas" → `/cardapio`)
-  derrubava o sidebar de volta pro modo "main" sem avisar. Agora checa as
-  URLs reais dos itens de cada seção.
-- Animação mais rápida: `STAGGER_MS` 55→35, `DURACAO_MS` 220→150.
-- `loading.tsx` criado em todo segmento de topo do dashboard (13 rotas) +
-  `components/route-loading.tsx` (skeleton genérico) — sem isso o prefetch
-  automático do `next/link` não prefetchava nada (rota dinâmica sem
-  `loading.tsx` não prefetcha conteúdo, só o layout raiz).
+Antes de começar qualquer coisa nova, verificamos por agente de pesquisa se
+os 4 itens pendentes do handoff anterior (tabs `w-full`, data nos papéis de
+impressão, seleção múltipla de pedidos, botão "imprimir novos/atualizados")
+já tinham sido feitos — e sim, todos os 4 estavam implementados (por outra
+sessão, entre 14/09 e agora):
 
-### c) Catálogo/Produtos — cadastro rápido de item (`features/catalogo`)
-Contexto: o usuário confirmou que este sistema **não terá cardápio digital
-pro cliente pedir** (isso fica pra uma parceria futura com a **Brendi**) —
-aqui é só precificação, estoque, gestão e financeiro.
+1. `empresa-tabs.tsx:41-52` — `TabsList` com `flex w-full`, cada trigger
+   `flex-1`.
+2. `formatDiaSemanaBR` em `lib/formatters.ts:143`, usado nos 4 PDFs
+   (resumo do dia, conferência, pesagem, comanda) — todos mostram
+   `dd/mm/aaaa` + dia da semana por extenso.
+3. `pedidos-tab.tsx` tem checkbox por linha, "selecionar todos" respeitando
+   filtro, botão "Excluir selecionados" com confirmação em `AlertDialog`, e
+   `removerPedidosAction` (plural) separado do singular.
+4. `statusImpressao` extraída pra `lib/pedidos-helpers.ts`; botão
+   "Imprimir novos/atualizados (N)" em `pedidos-tab.tsx:653-661`.
 
-- **P0/P1/P2 de eficiência no cadastro** (já existiam antes desta sessão
-  terminar de implementar):
-  - Criar insumo novo sem sair do formulário (`secao-ficha-tecnica.tsx`)
-  - Rascunho do formulário em `localStorage` (`lib/produto-rascunho.ts`) —
-    sobrevive a navegação acidental
-  - Botão "Duplicar produto" na listagem
-  - "Food cost %" ao lado da margem no resumo de preço
-  - Busca de insumo ordenada por mais usados primeiro
-- **Corte de cardápio digital** (pedido explícito do usuário): removidas as
-  abas Adicionais, Classificações e a maior parte de Disponibilidade
-  (canais/turno/dias da semana), descrição, vídeo, desconto, preview mobile
-  do cardápio, a feature inteira `/catalogo/adicionais` e a rota stub
-  `/catalogo/delivery`. **Foto foi mantida** — achei um consumidor real
-  (`features/consumo-funcionario` usa a foto pro funcionário reconhecer o
-  item ao lançar consumo próprio, não é vitrine de cardápio).
-  - `produto-form.tsx` virou 2 seções empilhadas (Item + Ficha técnica), sem
-    Tabs — só sobrou isso pra abrir.
-  - **As colunas/tabelas do banco que ficaram sem uso não foram dropadas**
-    (`desconto_tipo`, `desconto_valor`, `disponivel_delivery`,
-    `disponivel_local`, `aparece_almoco`, `aparece_janta`, `classificacoes`,
-    `produto_dia_semana`, `produto_grupo_adicional`, `grupo_adicional`,
-    `adicional`) — o código só grava valores neutros nelas agora. Dropar é
-    uma migração separada, decisão pendente do usuário.
+Nada a fazer aqui — só constatação.
 
-## 2. Pendente / NÃO implementado (pedido pelo usuário, mas a conversa desviou pro setup do Tavily antes de eu voltar a isso — não esquecer)
+## 2. Auditoria completa de arquitetura do `apps/admin`
 
-O usuário pediu 4 mudanças na aba "Pedidos" que **não foram feitas**:
+Pedido do usuário: antes de continuar evoluindo o produto, auditar toda a
+arquitetura (estrutura, backend, frontend, banco, segurança, performance) do
+`apps/admin`, dividida em tasks, com relatório de cada área.
 
-1. Tabs (`empresa-tabs.tsx` ou similar) ocuparem `w-full` com largura igual
-   entre si, pra aumentar a área de clique.
-2. Papel de impressão (resumo do dia, conferência, pesagem, comanda
-   individual) mostrar a **data do pedido** (não só data/hora de impressão)
-   em dois formatos: `dd/mm/aaaa` e nome do dia da semana por extenso (ex:
-   "Domingo"). Precisa de um `formatDiaSemanaBR` novo em `lib/formatters.ts`
-   (calcular por `Date.UTC(ano, mes-1, dia).getUTCDay()`, não por
-   `new Date(string)`, pelo mesmo motivo do fuso já documentado ali).
-   Afeta: `resumo-dia-pdf.tsx`, `conferencia-dia-pdf.tsx`, `pesagem-pdf.tsx`
-   (já tem `data`, só falta o dia da semana), `comanda-pdf.tsx` (não tem
-   `data` nenhuma hoje — precisa adicionar em `ComandaDados` e propagar por
-   `use-imprimir-comandas.tsx` → `ComandaEntrada`, e nos 2-3 lugares que
-   constroem esse objeto: `pedidos-tab.tsx`, `adicionar-pedido-manual-drawer.tsx`).
-3. Seleção múltipla de pedidos na lista (`pedido-dia-row.tsx` +
-   `pedidos-tab.tsx`): checkbox por linha, "selecionar todos" respeitando o
-   filtro atual (turno/recusa/busca já aplicado), botão "Deletar todos" que
-   só aparece com 2+ selecionados, confirmação em duas etapas antes de
-   apagar (precisa de action nova tipo `removerPedidosAction` — hoje só
-   existe `removerPedidoSchema`/`removerPedidoAction` no singular).
-4. Botão "Imprimir novos e/ou atualizados" ao lado do "Imprimir todos" —
-   precisa expor a lógica de `statusImpressao()` (hoje só existe dentro de
-   `pedido-dia-row.tsx`) num nível que `pedidos-tab.tsx` consiga filtrar por
-   ela antes de chamar `imprimirEMarcar`.
+- Criada a branch `refactor/architecture` (working tree já estava limpo).
+- 6 agentes rodaram em paralelo, cada um só leitura (Read/Grep/Bash
+  read-only), um por área. Cada relatório foi publicado como página no
+  Notion, dentro da página "Software" que o usuário indicou
+  (`https://app.notion.com/p/3dbe71495ebe8034bf84f2c734e3b986`):
+  - Índice: `https://app.notion.com/p/3dbe71495ebe815784c5f9f0e98a2d87`
+  - Estrutura: `https://app.notion.com/p/3dbe71495ebe81959338f3e7bd9f66e1`
+  - Backend: `https://app.notion.com/p/3dbe71495ebe81cf96eaea870a070257`
+  - Frontend: `https://app.notion.com/p/3dbe71495ebe81daac80d2060a909a16`
+  - Banco: `https://app.notion.com/p/3dbe71495ebe8129853de57e57cfd9c2`
+  - Segurança: `https://app.notion.com/p/3dbe71495ebe81f081d8d63ffb0a9fd8`
+  - Performance: `https://app.notion.com/p/3dbe71495ebe8199958df75cccac149c`
 
-## 3. Outras coisas pra saber
+### Achados mais importantes (nenhum CRÍTICO de perda de dado ou vazamento
+entre empresas em nenhuma área — os achados abaixo são os de maior impacto)
 
-- **Tavily MCP** foi configurado nesta sessão via `claude mcp add --scope
-  user` (fica em `~/.claude.json` da máquina, **não vai no git, não
-  sincroniza sozinho pro outro computador** — se quiser usar Tavily lá
-  também, rodar de novo:
-  `claude mcp add --transport http --scope user tavily "https://mcp.tavily.com/mcp/?tavilyApiKey=<chave>"`)
-- O WIP de cardápio (`features/cardapio/*`, `packages/db/src/schema/cardapio-empresa.ts`)
-  que está sendo commitado junto **não foi tocado por esta sessão** — já
-  estava em andamento antes de eu começar. Schema mudou (+31 linhas em
-  `cardapio-empresa.ts`); se o fluxo do projeto for `drizzle-kit push` direto
-  (sem pasta de migrations versionada — não existe `packages/db/drizzle/`
-  neste repo), lembrar de rodar isso contra o banco se ainda não rodou.
-- `check-types`, lint e os 434 testes (`pnpm --filter admin test`) passaram
-  limpos no estado final desta sessão.
+- **Segurança (achado mais grave do conjunto, CRÍTICO)**: RBAC por papel só
+  é reforçado em `proxy.ts` (nível de rota/navegação). Dentro das Server
+  Actions, quase tudo usa `authActionClient` (só exige sessão, não checa
+  `role`) — qualquer usuário autenticado de qualquer cargo pode em tese
+  disparar diretamente actions de financeiro/RH/compras/estoque, já que
+  Server Actions são endpoints públicos por ID, não amarrados à rota de
+  origem. Também: `createPausaAction`/`deletePausaAction` sem nenhuma
+  checagem (stub hoje); `/api/qz/sign` assina qualquer texto com a chave
+  privada sem validar payload nem restringir por papel.
+- **Banco (ALTO)**: race condition real no saldo de estoque —
+  `aplicar-movimento.ts` lê o saldo, calcula em JS, e faz `UPDATE` fixo, sem
+  lock nem `SET quantidade_atual = quantidade_atual + $delta` atômico. Duas
+  movimentações concorrentes podem se sobrepor. Também: `finalizarDiaAction`,
+  `criarProdutoAction` (ficha técnica) e `abrirInventarioAction` fazem
+  inserts encadeados fora de `executarLote` — falha no meio deixa dado
+  parcial.
+- **Performance (CRÍTICO)**: `auth.api.getSession()` chamado em dobro em
+  quase toda navegação (layout + página filha, sem `React.cache`); N+1 real
+  em `getEmpresas()` (2 `count()` por empresa). Cache (`unstable_cache`) só
+  existe em 3 de 9 features; nenhuma listagem grande pagina no banco
+  (`LIMIT`/`OFFSET`), só em memória/client.
+- **Estrutura (ALTO)**: `features/empresas/lib/actions.ts` com 906 linhas e
+  30+ actions de domínios distintos; `pedidos-tab.tsx` com 891 linhas
+  misturando UI+regra de negócio+impressão; nenhuma barreira pública entre
+  features (50+ cross-imports diretos, sem `index.ts`).
+- **Backend (ALTO)**: `features/usuarios/lib/actions.ts` repassa
+  `err.message` cru do better-auth pro toast, driblando o mascaramento
+  central de erro — único lugar do app com esse padrão. 100% das Server
+  Actions validam com Zod (ponto forte).
+- **Frontend (ALTO)**: 52% dos arquivos são Client Components; padrão
+  repetido de fetch-on-mount (`useEffect`+`useAction`) em vez de Server
+  Component + DAL em 7 componentes; `historico-tab.tsx` tem busca/data/página
+  em `useState` (perde no refresh — mesmo bug já corrigido em `pedidos-tab`
+  pro campo `dia`, mas não generalizado pros outros filtros).
+
+## 3. Pivot de produto: vira SaaS multi-tenant
+
+No meio da conversa sobre a auditoria, o usuário decidiu que o projeto não
+fica mais restrito ao Nosso Quintal — vira um **SaaS multi-tenant** pra
+outros restaurantes assinarem. Isso motivou uma rodada extensa de perguntas
+de arquitetura (via `AskUserQuestion`) pra fechar decisões antes de
+implementar qualquer coisa. Todas as decisões estão registradas com data e
+contexto na seção 10 (log de decisões) de `ARCHITECTURE.md` — resumo aqui:
+
+- **Hierarquia**: nova entidade **`restaurante`** (tenant) acima de
+  `empresa` — `empresa` continua sendo o cliente B2B do restaurante (quem
+  pede marmita), não é o tenant.
+- **Isolamento**: `organization_id` (não `restaurante_id` — ver nota
+  importante abaixo) + filtro obrigatório na aplicação, sem RLS nem schema
+  separado por tenant, por ora.
+- **Nosso Quintal migra pra ser o tenant #1 real**, não fica como instalação
+  separada.
+- **Auth**: adotar o plugin `organization` do better-auth (confirmado via
+  Context7 — tabelas `organization`/`member`/`invitation` +
+  `session.activeOrganizationId`) em vez de RBAC/multi-tenant próprio do
+  zero.
+- **Papéis**: conjunto fixo (mesmo enum de hoje: admin/caixa/financeiro/
+  cozinha/estoquista/entregador/rh), avaliado dentro do
+  `activeOrganizationId`. Super-admin da plataforma é separado — reaproveita
+  `user.role` global do plugin `admin()` do better-auth com valor próprio
+  (`platform_admin`), sem vínculo com nenhum restaurante.
+- **Multi-membership**: um usuário pode pertencer a múltiplos restaurantes
+  (necessário pra convites e pra você dar suporte multi-tenant).
+- **Roteamento**: domínio único, seleção de tenant após login (não
+  subdomínio por tenant).
+- **Onboarding**: signup self-serve, libera na hora (sem aprovação manual —
+  decisão consciente do usuário, aceitando risco de conta de teste/spam na
+  fase inicial).
+- **Cobrança**: fora do escopo desta fase — só deixar campo de status
+  (trial/ativo/suspenso) preparado no schema.
+
+### Refinamentos discutidos depois (⚠️ ainda NÃO escritos em `ARCHITECTURE.md`
+— ver pendências na seção 5)
+
+- **Café/suco/lanche e tipo de entrega não são universais.** Tipo de entrega
+  (marmita individual vs. pesagem em massa) **já é configurável por
+  `empresa`** hoje — não precisa de mudança de modelo, só ganha
+  `organization_id` de graça via `empresa`. Café/suco/lanche é diferente:
+  hoje é preço fixo por restaurante no fechamento do dia — decisão: virar um
+  conceito de **módulos opcionais habilitados por restaurante** (ex.:
+  `restaurante.modulos_habilitados` ou tabela `restaurante_modulo`), com a
+  config de preço numa tabela satélite que só existe/é usada se o módulo
+  estiver habilitado. Assim uma marmitaria que não oferece isso não precisa
+  desse dado, e dá pra adicionar outros módulos no futuro sem redesenhar o
+  schema.
+- **Nome de coluna: `organization_id`, não `restaurante_id`.** Sugestão do
+  próprio usuário, aceita — já que a tabela nativa do better-auth se chama
+  `organization`, manter esse nome como coluna/FK em todo o schema (não
+  `restaurante_id`) fica consistente com a camada de auth e mais abrangente
+  pro futuro. "Restaurante" continua sendo o nome do conceito de produto/UI
+  em português; `organization_id` é o nome técnico da coluna.
+  **`ARCHITECTURE.md` ainda usa `restaurante_id`/`restaurante_config` em
+  vários pontos — precisa de uma revisão pra trocar pela nomenclatura
+  `organization_id` antes de considerar o documento fechado.**
+- **Cargos e permissões detalhados (quem pode ver/fazer o quê) ficam pra um
+  documento separado depois** — não vamos redesenhar o RBAC granular agora,
+  só garantir que a arquitetura (clients por domínio) permite isso depois.
+- **Reestruturação de apps do monorepo** (decidido, não implementado):
+  - `apps/web` = porta de entrada pública (marketing a construir + signup
+    self-serve + o formulário público `/cardapio/[slug]` que já existe hoje).
+    Hoje `apps/web` só tem um placeholder "Hello World!" na home.
+  - `apps/admin` é renomeado para **`apps/app`** — passa a ser só o produto
+    autenticado multi-tenant (onde o usuário cai depois do login/signup).
+  - Painel de super-admin (você + equipe: métricas, financeiro do SaaS,
+    impersonate multi-tenant) fica **dentro do mesmo app renomeado**, como
+    seção protegida por role (`user.role === 'platform_admin'`), não um app
+    separado — menos duplicação de auth/DB/UI pra um time pequeno; pode
+    virar app próprio depois se precisar de isolamento maior.
+  - **Nada disso foi executado ainda** — é decisão registrada, falta
+    escrever em `ARCHITECTURE.md` e depois fazer o rename de fato.
+
+## 4. `ARCHITECTURE.md` (raiz do repo, não commitado)
+
+Documento vivo criado nesta sessão pra registrar toda decisão arquitetural
+antes de qualquer refatoração de código. Estrutura: contexto do pivot SaaS,
+modelo de entidades, auth/RBAC (plugin `organization`), fluxo padrão de
+feature (sem camada `Service` separada — Server Action já orquestra, regra
+de negócio em helpers testáveis), regras de domínio (estoque/financeiro),
+migração dos dados existentes, itens em aberto, e um log de decisões com
+data/contexto. **Precisa da revisão de nomenclatura `organization_id`
+mencionada acima antes de considerar fechado.**
+
+## 5. Skill global `nextjs-server-actions` (fora do repositório — não
+sincroniza via git!)
+
+O usuário pediu uma skill **global** (usada em qualquer repositório seu, não
+só neste projeto) documentando a melhor arquitetura de Server Actions
+possível — pesquisada via Tavily (4 pesquisas `tavily_research` completas:
+next-safe-action v8, convenção de nome de arquivo por CRUD, DAL/autorização,
+organização de schema Zod) antes de escrever qualquer coisa, conforme
+instrução explícita do usuário ("se o Tavily não estiver funcionando,
+aguarde eu conectar, não faça pesquisa sem ele").
+
+Arquivo reescrito: `~/.claude/skills/nextjs-server-actions/SKILL.md` (+
+`templates/safe-action.ts`). Cobre:
+
+- Regra de decisão de arquivo (agrupado até ~5 actions/300 linhas → depois
+  disso, um arquivo por ação em `lib/actions/create-employee.ts` etc.,
+  verbo-primeiro kebab-case).
+- Clients em camadas do next-safe-action (`actionClient` →
+  `authActionClient` → `tenantActionClient` — deriva `organizationId` da
+  sessão, nunca do payload → clients por domínio de negócio).
+- Autorização como defesa em profundidade: `proxy.ts`/middleware não é o
+  controle de segurança real; a DAL de leitura também precisa checar que o
+  recurso pertence ao tenant, não só as actions de escrita.
+- DAL sempre devolve DTO (Zod-parseado), nunca a entidade crua do ORM;
+  `React.cache()` pra evitar chamada duplicada de sessão por request.
+  Composição de schema Zod (base + `.partial()/.extend()`) em vez de
+  duplicar.
+
+**⚠️ Isso está em `~/.claude/skills/`, fora do repositório `CRM-Restaurant`
+— não vai no `git push`.** No outro computador, essa skill não vai existir
+até você (a) copiar esse arquivo manualmente pra lá, ou (b) pedir pra essa
+sessão do Claude Code lá refazer a mesma pesquisa/skill do zero.
+
+## 6. Pendências / próximos passos claros
+
+1. **Atualizar `ARCHITECTURE.md`** com os refinamentos da seção 3 acima
+   (trocar `restaurante_id`→`organization_id`, adicionar o conceito de
+   módulos opcionais por restaurante, e a decisão de topologia de apps
+   `apps/admin`→`apps/app` + painel super-admin como seção protegida).
+2. **Decidir a ordem de execução da refatoração** — ainda não decidido: o
+   que vem primeiro (modelo de tenant, RBAC nas actions, ou correções
+   pontuais da auditoria que não dependem de multi-tenant).
+3. **Definir o script/estratégia de migração de dado do Nosso Quintal** pro
+   modelo multi-tenant novo.
+4. **Criar depois** (explicitamente adiado, não esquecer): documento de
+   cargos/permissões detalhado (quem pode ver/fazer o quê por cargo).
+5. **Reavaliar RLS** como defesa em profundidade adicional — não agora, mas
+   está registrado como item em aberto no `ARCHITECTURE.md`.
+6. Cobrança/planos do SaaS — fora do escopo desta fase (billing gateway,
+   etc.), só deixar campo de status preparado.
+7. **Nenhum código foi alterado ainda** — nem o rename de `apps/admin` pra
+   `apps/app`, nem nenhuma correção da auditoria. Tudo aguarda o
+   `ARCHITECTURE.md` estar fechado, por pedido explícito do usuário.
+
+## 7. Outras coisas pra saber
+
+- `check-types`, lint e os testes **não foram executados nesta sessão** (não
+  houve mudança de código em `apps/admin` que justificasse rodar).
+- A branch `refactor/architecture` está só com `ARCHITECTURE.md` como
+  arquivo novo, não commitado. Sem commits novos nesta sessão.
+- Os relatórios completos da auditoria (achados item a item, com
+  arquivo:linha) ficam só no Notion (links na seção 2) — este handoff resume,
+  não substitui.
