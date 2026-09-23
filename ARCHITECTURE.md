@@ -162,10 +162,16 @@ Client/Server Component
 
 - Livro-razão append-only (`estoque_movimento`) + saldo agregado
   (`estoque_item.quantidade_atual`) — padrão já usado, mantém.
-- **Correção obrigatória**: o `UPDATE` do saldo passa a ser atômico em SQL
-  (`quantidade_atual = quantidade_atual + $delta`), nunca
-  ler-calcular-escrever em JS (era a race condition ALTO da auditoria de
-  banco).
+- **Corrigido em 23/09/2026** (`aplicar-movimento.ts`): o `UPDATE` do saldo
+  é atômico em SQL (`quantidade_atual = quantidade_atual + $delta`), nunca
+  mais ler-calcular-escrever em JS. `saldo_resultante` do livro-razão também
+  passou a ser lido de volta do banco (subquery pós-update), não calculado em
+  JS. Foi tratado como exceção urgente à regra "sem código antes do
+  documento fechado" (topo deste arquivo) porque a feature `mesas`
+  (implementada em código antes deste documento ser atualizado — ver nota de
+  processo em §10) passou a exercitar esse caminho com concorrência real
+  (garçons lançando pedido ao mesmo tempo), tornando o risco teórico em
+  risco de produção.
 
 ### 6.2 Financeiro
 
@@ -184,6 +190,33 @@ Client/Server Component
 - Toda rota de API (`/api/qz/*`, etc.) precisa estar mapeada em
   `ROUTE_ROLES`/equivalente de autorização — hoje `/api/qz/sign` não está
   (achado ALTO da auditoria de segurança).
+
+### 6.4 Clientes pessoa física (pacotes individuais pré-pagos)
+
+Caso real: cliente compra um pacote de N dias pra um grupo de pessoas (ex.:
+4 pessoas, cada uma com tamanho de marmita e observações fixas), pago à
+vista, com prato definido por pessoa em cada dia — não é uma empresa B2B
+(sem CNPJ/contrato) nem atendimento avulso de salão (`mesas`).
+
+- **Decisão: reaproveitar `empresa`/`colaborador_pedido`/
+  `pedido_dia_importado`, não criar domínio novo.** O formato já é idêntico
+  ao que existe pra empresas — nome da pessoa, data, prato (texto livre),
+  tamanho, observação — só que lançado manualmente (drawer "Adicionar
+  pedido manual" já existente) em vez de importado por planilha.
+- `empresa` ganha um campo `tipo` (`pessoa_juridica` | `pessoa_fisica`).
+  CNPJ/contrato ficam opcionais para `pessoa_fisica`.
+- Modelo simplificado deliberadamente: **não** há uma sequência de pratos
+  com repetição automática nem um "perfil padrão de substituição" por
+  pessoa — cada linha (`colaborador_pedido` + `pedido_dia_importado`) é
+  lançada explicitamente por dia, prato e observação, exatamente como já
+  funciona pra empresa hoje. Se o mesmo prato vale pra todo mundo num dia
+  (caso comum), isso é só lançar a mesma coisa 4 vezes, não uma regra
+  especial no modelo.
+- Pagamento: à vista, uma entrada única no financeiro na venda do pacote —
+  sem cobrança recorrente/parcelada por ora.
+- Entrega: campo `forma_entrega` (retirada | entrega) — sem logística de
+  entrega mais elaborada (endereço/rota) desenhada ainda; entra quando
+  aparecer um caso real que precise disso.
 
 ## 7. Migração dos dados existentes
 
@@ -211,6 +244,27 @@ como registro do estado do código em 14/09/2026, antes da refatoração.
 - Se/quando reavaliar RLS como defesa em profundidade adicional ao filtro de
   aplicação.
 - Cobrança/planos (explicitamente adiado, ver §3.6).
+- Revisão de nomenclatura pendente neste documento: §2/§3 ainda usam
+  `restaurante_id`/`restaurante_config` como nome técnico — o código real
+  (commits `56b2a6c`/`3f68036`, ver nota de processo em §10) já implementou
+  como `organization_id`, sem tabela `restaurante_config` própria. Este
+  documento precisa de uma passada pra alinhar o texto ao que já existe.
+- RBAC por domínio (§3.3) só foi implementado de fato para `mesas`/
+  `catálogo`/`estoque` (como `tenantActionClient`/`garcomActionClient`/
+  `caixaActionClient`/`adminTenantActionClient`, por função operacional, não
+  por domínio de negócio como o texto original previa). `financeiro`, `rh`,
+  `compras` e `empresas` continuam só com `authActionClient` — achado
+  crítico da auditoria de segurança ainda aberto nesses domínios.
+- `organization_id` ficou nullable (não `NOT NULL`) nas tabelas
+  retrofitadas (`categoria_produto`, `produto`, `grupo_adicional`,
+  `estoque_item`, `inventario_fisico`), esperando um backfill
+  (`setup-diniz-gourmet.ts`) que não existe no repositório — janela real de
+  linha sem tenant até isso ser resolvido.
+- Substituição pontual num dia específico do pacote de pessoa física (§6.4)
+  — como já não há "perfil padrão" fixo, isso já é resolvido por natureza
+  (cada linha é independente), mas vale confirmar se a UI de lançamento
+  precisa de algum atalho pra "repetir os últimos N dias" quando o pedido
+  realmente não muda.
 
 ## 10. Log de decisões
 
@@ -227,3 +281,7 @@ como registro do estado do código em 14/09/2026, antes da refatoração.
 | 2026-09-14 | Adotar plugin `organization` do better-auth em vez de RBAC/multi-tenant próprio | Evita reimplementar convite, multi-membership e troca de dono |
 | 2026-09-14 | Usuário pode pertencer a múltiplos restaurantes | Necessário pra convites e suporte multi-tenant sem conta duplicada |
 | 2026-09-14 | Conjunto de papéis fixo para todos os tenants, sem customização por restaurante | Evita a complexidade de um sistema de permissões granular agora |
+| 2026-09-18/23 | **Nota de processo**: commits `56b2a6c` (multi-tenant) e `3f68036` (feature `mesas`) foram implementados e enviados direto pro `main` sem atualizar este documento antes | Divergência do fluxo combinado ("fechar arquitetura antes de codar") — revisão de código feita em 23/09 encontrou o que bate e o que diverge do que estava decidido aqui (ver §9) |
+| 2026-09-23 | Corrigida a race condition de saldo de estoque (§6.1) como exceção urgente à regra de não codar antes do documento fechado | A feature `mesas` passou a exercitar esse caminho com concorrência real de produção, tornando o risco teórico em risco imediato |
+| 2026-09-23 | Pacote pré-pago pra cliente pessoa física reaproveita `empresa`/`colaborador_pedido`/`pedido_dia_importado` (campo `tipo` em `empresa`), sem domínio novo | Formato de dado é idêntico ao que já existe pra empresa; menos código, reusa fluxo de lançamento manual já pronto |
+| 2026-09-23 | Modelo do pacote individual não tem sequência de pratos com repetição automática nem perfil padrão de substituição por pessoa — cada dia é lançado explicitamente | Pedido do usuário por simplicidade — "só nome da pessoa + prato que quer no dia", sem abstração de repetição/perfil |
