@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { toNumber, toNumericString } from '@/lib/numeric'
@@ -25,47 +25,47 @@ export interface MovimentoPlanejado {
   validade?: string | null
 }
 
-export interface MovimentoAplicado {
-  saldoAnterior: number
-  saldoResultante: number
-}
-
 /**
  * Único caminho que altera `estoque_item.quantidade_atual`. Devolve os
- * statements prontos (movimento + update do saldo) em vez de executá-los, para
- * que o chamador junte vários itens num lote só — ver `executarLote`.
+ * statements prontos (update do saldo + movimento) em vez de executá-los,
+ * para que o chamador junte vários itens num lote só — ver `executarLote`.
+ *
+ * O incremento é feito inteiramente em SQL (`quantidade_atual = quantidade_atual
+ * + delta`), nunca lendo o saldo em JS para depois escrever um valor fixo —
+ * isso é o que evita a race condition de duas movimentações concorrentes no
+ * mesmo item (ex.: dois garçons lançando pedido ao mesmo tempo) se
+ * sobrescreverem uma à outra. `saldo_resultante` do lançamento no livro-razão
+ * é lido de volta do banco (subquery), depois do UPDATE já ter sido aplicado
+ * — nunca calculado a partir de um saldo lido antes desta chamada. Os dois
+ * statements precisam rodar nesta ordem dentro do mesmo `executarLote`
+ * (update antes do insert) para a subquery enxergar o valor já atualizado.
  */
-export function planejarMovimento(
-  movimento: MovimentoPlanejado,
-  saldoAnterior: number
-) {
-  const saldoResultante =
-    Math.round((saldoAnterior + movimento.quantidade) * 1000) / 1000
-
-  const inserirMovimento = db.insert(estoque_movimento).values({
-    estoque_item_id: movimento.estoqueItemId,
-    tipo: movimento.tipo,
-    quantidade: toNumericString(movimento.quantidade),
-    saldo_resultante: toNumericString(saldoResultante),
-    origem_tipo: movimento.origemTipo ?? null,
-    origem_id: movimento.origemId ?? null,
-    observacao: movimento.observacao ?? null,
-    user_id: movimento.userId ?? null,
-  })
+export function planejarMovimento(movimento: MovimentoPlanejado) {
+  const delta = toNumericString(movimento.quantidade)
 
   const atualizarSaldo = db
     .update(estoque_item)
     .set({
-      quantidade_atual: toNumericString(saldoResultante),
+      quantidade_atual: sql`${estoque_item.quantidade_atual} + ${delta}`,
       ...(movimento.validade !== undefined
         ? { validade: movimento.validade }
         : {}),
     })
     .where(eq(estoque_item.id, movimento.estoqueItemId))
 
+  const inserirMovimento = db.insert(estoque_movimento).values({
+    estoque_item_id: movimento.estoqueItemId,
+    tipo: movimento.tipo,
+    quantidade: delta,
+    saldo_resultante: sql`(select ${estoque_item.quantidade_atual} from ${estoque_item} where ${estoque_item.id} = ${movimento.estoqueItemId})`,
+    origem_tipo: movimento.origemTipo ?? null,
+    origem_id: movimento.origemId ?? null,
+    observacao: movimento.observacao ?? null,
+    user_id: movimento.userId ?? null,
+  })
+
   return {
-    statements: [inserirMovimento, atualizarSaldo],
-    resultado: { saldoAnterior, saldoResultante } satisfies MovimentoAplicado,
+    statements: [atualizarSaldo, inserirMovimento],
   }
 }
 

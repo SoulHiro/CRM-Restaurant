@@ -69,22 +69,19 @@ async function planejarConsumo(
   const statements: Statement[] = []
   for (const linha of consumo) {
     if (linha.quantidade === 0) continue
-    const saldoAnterior = await lerSaldoAtual(organizationId, linha.estoqueItemId)
-    if (saldoAnterior == null) {
+    const existe = await lerSaldoAtual(organizationId, linha.estoqueItemId)
+    if (existe == null) {
       throw new ActionError('Algum insumo da ficha técnica não existe mais no estoque.')
     }
     const sinal = tipo === 'baixa_venda' ? -1 : 1
-    const { statements: movimento } = planejarMovimento(
-      {
-        estoqueItemId: linha.estoqueItemId,
-        tipo,
-        quantidade: sinal * Math.abs(linha.quantidade),
-        origemTipo: 'comanda_item',
-        origemId,
-        userId,
-      },
-      saldoAnterior
-    )
+    const { statements: movimento } = planejarMovimento({
+      estoqueItemId: linha.estoqueItemId,
+      tipo,
+      quantidade: sinal * Math.abs(linha.quantidade),
+      origemTipo: 'comanda_item',
+      origemId,
+      userId,
+    })
     statements.push(...movimento)
   }
   return statements

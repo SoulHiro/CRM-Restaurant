@@ -62,16 +62,13 @@ export const createEstoqueItemAction = adminTenantActionClient
     if (!criado) throw new ActionError('Não foi possível cadastrar o item')
 
     if (parsedInput.quantidadeAtual > 0) {
-      const { statements } = planejarMovimento(
-        {
-          estoqueItemId: criado.id,
-          tipo: 'ajuste_manual',
-          quantidade: parsedInput.quantidadeAtual,
-          observacao: 'Quantidade inicial do cadastro',
-          userId: ctx.user.id,
-        },
-        0
-      )
+      const { statements } = planejarMovimento({
+        estoqueItemId: criado.id,
+        tipo: 'ajuste_manual',
+        quantidade: parsedInput.quantidadeAtual,
+        observacao: 'Quantidade inicial do cadastro',
+        userId: ctx.user.id,
+      })
       await executarLote(statements)
     }
 
@@ -151,16 +148,13 @@ export const ajustarQuantidadeAction = tenantActionClient
     const observacao =
       parsedInput.observacao?.trim() || 'Correção de quantidade em estoque'
 
-    const { statements } = planejarMovimento(
-      {
-        estoqueItemId: parsedInput.estoqueItemId,
-        tipo: 'ajuste_manual',
-        quantidade: diferenca,
-        observacao,
-        userId: ctx.user.id,
-      },
-      saldoAtual
-    )
+    const { statements } = planejarMovimento({
+      estoqueItemId: parsedInput.estoqueItemId,
+      tipo: 'ajuste_manual',
+      quantidade: diferenca,
+      observacao,
+      userId: ctx.user.id,
+    })
     await executarLote(statements)
 
     revalidarEstoque(parsedInput.estoqueItemId)
@@ -193,18 +187,15 @@ export const registrarPerdaAction = tenantActionClient
 
     if (!perda) throw new ActionError('Não foi possível registrar a perda')
 
-    const { statements } = planejarMovimento(
-      {
-        estoqueItemId: parsedInput.estoqueItemId,
-        tipo: 'perda',
-        quantidade: -parsedInput.quantidade,
-        origemTipo: 'perda',
-        origemId: perda.id,
-        observacao,
-        userId: ctx.user.id,
-      },
-      saldoAtual
-    )
+    const { statements } = planejarMovimento({
+      estoqueItemId: parsedInput.estoqueItemId,
+      tipo: 'perda',
+      quantidade: -parsedInput.quantidade,
+      origemTipo: 'perda',
+      origemId: perda.id,
+      observacao,
+      userId: ctx.user.id,
+    })
     await executarLote(statements)
 
     revalidarEstoque(parsedInput.estoqueItemId)
@@ -346,18 +337,15 @@ export const finalizarInventarioAction = tenantActionClient
       const saldoAtual = toNumber(linha.item.quantidade_atual)
       const contada = toNumber(linha.quantidade_contada)
 
-      return planejarMovimento(
-        {
-          estoqueItemId: linha.estoque_item_id,
-          tipo: 'ajuste_inventario',
-          quantidade: contada - saldoAtual,
-          origemTipo: 'inventario',
-          origemId: inventario.id,
-          observacao: `Contagem de ${inventario.data}`,
-          userId: ctx.user.id,
-        },
-        saldoAtual
-      ).statements
+      return planejarMovimento({
+        estoqueItemId: linha.estoque_item_id,
+        tipo: 'ajuste_inventario',
+        quantidade: contada - saldoAtual,
+        origemTipo: 'inventario',
+        origemId: inventario.id,
+        observacao: `Contagem de ${inventario.data}`,
+        userId: ctx.user.id,
+      }).statements
     })
 
     statements.push(

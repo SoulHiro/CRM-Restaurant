@@ -149,18 +149,16 @@ export const receberCompraAction = authActionClient
       throw new ActionError('A compra não tem itens para dar entrada.')
     }
 
-    const saldos = await db.query.estoque_item.findMany({
+    const itensExistentes = await db.query.estoque_item.findMany({
       where: inArray(
         estoque_item.id,
         row.itens.map((linha) => linha.estoque_item_id)
       ),
-      columns: { id: true, quantidade_atual: true, validade: true },
+      columns: { id: true, validade: true },
     })
-    const saldoPorItem = new Map(
-      saldos.map((item) => [item.id, toNumber(item.quantidade_atual)])
-    )
+    const idsExistentes = new Set(itensExistentes.map((item) => item.id))
     const validadePorItem = new Map(
-      saldos.map((item) => [item.id, item.validade])
+      itensExistentes.map((item) => [item.id, item.validade])
     )
 
     const statements: Statement[] = [
@@ -171,28 +169,23 @@ export const receberCompraAction = authActionClient
     ]
 
     for (const linha of row.itens) {
-      const saldoAnterior = saldoPorItem.get(linha.estoque_item_id)
-      if (saldoAnterior == null) {
+      if (!idsExistentes.has(linha.estoque_item_id)) {
         throw new ActionError('Algum item da nota não existe mais no estoque')
       }
 
       const validadeAtual = validadePorItem.get(linha.estoque_item_id) ?? null
 
-      const { statements: movimento, resultado } = planejarMovimento(
-        {
-          estoqueItemId: linha.estoque_item_id,
-          tipo: 'entrada_compra',
-          quantidade: toNumber(linha.quantidade),
-          origemTipo: 'compra',
-          origemId: row.id,
-          userId: ctx.user.id,
-          validade: validadeMaisProxima(validadeAtual, linha.validade),
-        },
-        saldoAnterior
-      )
+      const { statements: movimento } = planejarMovimento({
+        estoqueItemId: linha.estoque_item_id,
+        tipo: 'entrada_compra',
+        quantidade: toNumber(linha.quantidade),
+        origemTipo: 'compra',
+        origemId: row.id,
+        userId: ctx.user.id,
+        validade: validadeMaisProxima(validadeAtual, linha.validade),
+      })
 
       statements.push(...movimento)
-      saldoPorItem.set(linha.estoque_item_id, resultado.saldoResultante)
 
       statements.push(
         db.insert(historico_preco_insumo).values({
