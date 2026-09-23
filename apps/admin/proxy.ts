@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 // Map: route prefix → allowed roles
 const ROUTE_ROLES: Record<string, string[]> = {
   '/caixa': ['admin', 'caixa', 'cozinha'],
+  '/mesas': ['admin', 'garcom'],
   '/cardapio': ['admin', 'caixa'],
   '/catalogo': ['admin'],
   '/empresas': ['admin', 'caixa'],

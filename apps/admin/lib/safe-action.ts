@@ -86,3 +86,23 @@ export const adminTenantActionClient = adminActionClient.use(
     return next({ ctx: { ...ctx, organizationId: ctx.organizationId } })
   }
 )
+
+/**
+ * Só garçom (ou admin) — usada pelas actions de `/mesas` (lançar, editar,
+ * excluir item, abrir/cancelar comanda). Defesa em profundidade: a rota já
+ * é protegida em `proxy.ts`, mas a action não confia só nisso.
+ */
+export const garcomActionClient = tenantActionClient.use(async ({ next, ctx }) => {
+  if (ctx.user.role !== 'admin' && ctx.user.role !== 'garcom') {
+    throw new ActionError('Só garçom pode fazer isso.')
+  }
+  return next({ ctx })
+})
+
+/** Só caixa (ou admin) — usada pelas actions de fechamento/pagamento de comanda. */
+export const caixaActionClient = tenantActionClient.use(async ({ next, ctx }) => {
+  if (ctx.user.role !== 'admin' && ctx.user.role !== 'caixa') {
+    throw new ActionError('Só caixa pode fazer isso.')
+  }
+  return next({ ctx })
+})

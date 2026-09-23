@@ -22,6 +22,7 @@ export const transacaoOrigemEnum = pgEnum('transacao_origem', [
   'pagbank',
   'marmita_b2b',
   'manual',
+  'salao',
 ])
 
 export const despesaCategoriaEnum = pgEnum('despesa_categoria', [

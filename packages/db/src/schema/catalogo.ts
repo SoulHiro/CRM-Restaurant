@@ -78,6 +78,11 @@ export const produto = pgTable(
   // scripts/setup-diniz-gourmet.ts).
   organization_id: text('organization_id').references(() => organization.id),
   nome: text('nome').notNull(),
+  // Atalho numérico livre pro garçom lançar rápido em /mesas (ex: 1-29
+  // lanches, 30-50 porções, 50-100 bebidas — a faixa é decisão operacional
+  // do restaurante, o sistema só guarda e busca por igualdade). Nulo =
+  // produto sem atalho definido ainda.
+  codigo_rapido: integer('codigo_rapido'),
   categoria_id: text('categoria_id').references(() => categoria_produto.id),
   tipo: tipoProdutoEnum('tipo').notNull().default('comida'),
   descricao: text('descricao'),
@@ -115,7 +120,10 @@ export const produto = pgTable(
     .defaultNow()
     .$onUpdate(() => new Date()),
   },
-  (t) => [index('produto_organization_idx').on(t.organization_id)]
+  (t) => [
+    index('produto_organization_idx').on(t.organization_id),
+    unique().on(t.organization_id, t.codigo_rapido),
+  ]
 )
 
 /**

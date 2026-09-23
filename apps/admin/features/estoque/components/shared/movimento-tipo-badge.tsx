@@ -8,6 +8,7 @@ const TIPO_LABELS: Record<MovimentoTipo, string> = {
   ajuste_inventario: 'Ajuste de inventário',
   baixa_venda: 'Baixa por venda',
   ajuste_manual: 'Ajuste manual',
+  estorno_venda: 'Estorno de venda',
 }
 
 export function MovimentoTipoBadge({ tipo }: { tipo: MovimentoTipo }) {

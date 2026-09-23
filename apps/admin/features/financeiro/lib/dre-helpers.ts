@@ -14,6 +14,7 @@ export const ORIGEM_LABELS: Record<TransacaoOrigem, string> = {
   ifood: 'iFood',
   pagbank: 'PagBank',
   marmita_b2b: 'Marmita B2B',
+  salao: 'Salão',
 }
 
 export const SUBTIPO_LABELS: Record<DespesaSubtipo, string> = {

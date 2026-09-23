@@ -29,6 +29,7 @@ export const MOVIMENTO_TIPOS = [
   'ajuste_inventario',
   'baixa_venda',
   'ajuste_manual',
+  'estorno_venda',
 ] as const
 export type MovimentoTipo = (typeof MOVIMENTO_TIPOS)[number]
 

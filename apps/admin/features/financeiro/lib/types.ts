@@ -7,6 +7,7 @@ export const TRANSACAO_ORIGENS = [
   'ifood',
   'pagbank',
   'marmita_b2b',
+  'salao',
 ] as const
 export type TransacaoOrigem = (typeof TRANSACAO_ORIGENS)[number]
 

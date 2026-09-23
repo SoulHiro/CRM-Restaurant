@@ -7,6 +7,7 @@ import {
   Building2,
   Clock,
   DollarSign,
+  Grid2x2,
   LayoutGrid,
   Package,
   Package2,
@@ -39,6 +40,12 @@ const NAV_ITEMS = [
     url: '/caixa',
     icon: UtensilsCrossed,
     roles: ['admin', 'caixa', 'cozinha'],
+  },
+  {
+    title: 'Salão',
+    url: '/mesas',
+    icon: Grid2x2,
+    roles: ['admin', 'garcom'],
   },
   {
     title: 'Catálogo',

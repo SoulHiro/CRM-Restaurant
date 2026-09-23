@@ -42,6 +42,10 @@ export const movimentoEstoqueTipoEnum = pgEnum('movimento_estoque_tipo', [
   'ajuste_inventario',
   'baixa_venda',
   'ajuste_manual',
+  // Reversão de baixa_venda (item de comanda excluído/comanda cancelada
+  // depois de já ter baixado estoque) — nunca apaga o movimento original,
+  // que é encadeado (ver features/mesas).
+  'estorno_venda',
 ])
 
 export const perdaMotivoEnum = pgEnum('perda_motivo', [
