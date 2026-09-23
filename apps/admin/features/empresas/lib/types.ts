@@ -23,7 +23,9 @@ export type TurnoRefeicao =
 export interface EmpresaListItem {
   id: string
   nome: string
-  cnpj: string
+  tipo: 'pessoa_juridica' | 'pessoa_fisica'
+  /** Nulo quando `tipo === 'pessoa_fisica'` — cliente direto não tem CNPJ. */
+  cnpj: string | null
   email: string
   responsavelNome: string
   responsavelTelefone: string

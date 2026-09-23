@@ -74,12 +74,19 @@ import { toMoneyString } from '@/lib/numeric'
 export const createEmpresaAction = authActionClient
   .schema(createEmpresaSchema)
   .action(async ({ parsedInput }) => {
-    const existente = await db.query.empresa.findFirst({
-      where: (e, { eq }) => eq(e.cnpj, onlyDigits(parsedInput.cnpj)),
-      columns: { id: true },
-    })
-    if (existente) {
-      throw new ActionError('Já existe uma empresa cadastrada com esse CNPJ.')
+    const cnpjDigits =
+      parsedInput.tipo === 'pessoa_juridica' && parsedInput.cnpj
+        ? onlyDigits(parsedInput.cnpj)
+        : null
+
+    if (cnpjDigits) {
+      const existente = await db.query.empresa.findFirst({
+        where: (e, { eq }) => eq(e.cnpj, cnpjDigits),
+        columns: { id: true },
+      })
+      if (existente) {
+        throw new ActionError('Já existe uma empresa cadastrada com esse CNPJ.')
+      }
     }
 
     // Link do formulário público já nasce pronto — ninguém deveria precisar
@@ -101,7 +108,8 @@ export const createEmpresaAction = authActionClient
       .insert(empresa)
       .values({
         nome: parsedInput.nome.trim(),
-        cnpj: onlyDigits(parsedInput.cnpj),
+        tipo: parsedInput.tipo,
+        cnpj: cnpjDigits,
         slug,
         responsavel_nome: parsedInput.responsavelNome?.trim() || null,
         email_contato: parsedInput.emailContato?.trim() || null,

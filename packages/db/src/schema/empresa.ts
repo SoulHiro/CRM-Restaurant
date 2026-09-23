@@ -12,6 +12,15 @@ import { createId } from '@paralleldrive/cuid2'
 
 export const empresaStatusEnum = pgEnum('empresa_status', ['ativo', 'inativo'])
 
+// 'pessoa_fisica': cliente direto (ex: pacote individual pré-pago pra um
+// grupo de pessoas), reaproveitando toda a estrutura de empresa/colaborador/
+// pedido em vez de um domínio novo — ver ARCHITECTURE.md §6.4. CNPJ não se
+// aplica a esse tipo.
+export const empresaTipoEnum = pgEnum('empresa_tipo', [
+  'pessoa_juridica',
+  'pessoa_fisica',
+])
+
 // 'pesagem': parte dos pedidos do dia não vira comanda individual — é
 // preparada em lote (arroz/feijão calculados por headcount, resto contado
 // por prato) e impressa num papel de conferência à parte. Hoje só a
@@ -34,7 +43,9 @@ export const empresa = pgTable('empresa', {
     .primaryKey()
     .$defaultFn(() => createId()),
   nome: text('nome').notNull(),
-  cnpj: text('cnpj').notNull().unique(),
+  tipo: empresaTipoEnum('tipo').notNull().default('pessoa_juridica'),
+  // Nulo quando tipo = 'pessoa_fisica' — cliente direto não tem CNPJ.
+  cnpj: text('cnpj').unique(),
   responsavel_nome: text('responsavel_nome'),
   email_contato: text('email_contato'),
   telefone_contato: text('telefone_contato'),

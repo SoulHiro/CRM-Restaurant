@@ -48,8 +48,10 @@ export function CadastrarEmpresaForm({
     },
   })
 
+  const tipo = form.watch('tipo')
+
   const { isLoading: isLookingUpCnpj } = useCnpjLookup(
-    form.watch('cnpj') ?? '',
+    tipo === 'pessoa_juridica' ? (form.watch('cnpj') ?? '') : '',
     (nome) => {
       if (!form.getValues('nome')) {
         form.setValue('nome', nome, { shouldValidate: true })
@@ -82,6 +84,7 @@ export function CadastrarEmpresaForm({
           <IdentificacaoFields
             control={form.control}
             isLookingUpCnpj={isLookingUpCnpj}
+            tipo={tipo}
           />
           <EnderecoFields
             control={form.control}

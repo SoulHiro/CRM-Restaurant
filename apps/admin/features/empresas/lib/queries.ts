@@ -86,6 +86,7 @@ async function mapEmpresa(
   return {
     id: row.id,
     nome: row.nome,
+    tipo: row.tipo,
     cnpj: row.cnpj,
     email: row.email_contato ?? '',
     responsavelNome: row.responsavel_nome ?? '',

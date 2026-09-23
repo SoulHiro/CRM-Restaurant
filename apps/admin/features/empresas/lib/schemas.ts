@@ -41,32 +41,39 @@ export const UFS = [
   'TO',
 ]
 
-export const createEmpresaSchema = z.object({
-  cnpj: z
-    .string()
-    .min(1, 'Informe o CNPJ')
-    .refine((value) => onlyDigits(value).length === 14, 'CNPJ inválido'),
-  nome: z.string().min(1, 'Informe o nome da empresa'),
-  responsavelNome: z.string().optional(),
-  emailContato: z
-    .string()
-    .email('E-mail inválido')
-    .optional()
-    .or(z.literal('')),
-  telefoneContato: z.string().optional(),
-  cep: z.string().optional(),
-  logradouro: z.string().optional(),
-  numero: z.string().optional(),
-  complemento: z.string().optional(),
-  bairro: z.string().optional(),
-  cidade: z.string().optional(),
-  uf: z.string().optional(),
-  status: z.enum(['ativo', 'inativo']),
-})
+export const createEmpresaSchema = z
+  .object({
+    tipo: z.enum(['pessoa_juridica', 'pessoa_fisica']),
+    cnpj: z.string().optional(),
+    nome: z.string().min(1, 'Informe o nome'),
+    responsavelNome: z.string().optional(),
+    emailContato: z
+      .string()
+      .email('E-mail inválido')
+      .optional()
+      .or(z.literal('')),
+    telefoneContato: z.string().optional(),
+    cep: z.string().optional(),
+    logradouro: z.string().optional(),
+    numero: z.string().optional(),
+    complemento: z.string().optional(),
+    bairro: z.string().optional(),
+    cidade: z.string().optional(),
+    uf: z.string().optional(),
+    status: z.enum(['ativo', 'inativo']),
+  })
+  // CNPJ só é exigido/validado pra pessoa jurídica — pessoa física não tem.
+  .refine(
+    (v) =>
+      v.tipo !== 'pessoa_juridica' ||
+      (v.cnpj != null && onlyDigits(v.cnpj).length === 14),
+    { message: 'CNPJ inválido', path: ['cnpj'] }
+  )
 
 export type CreateEmpresaInput = z.infer<typeof createEmpresaSchema>
 
 export const createEmpresaDefaultValues: CreateEmpresaInput = {
+  tipo: 'pessoa_juridica',
   cnpj: '',
   nome: '',
   responsavelNome: '',

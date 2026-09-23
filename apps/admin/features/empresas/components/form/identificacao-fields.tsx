@@ -25,30 +25,31 @@ import type { CreateEmpresaInput } from '../../lib/schemas'
 export function IdentificacaoFields({
   control,
   isLookingUpCnpj,
+  tipo,
 }: {
   control: Control<CreateEmpresaInput>
   isLookingUpCnpj: boolean
+  tipo: 'pessoa_juridica' | 'pessoa_fisica'
 }) {
   return (
     <div className="grid grid-cols-2 gap-4">
       <FormField
         control={control}
-        name="cnpj"
+        name="tipo"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>CNPJ</FormLabel>
-            <FormControl>
-              <div className="relative">
-                <Input
-                  placeholder="00.000.000/0000-00"
-                  {...field}
-                  onChange={(e) => field.onChange(maskCnpj(e.target.value))}
-                />
-                {isLookingUpCnpj && (
-                  <Loader2 className="absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-                )}
-              </div>
-            </FormControl>
+            <FormLabel>Tipo</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="pessoa_juridica">Pessoa jurídica</SelectItem>
+                <SelectItem value="pessoa_fisica">Pessoa física</SelectItem>
+              </SelectContent>
+            </Select>
             <FormMessage />
           </FormItem>
         )}
@@ -81,14 +82,46 @@ export function IdentificacaoFields({
         name="nome"
         render={({ field }) => (
           <FormItem className="col-span-2">
-            <FormLabel>Nome da empresa</FormLabel>
+            <FormLabel>
+              {tipo === 'pessoa_fisica' ? 'Nome do cliente' : 'Nome da empresa'}
+            </FormLabel>
             <FormControl>
-              <Input placeholder="Razão social" {...field} />
+              <Input
+                placeholder={
+                  tipo === 'pessoa_fisica' ? 'Nome completo' : 'Razão social'
+                }
+                {...field}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
+
+      {tipo === 'pessoa_juridica' && (
+        <FormField
+          control={control}
+          name="cnpj"
+          render={({ field }) => (
+            <FormItem className="col-span-2">
+              <FormLabel>CNPJ</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input
+                    placeholder="00.000.000/0000-00"
+                    {...field}
+                    onChange={(e) => field.onChange(maskCnpj(e.target.value))}
+                  />
+                  {isLookingUpCnpj && (
+                    <Loader2 className="absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
 
       <FormField
         control={control}

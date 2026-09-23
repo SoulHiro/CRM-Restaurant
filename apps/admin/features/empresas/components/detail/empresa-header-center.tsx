@@ -14,9 +14,11 @@ export function EmpresaHeaderCenter({ empresa }: { empresa: EmpresaListItem }) {
       <span className="whitespace-nowrap text-sm font-medium text-foreground/80">
         {empresa.nome}
       </span>
-      <span className="whitespace-nowrap text-xs text-muted-foreground">
-        {maskCnpj(empresa.cnpj)}
-      </span>
+      {empresa.cnpj && (
+        <span className="whitespace-nowrap text-xs text-muted-foreground">
+          {maskCnpj(empresa.cnpj)}
+        </span>
+      )}
     </div>
   )
 }
